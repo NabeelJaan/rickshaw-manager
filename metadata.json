@@ -1,0 +1,5 @@
+{
+  "name": "Rickshaw Manager",
+  "description": "A management application for a Rickshaw rental business, tracking drivers, income, expenses, and investments.",
+  "requestFramePermissions": []
+}
