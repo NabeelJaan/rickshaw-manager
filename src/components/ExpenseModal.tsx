@@ -38,7 +38,9 @@ export default function ExpenseModal({ isOpen, onClose, onSuccess, driverId, dri
 
   const fetchCategories = async () => {
     try {
-      const response = await fetch('/api/categories?type=expense');
+      const token = localStorage.getItem('auth_token');
+      const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+      const response = await fetch('/api/categories?type=expense', { headers });
       if (response.ok) {
         const data = await response.json();
         setCategories(data);
@@ -50,10 +52,14 @@ export default function ExpenseModal({ isOpen, onClose, onSuccess, driverId, dri
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+    const token = localStorage.getItem('auth_token');
+    const headers = { 
+      'Content-Type': 'application/json',
+      ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+    };
     const res = await fetch('/api/transactions', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers,
       body: JSON.stringify({
         date: formData.date,
         type: 'expense',

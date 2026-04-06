@@ -87,12 +87,17 @@ export default function LogRentModal({ isOpen, onClose, onSubmit, onSuccess, sel
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    const token = localStorage.getItem('auth_token');
+    const headers = { 
+      'Content-Type': 'application/json',
+      ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+    };
     setLoading(true);
     
     try {
       const res = await fetch('/api/transactions', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify({
           ...formData,
           amount: formData.amount === '' ? 0 : parseFloat(formData.amount),

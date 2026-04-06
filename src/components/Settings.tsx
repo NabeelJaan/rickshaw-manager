@@ -78,9 +78,14 @@ export default function Settings() {
 
   const saveSettings = async (updatedSettings: AppSettings) => {
     try {
+      const token = localStorage.getItem('auth_token');
+      const headers = {
+        'Content-Type': 'application/json',
+        ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+      };
       const response = await fetch('/api/settings', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify({
           currency: updatedSettings.currency,
           currencySymbol: updatedSettings.currencySymbol,
@@ -130,9 +135,14 @@ export default function Settings() {
     if (!newCategory.name.trim()) return;
     
     try {
+      const token = localStorage.getItem('auth_token');
+      const headers = {
+        'Content-Type': 'application/json',
+        ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+      };
       const response = await fetch('/api/categories', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify({
           name: newCategory.name.toLowerCase().replace(/\s+/g, '_'),
           type: newCategory.type
@@ -156,9 +166,11 @@ export default function Settings() {
     if (!editingCategory || !editingCategory.name.trim()) return;
     
     try {
+      const token = localStorage.getItem('auth_token');
+      const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
       const response = await fetch(`/api/categories/${editingCategory.id}`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify({
           name: editingCategory.name.toLowerCase().replace(/\s+/g, '_')
         })
@@ -181,8 +193,11 @@ export default function Settings() {
     if (!confirm('Are you sure you want to delete this category?')) return;
     
     try {
+      const token = localStorage.getItem('auth_token');
+      const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
       const response = await fetch(`/api/categories/${id}`, {
-        method: 'DELETE'
+        method: 'DELETE',
+        headers
       });
       
       if (response.ok) {

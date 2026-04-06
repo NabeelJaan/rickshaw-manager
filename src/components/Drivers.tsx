@@ -41,11 +41,13 @@ export default function Drivers({ onDriverAdded, defaultShowForm }: { onDriverAd
   }, [defaultShowForm]);
 
   const fetchData = () => {
-    fetch('/api/drivers')
+    const token = localStorage.getItem('auth_token');
+    const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+    fetch('/api/drivers', { headers })
       .then(res => res.json())
       .then(data => setDrivers(data));
     
-    fetch('/api/rickshaws')
+    fetch('/api/rickshaws', { headers })
       .then(res => res.json())
       .then(data => setRickshaws(data));
   };
@@ -56,9 +58,14 @@ export default function Drivers({ onDriverAdded, defaultShowForm }: { onDriverAd
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    const token = localStorage.getItem('auth_token');
+    const headers = { 
+      'Content-Type': 'application/json',
+      ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+    };
     const res = await fetch('/api/drivers', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers,
       body: JSON.stringify({
         name: formData.name,
         phone: formData.phone,
@@ -76,9 +83,14 @@ export default function Drivers({ onDriverAdded, defaultShowForm }: { onDriverAd
 
     // If a rickshaw was selected, create an assignment
     if (formData.rickshaw_id) {
+      const token = localStorage.getItem('auth_token');
+      const headers = { 
+        'Content-Type': 'application/json',
+        ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+      };
       await fetch('/api/assignments', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify({
           rickshaw_id: formData.rickshaw_id,
           driver_id: newDriver.id,
@@ -105,9 +117,14 @@ export default function Drivers({ onDriverAdded, defaultShowForm }: { onDriverAd
 
   const handleUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
+    const token = localStorage.getItem('auth_token');
+    const headers = { 
+      'Content-Type': 'application/json',
+      ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+    };
     const res = await fetch(`/api/drivers/${editFormData.id}`, {
       method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
+      headers,
       body: JSON.stringify({
         name: editFormData.name,
         phone: editFormData.phone,
@@ -127,7 +144,12 @@ export default function Drivers({ onDriverAdded, defaultShowForm }: { onDriverAd
 
   const handleDelete = async (id: number) => {
     if (confirm('Are you sure you want to delete this driver? This will also delete all their assignments and transactions.')) {
-      const res = await fetch(`/api/drivers/${id}`, { method: 'DELETE' });
+      const token = localStorage.getItem('auth_token');
+      const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+      const res = await fetch(`/api/drivers/${id}`, { 
+        method: 'DELETE',
+        headers
+      });
       if (!res.ok) {
         const error = await res.json();
         alert(`Error deleting driver: ${error.error}`);

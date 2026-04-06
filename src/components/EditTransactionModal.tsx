@@ -48,9 +48,14 @@ export default function EditTransactionModal({ isOpen, onClose, onSuccess, trans
     
     if (!transaction) return;
     
+    const token = localStorage.getItem('auth_token');
+    const headers = { 
+      'Content-Type': 'application/json',
+      ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+    };
     const res = await fetch(`/api/transactions/${transaction.id}`, {
       method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
+      headers,
       body: JSON.stringify({
         date: formData.date,
         type: formData.type,

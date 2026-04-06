@@ -1,14 +1,26 @@
 import express from 'express';
 import { sql } from '@vercel/postgres';
+import bcrypt from 'bcryptjs';
+import jwt from 'jsonwebtoken';
 
 const app = express();
 app.use(express.json());
+
+const JWT_SECRET = process.env.JWT_SECRET || 'super-secret-key-change-me';
 
 // ─── DB Init ──────────────────────────────────────────────────────────────────
 
 let dbReady = false;
 async function ensureDb() {
   if (dbReady) return;
+  
+  await sql`CREATE TABLE IF NOT EXISTS users (
+    id SERIAL PRIMARY KEY,
+    username TEXT UNIQUE NOT NULL,
+    password TEXT NOT NULL,
+    role TEXT DEFAULT 'admin'
+  )`;
+  
   await sql`CREATE TABLE IF NOT EXISTS rickshaws (
     id SERIAL PRIMARY KEY,
     number TEXT UNIQUE NOT NULL,
@@ -67,9 +79,76 @@ async function ensureDb() {
   dbReady = true;
 }
 
+// ─── Auth ─────────────────────────────────────────────────────────────────────
+
+app.post('/api/auth/seed', async (req, res) => {
+  try {
+    await ensureDb();
+    const { username, password } = req.body;
+    
+    // Check if any user exists
+    const users = await sql`SELECT * FROM users LIMIT 1`;
+    if (users.rowCount > 0) {
+      return res.status(400).json({ error: 'System already seeded' });
+    }
+    
+    const hashedPassword = await bcrypt.hash(password, 10);
+    const result = await sql`
+      INSERT INTO users (username, password, role) 
+      VALUES (${username}, ${hashedPassword}, 'super_admin') 
+      RETURNING id, username, role
+    `;
+    
+    res.json({ success: true, user: result.rows[0] });
+  } catch (e: any) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.post('/api/auth/login', async (req, res) => {
+  try {
+    await ensureDb();
+    const { username, password } = req.body;
+    
+    const result = await sql`SELECT * FROM users WHERE username = ${username}`;
+    const user = result.rows[0];
+    
+    if (!user || !(await bcrypt.compare(password, user.password))) {
+      return res.status(401).json({ error: 'Invalid credentials' });
+    }
+    
+    const token = jwt.sign(
+      { id: user.id, username: user.username, role: user.role },
+      JWT_SECRET,
+      { expiresIn: '24h' }
+    );
+    
+    res.json({ 
+      token, 
+      user: { id: user.id, username: user.username, role: user.role } 
+    });
+  } catch (e: any) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// Middleware to check auth
+const authenticate = (req: any, res: any, next: any) => {
+  const token = req.headers.authorization?.split(' ')[1];
+  if (!token) return res.status(401).json({ error: 'Unauthorized' });
+  
+  try {
+    const decoded = jwt.verify(token, JWT_SECRET);
+    req.user = decoded;
+    next();
+  } catch (e) {
+    res.status(401).json({ error: 'Invalid token' });
+  }
+};
+
 // ─── Rickshaws ────────────────────────────────────────────────────────────────
 
-app.get('/api/rickshaws', async (req, res) => {
+app.get('/api/rickshaws', authenticate, async (req, res) => {
   try {
     await ensureDb();
     const r = await sql`
@@ -81,7 +160,7 @@ app.get('/api/rickshaws', async (req, res) => {
   } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 
-app.post('/api/rickshaws', async (req, res) => {
+app.post('/api/rickshaws', authenticate, async (req, res) => {
   try {
     await ensureDb();
     const { number, purchase_date, investment_cost } = req.body;
@@ -90,7 +169,7 @@ app.post('/api/rickshaws', async (req, res) => {
   } catch (e: any) { res.status(400).json({ error: e.message }); }
 });
 
-app.put('/api/rickshaws/:id', async (req, res) => {
+app.put('/api/rickshaws/:id', authenticate, async (req, res) => {
   try {
     await ensureDb();
     const { number, purchase_date, investment_cost } = req.body;
@@ -100,7 +179,7 @@ app.put('/api/rickshaws/:id', async (req, res) => {
   } catch (e: any) { res.status(400).json({ error: e.message }); }
 });
 
-app.delete('/api/rickshaws/:id', async (req, res) => {
+app.delete('/api/rickshaws/:id', authenticate, async (req, res) => {
   try {
     await ensureDb();
     const id = req.params.id;
@@ -113,7 +192,7 @@ app.delete('/api/rickshaws/:id', async (req, res) => {
 
 // ─── Drivers ──────────────────────────────────────────────────────────────────
 
-app.get('/api/drivers', async (req, res) => {
+app.get('/api/drivers', authenticate, async (req, res) => {
   try {
     await ensureDb();
     const r = await sql`
@@ -126,7 +205,7 @@ app.get('/api/drivers', async (req, res) => {
   } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 
-app.post('/api/drivers', async (req, res) => {
+app.post('/api/drivers', authenticate, async (req, res) => {
   try {
     await ensureDb();
     const { name, phone, join_date } = req.body;
@@ -135,7 +214,7 @@ app.post('/api/drivers', async (req, res) => {
   } catch (e: any) { res.status(400).json({ error: e.message }); }
 });
 
-app.put('/api/drivers/:id', async (req, res) => {
+app.put('/api/drivers/:id', authenticate, async (req, res) => {
   try {
     await ensureDb();
     const { name, phone, join_date } = req.body;
@@ -145,7 +224,7 @@ app.put('/api/drivers/:id', async (req, res) => {
   } catch (e: any) { res.status(400).json({ error: e.message }); }
 });
 
-app.delete('/api/drivers/:id', async (req, res) => {
+app.delete('/api/drivers/:id', authenticate, async (req, res) => {
   try {
     await ensureDb();
     const id = req.params.id;
@@ -158,7 +237,7 @@ app.delete('/api/drivers/:id', async (req, res) => {
 
 // ─── Assignments ──────────────────────────────────────────────────────────────
 
-app.get('/api/assignments', async (req, res) => {
+app.get('/api/assignments', authenticate, async (req, res) => {
   try {
     await ensureDb();
     const r = await sql`
@@ -171,7 +250,7 @@ app.get('/api/assignments', async (req, res) => {
   } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 
-app.post('/api/assignments', async (req, res) => {
+app.post('/api/assignments', authenticate, async (req, res) => {
   try {
     await ensureDb();
     const { rickshaw_id, driver_id, start_date } = req.body;
@@ -183,7 +262,7 @@ app.post('/api/assignments', async (req, res) => {
 
 // ─── Transactions ─────────────────────────────────────────────────────────────
 
-app.get('/api/transactions', async (req, res) => {
+app.get('/api/transactions', authenticate, async (req, res) => {
   try {
     await ensureDb();
     const { start_date, end_date, rickshaw_id, driver_id, limit } = req.query;
@@ -203,7 +282,7 @@ app.get('/api/transactions', async (req, res) => {
   } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 
-app.post('/api/transactions', async (req, res) => {
+app.post('/api/transactions', authenticate, async (req, res) => {
   try {
     await ensureDb();
     const { date, type, category, amount, rickshaw_id, driver_id, notes } = req.body;
@@ -223,7 +302,7 @@ app.post('/api/transactions', async (req, res) => {
   } catch (e: any) { res.status(400).json({ error: e.message }); }
 });
 
-app.put('/api/transactions/:id', async (req, res) => {
+app.put('/api/transactions/:id', authenticate, async (req, res) => {
   try {
     await ensureDb();
     const { id } = req.params;
@@ -256,7 +335,7 @@ app.put('/api/transactions/:id', async (req, res) => {
   } catch (e: any) { res.status(400).json({ error: e.message }); }
 });
 
-app.delete('/api/transactions/:id', async (req, res) => {
+app.delete('/api/transactions/:id', authenticate, async (req, res) => {
   try {
     await ensureDb();
     const { id } = req.params;
@@ -278,7 +357,7 @@ app.delete('/api/transactions/:id', async (req, res) => {
 
 // ─── Categories ───────────────────────────────────────────────────────────────
 
-app.get('/api/categories', async (req, res) => {
+app.get('/api/categories', authenticate, async (req, res) => {
   try {
     await ensureDb();
     const { type } = req.query;
@@ -289,7 +368,7 @@ app.get('/api/categories', async (req, res) => {
   } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 
-app.post('/api/categories', async (req, res) => {
+app.post('/api/categories', authenticate, async (req, res) => {
   try {
     await ensureDb();
     const { name, type } = req.body;
@@ -298,7 +377,7 @@ app.post('/api/categories', async (req, res) => {
   } catch (e: any) { res.status(400).json({ error: e.message }); }
 });
 
-app.put('/api/categories/:id', async (req, res) => {
+app.put('/api/categories/:id', authenticate, async (req, res) => {
   try {
     await ensureDb();
     const r = await sql`UPDATE categories SET name=${req.body.name} WHERE id=${req.params.id} RETURNING *`;
@@ -307,7 +386,7 @@ app.put('/api/categories/:id', async (req, res) => {
   } catch (e: any) { res.status(400).json({ error: e.message }); }
 });
 
-app.delete('/api/categories/:id', async (req, res) => {
+app.delete('/api/categories/:id', authenticate, async (req, res) => {
   try {
     await ensureDb();
     const { id } = req.params;
@@ -323,7 +402,7 @@ app.delete('/api/categories/:id', async (req, res) => {
 
 // ─── Settings ─────────────────────────────────────────────────────────────────
 
-app.get('/api/settings', async (req, res) => {
+app.get('/api/settings', authenticate, async (req, res) => {
   try {
     await ensureDb();
     const r = await sql`SELECT * FROM settings WHERE id=1`;
@@ -331,7 +410,7 @@ app.get('/api/settings', async (req, res) => {
   } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 
-app.post('/api/settings', async (req, res) => {
+app.post('/api/settings', authenticate, async (req, res) => {
   try {
     await ensureDb();
     const { currency, currencySymbol, dateFormat, autoBackup, reportFormat } = req.body;
@@ -346,7 +425,7 @@ app.post('/api/settings', async (req, res) => {
 
 // ─── Stats ────────────────────────────────────────────────────────────────────
 
-app.get('/api/stats', async (req, res) => {
+app.get('/api/stats', authenticate, async (req, res) => {
   try {
     await ensureDb();
     const { driver_id } = req.query;

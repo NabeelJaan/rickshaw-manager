@@ -48,7 +48,12 @@ export default function Dashboard({ selectedDriverId }: { selectedDriverId?: str
 
   const handleDeleteTransaction = async (id: number) => {
     if (confirm('Are you sure you want to delete this transaction?')) {
-      await fetch(`/api/transactions/${id}`, { method: 'DELETE' });
+      const token = localStorage.getItem('auth_token');
+      const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+      await fetch(`/api/transactions/${id}`, { 
+        method: 'DELETE',
+        headers
+      });
       fetchData();
     }
   };
@@ -56,12 +61,12 @@ export default function Dashboard({ selectedDriverId }: { selectedDriverId?: str
   const fetchData = () => {
     setLoading(true);
     const query = selectedDriverId ? `?driver_id=${selectedDriverId}` : '';
-    console.log('Dashboard fetching data with query:', query);
-    console.log('selectedDriverId (type):', selectedDriverId, typeof selectedDriverId);
+    const token = localStorage.getItem('auth_token');
+    const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
     
     Promise.all([
-      fetch(`/api/stats${query}`).then(res => res.json()),
-      fetch(`/api/transactions${query ? query + '&' : '?'}limit=10`).then(res => res.json())
+      fetch(`/api/stats${query}`, { headers }).then(res => res.json()),
+      fetch(`/api/transactions${query ? query + '&' : '?'}limit=10`, { headers }).then(res => res.json())
     ]).then(([statsData, txData]) => {
       console.log('Dashboard received stats:', statsData);
       console.log('Dashboard received transactions:', txData);
@@ -93,7 +98,9 @@ export default function Dashboard({ selectedDriverId }: { selectedDriverId?: str
 
   useEffect(() => {
     if (selectedDriverId) {
-      fetch(`/api/drivers`)
+      const token = localStorage.getItem('auth_token');
+      const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+      fetch(`/api/drivers`, { headers })
         .then(res => res.json())
         .then(drivers => {
           const driver = drivers.find((d: any) => d.id.toString() === selectedDriverId);

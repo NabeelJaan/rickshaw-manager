@@ -40,9 +40,11 @@ export default function Rickshaws({ selectedDriverId }: { selectedDriverId?: str
   }, []);
 
   const fetchData = () => {
-    fetch('/api/rickshaws').then(res => res.json()).then(setRickshaws);
-    fetch('/api/drivers').then(res => res.json()).then(setDrivers);
-    fetch('/api/assignments').then(res => res.json()).then(setAssignments);
+    const token = localStorage.getItem('auth_token');
+    const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+    fetch('/api/rickshaws', { headers }).then(res => res.json()).then(setRickshaws);
+    fetch('/api/drivers', { headers }).then(res => res.json()).then(setDrivers);
+    fetch('/api/assignments', { headers }).then(res => res.json()).then(setAssignments);
   };
 
   useEffect(() => {
@@ -51,9 +53,14 @@ export default function Rickshaws({ selectedDriverId }: { selectedDriverId?: str
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    const token = localStorage.getItem('auth_token');
+    const headers = { 
+      'Content-Type': 'application/json',
+      ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+    };
     const res = await fetch('/api/rickshaws', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers,
       body: JSON.stringify(formData),
     });
     
@@ -70,9 +77,14 @@ export default function Rickshaws({ selectedDriverId }: { selectedDriverId?: str
 
   const handleAssign = async (e: React.FormEvent) => {
     e.preventDefault();
+    const token = localStorage.getItem('auth_token');
+    const headers = { 
+      'Content-Type': 'application/json',
+      ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+    };
     const res = await fetch('/api/assignments', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers,
       body: JSON.stringify(assignData),
     });
     
@@ -99,9 +111,14 @@ export default function Rickshaws({ selectedDriverId }: { selectedDriverId?: str
 
   const handleUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
+    const token = localStorage.getItem('auth_token');
+    const headers = { 
+      'Content-Type': 'application/json',
+      ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+    };
     const res = await fetch(`/api/rickshaws/${editFormData.id}`, {
       method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
+      headers,
       body: JSON.stringify({
         number: editFormData.number,
         purchase_date: editFormData.purchase_date,
@@ -121,7 +138,12 @@ export default function Rickshaws({ selectedDriverId }: { selectedDriverId?: str
 
   const handleDelete = async (id: number) => {
     if (confirm('Are you sure you want to delete this rickshaw? This will also delete all its assignments and transactions.')) {
-      const res = await fetch(`/api/rickshaws/${id}`, { method: 'DELETE' });
+      const token = localStorage.getItem('auth_token');
+      const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+      const res = await fetch(`/api/rickshaws/${id}`, { 
+        method: 'DELETE',
+        headers
+      });
       if (!res.ok) {
         const error = await res.json();
         alert(`Error deleting rickshaw: ${error.error}`);

@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react';
-import { LayoutDashboard, Users, Car, Receipt, Settings, Menu, X, ChevronDown } from 'lucide-react';
+import { LayoutDashboard, Users, Car, Receipt, Settings, Menu, X, ChevronDown, LogOut } from 'lucide-react';
+import { AuthProvider, useAuth } from './contexts/AuthContext';
+import LoginPage from './components/LoginPage';
 import Dashboard from './components/Dashboard';
 import Rickshaws from './components/Rickshaws';
 import Drivers from './components/Drivers';
@@ -7,7 +9,8 @@ import Transactions from './components/Transactions';
 import SettingsPage from './components/Settings';
 import { Driver } from './types';
 
-export default function App() {
+function AppContent() {
+  const { isAuthenticated, logout, user } = useAuth();
   const [activeTab, setActiveTab] = useState('dashboard');
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [drivers, setDrivers] = useState<Driver[]>([]);
@@ -19,8 +22,14 @@ export default function App() {
   };
 
   useEffect(() => {
-    fetchDrivers();
-  }, []);
+    if (isAuthenticated) {
+      fetchDrivers();
+    }
+  }, [isAuthenticated]);
+
+  if (!isAuthenticated) {
+    return <LoginPage />;
+  }
 
   const navItems = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -56,7 +65,7 @@ export default function App() {
 
       {/* Sidebar */}
       <div className={`
-        fixed md:static inset-y-0 left-0 z-50 w-64 bg-zinc-950 text-zinc-300 transform transition-transform duration-200 ease-in-out border-r border-zinc-800
+        fixed md:static inset-y-0 left-0 z-50 w-64 bg-zinc-950 text-zinc-300 transform transition-transform duration-200 ease-in-out border-r border-zinc-800 flex flex-col
         ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
       `}>
         <div className="p-6 hidden md:block">
@@ -66,7 +75,19 @@ export default function App() {
           </h1>
         </div>
 
-        <div className="px-4 mb-8">
+        <div className="px-4 mb-6">
+          <div className="bg-zinc-900/50 border border-zinc-800 rounded-2xl p-3 mb-6">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-full bg-emerald-500/10 flex items-center justify-center">
+                <Users className="w-4 h-4 text-emerald-500" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-medium text-white truncate">{user?.username}</p>
+                <p className="text-[10px] text-zinc-500 uppercase tracking-wider font-semibold">Super Admin</p>
+              </div>
+            </div>
+          </div>
+
           <label className="block text-[10px] font-semibold text-zinc-500 uppercase tracking-widest mb-3">Active Profile</label>
           <div className="relative">
             <select 
@@ -93,7 +114,7 @@ export default function App() {
           </div>
         </div>
 
-        <nav className="px-4 space-y-1">
+        <nav className="px-4 space-y-1 flex-1">
           {navItems.map((item) => {
             const Icon = item.icon;
             const isActive = activeTab === item.id;
@@ -117,6 +138,16 @@ export default function App() {
             );
           })}
         </nav>
+
+        <div className="p-4 mt-auto border-t border-zinc-900">
+          <button 
+            onClick={logout}
+            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-zinc-500 hover:bg-rose-500/10 hover:text-rose-500 transition-all duration-200"
+          >
+            <LogOut className="w-5 h-5" />
+            <span className="text-sm font-medium">Sign Out</span>
+          </button>
+        </div>
       </div>
 
       {/* Main Content */}
@@ -126,5 +157,13 @@ export default function App() {
         </div>
       </main>
     </div>
+  );
+}
+
+export default function App() {
+  return (
+    <AuthProvider>
+      <AppContent />
+    </AuthProvider>
   );
 }
