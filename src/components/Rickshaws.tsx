@@ -145,11 +145,11 @@ export default function Rickshaws({ selectedDriverId }: { selectedDriverId?: str
 
   return (
     <div className="space-y-8">
-      <div className="flex justify-between items-center">
-        <h2 className="text-3xl font-bold text-zinc-900 tracking-tight">Rickshaws</h2>
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <h2 className="text-2xl md:text-3xl font-bold text-zinc-900 tracking-tight">Rickshaws</h2>
         <button 
           onClick={() => setShowForm(!showForm)}
-          className="bg-zinc-900 hover:bg-zinc-800 text-white px-4 py-2.5 rounded-xl flex items-center gap-2 transition-all shadow-sm text-sm font-medium"
+          className="w-full sm:w-auto bg-zinc-900 hover:bg-zinc-800 text-white px-4 py-2.5 rounded-xl flex items-center justify-center gap-2 transition-all shadow-sm text-sm font-medium"
         >
           <Plus className="w-4 h-4" /> Add Rickshaw
         </button>
@@ -242,7 +242,7 @@ export default function Rickshaws({ selectedDriverId }: { selectedDriverId?: str
         </form>
       )}
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-5">
         {filteredRickshaws.map(r => (
           <div key={r.id} className="bg-white p-6 rounded-2xl shadow-sm border border-zinc-200/60 hover:shadow-md transition-all relative group">
             <div className="flex items-center justify-between mb-5">

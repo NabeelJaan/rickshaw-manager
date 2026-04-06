@@ -113,9 +113,13 @@ export default function Dashboard({ selectedDriverId }: { selectedDriverId?: str
     { title: 'Pending Balance', value: stats.pendingBalance, icon: TrendingDown, color: 'text-amber-500', bg: 'bg-amber-500/10', prefix: currency + ' ' },
     { title: 'Total Investment', value: stats.totalInvestment, icon: Car, color: 'text-purple-500', bg: 'bg-purple-500/10', prefix: currency + ' ' },
     { title: 'Remaining Investment', value: Math.max(0, stats.totalInvestment - stats.profit), icon: TrendingDown, color: 'text-orange-500', bg: 'bg-orange-500/10', prefix: currency + ' ' },
-    { title: 'Active Rickshaws', value: stats.activeRickshaws, icon: Car, color: 'text-indigo-500', bg: 'bg-indigo-500/10', prefix: '' },
-    { title: 'Total Rickshaws', value: stats.totalRickshaws, icon: Car, color: 'text-zinc-500', bg: 'bg-zinc-500/10', prefix: '' },
+    { title: 'Active Rickshaws', value: stats.activeRickshaws, icon: Car, color: 'text-indigo-500', bg: 'bg-indigo-500/10', prefix: '', hideOnDriver: true },
+    { title: 'Total Rickshaws', value: stats.totalRickshaws, icon: Car, color: 'text-zinc-500', bg: 'bg-zinc-500/10', prefix: '', hideOnDriver: true },
   ];
+
+  const filteredStatCards = selectedDriverId 
+    ? statCards.filter(card => !card.hideOnDriver) 
+    : statCards;
 
   return (
     <div className="space-y-8">
@@ -155,6 +159,7 @@ export default function Dashboard({ selectedDriverId }: { selectedDriverId?: str
                 </button>
                 <button 
                   onClick={() => {
+                    setIsLogRentModalOpen(false);
                     setIsExpenseModalOpen(true);
                     setShowTransactionDropdown(false);
                   }}
@@ -169,17 +174,17 @@ export default function Dashboard({ selectedDriverId }: { selectedDriverId?: str
         </div>
       </div>
       
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-        {statCards.map((card, i) => (
-          <div key={i} className={`bg-white p-5 rounded-2xl shadow-sm border border-zinc-200/60 flex flex-col gap-4 transition-shadow hover:shadow-md`}>
+      <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 md:gap-4">
+        {filteredStatCards.map((card, i) => (
+          <div key={i} className={`bg-white p-4 md:p-5 rounded-2xl shadow-sm border border-zinc-200/60 flex flex-col gap-3 md:gap-4 transition-shadow hover:shadow-md`}>
             <div className="flex justify-between items-start">
-              <div className={`p-2.5 rounded-xl ${card.bg}`}>
-                <card.icon className={`w-5 h-5 ${card.color}`} />
+              <div className={`p-2 rounded-xl ${card.bg}`}>
+                <card.icon className={`w-4 h-4 md:w-5 md:h-5 ${card.color}`} />
               </div>
             </div>
             <div>
-              <p className="text-[13px] font-medium text-zinc-500 mb-1">{card.title}</p>
-              <h3 className="text-2xl font-semibold text-zinc-900 font-number tracking-tight">
+              <p className="text-[11px] md:text-[13px] font-medium text-zinc-500 mb-0.5 md:mb-1">{card.title}</p>
+              <h3 className="text-lg md:text-2xl font-bold text-zinc-900 font-number tracking-tight break-words">
                 {card.prefix}{card.value.toLocaleString()}
               </h3>
             </div>
@@ -206,11 +211,19 @@ export default function Dashboard({ selectedDriverId }: { selectedDriverId?: str
               </button>
             </div>
           </div>
-          <div className="h-72">
-            <ResponsiveContainer width="100%" height={288}>
-              <BarChart data={chartView === 'daily' ? stats.dailyData : stats.monthlyData} margin={{ top: 0, right: 0, left: -20, bottom: 0 }}>
+          <div className="h-64 md:h-72">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={chartView === 'daily' ? stats.dailyData : stats.monthlyData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f4f4f5" />
-                <XAxis dataKey={chartView === 'daily' ? 'date' : 'month'} axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#71717a' }} dy={10} />
+                <XAxis 
+                  dataKey={chartView === 'daily' ? 'date' : 'month'} 
+                  axisLine={false} 
+                  tickLine={false} 
+                  tick={{ fontSize: 10, fill: '#71717a' }} 
+                  dy={10}
+                  interval="preserveStartEnd"
+                  minTickGap={20}
+                />
                 <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#71717a' }} />
                 <Tooltip 
                   cursor={{ fill: '#f4f4f5', opacity: 0.4 }} 
@@ -227,11 +240,18 @@ export default function Dashboard({ selectedDriverId }: { selectedDriverId?: str
 
         <div className="bg-white p-6 rounded-2xl shadow-sm border border-zinc-200/60">
           <h3 className="text-base font-semibold text-zinc-900 mb-6">Total Income by Month (Last Year)</h3>
-          <div className="h-72">
-            <ResponsiveContainer width="100%" height={288}>
-              <BarChart data={stats.monthlyData} margin={{ top: 0, right: 0, left: -20, bottom: 0 }}>
+          <div className="h-64 md:h-72">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={stats.monthlyData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f4f4f5" />
-                <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#71717a' }} dy={10} />
+                <XAxis 
+                  dataKey="month" 
+                  axisLine={false} 
+                  tickLine={false} 
+                  tick={{ fontSize: 10, fill: '#71717a' }} 
+                  dy={10}
+                  interval="preserveStartEnd"
+                />
                 <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#71717a' }} />
                 <Tooltip 
                   cursor={{ fill: '#f4f4f5', opacity: 0.4 }} 
@@ -246,9 +266,79 @@ export default function Dashboard({ selectedDriverId }: { selectedDriverId?: str
         </div>
       </div>
 
-      <div className="bg-white p-6 rounded-2xl shadow-sm border border-zinc-200/60">
-        <h3 className="text-base font-semibold text-zinc-900 mb-6">Recent Transactions</h3>
-        <div className="overflow-x-auto">
+      <div className="bg-white rounded-2xl shadow-sm border border-zinc-200/60 overflow-hidden">
+        <div className="p-4 md:p-6 border-b border-zinc-100">
+          <h3 className="text-base font-semibold text-zinc-900">Recent Transactions</h3>
+        </div>
+        
+        {/* Mobile View: Cards */}
+        <div className="block md:hidden divide-y divide-zinc-100">
+          {transactions.map(t => (
+            <div key={t.id} className="p-4 space-y-3">
+              <div className="flex justify-between items-start">
+                <div>
+                  <p className="text-[10px] text-zinc-500 uppercase font-semibold tracking-wider mb-0.5">{t.date}</p>
+                  <p className="text-sm font-semibold text-zinc-900 capitalize">{t.category.replace('_', ' ')}</p>
+                </div>
+                <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium border ${
+                  t.type === 'income' ? 'bg-emerald-50 text-emerald-700 border-emerald-200/50' : 
+                  t.type === 'pending' ? 'bg-amber-50 text-amber-700 border-amber-200/50' :
+                  'bg-rose-50 text-rose-700 border-rose-200/50'
+                }`}>
+                  {t.type}
+                </span>
+              </div>
+              
+              <div className="flex justify-between items-end">
+                <div className="space-y-1">
+                  {t.rickshaw_number && (
+                    <div className="flex items-center gap-1.5 text-xs text-zinc-500">
+                      <Car className="w-3 h-3" />
+                      {t.rickshaw_number}
+                    </div>
+                  )}
+                  {t.driver_name && (
+                    <div className="flex items-center gap-1.5 text-xs text-zinc-500">
+                      <Users className="w-3 h-3" />
+                      {t.driver_name}
+                    </div>
+                  )}
+                </div>
+                <div className={`text-base font-bold font-number ${
+                  t.type === 'income' ? 'text-emerald-600' : 
+                  t.type === 'pending' ? 'text-amber-600' :
+                  'text-rose-600'
+                }`}>
+                  {t.type === 'income' ? '+' : t.type === 'pending' ? '' : '-'}{currency}{t.amount.toLocaleString()}
+                </div>
+              </div>
+              
+              {t.notes && (
+                <p className="text-xs text-zinc-500 bg-zinc-50 p-2 rounded-lg italic">
+                  "{t.notes}"
+                </p>
+              )}
+              
+              <div className="flex justify-end gap-3 pt-1">
+                <button 
+                  onClick={() => handleEditTransaction(t)} 
+                  className="text-zinc-400 hover:text-emerald-500 flex items-center gap-1 text-[11px] font-medium"
+                >
+                  <Edit className="w-3.5 h-3.5" /> Edit
+                </button>
+                <button 
+                  onClick={() => handleDeleteTransaction(t.id)} 
+                  className="text-zinc-400 hover:text-rose-500 flex items-center gap-1 text-[11px] font-medium"
+                >
+                  <Trash2 className="w-3.5 h-3.5" /> Delete
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Desktop View: Table */}
+        <div className="hidden md:block overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="bg-zinc-50/50 border-b border-zinc-200/60 text-[11px] font-semibold text-zinc-500 uppercase tracking-wider">
@@ -314,16 +404,14 @@ export default function Dashboard({ selectedDriverId }: { selectedDriverId?: str
                   </td>
                 </tr>
               ))}
-              {transactions.length === 0 && (
-                <tr>
-                  <td colSpan={8} className="p-12 text-center text-zinc-500">
-                    No recent transactions
-                  </td>
-                </tr>
-              )}
             </tbody>
           </table>
         </div>
+        {transactions.length === 0 && (
+          <div className="p-12 text-center text-zinc-500">
+            No recent transactions
+          </div>
+        )}
       </div>
 
       <LogRentModal 
