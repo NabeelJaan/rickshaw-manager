@@ -19,14 +19,12 @@ export default defineConfig(({mode}) => {
       rollupOptions: {
         output: {
           manualChunks: {
-            vendor: ['react', 'react-dom'],
-            router: ['react-router-dom'],
             ui: ['lucide-react'],
             charts: ['recharts']
           }
         }
       },
-      chunkSizeWarningLimit: 800
+      chunkSizeWarningLimit: 1000
     },
     server: {
       // HMR is disabled in AI Studio via DISABLE_HMR env var.
