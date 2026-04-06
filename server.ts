@@ -2,13 +2,12 @@ import express from "express";
 import { createServer as createViteServer } from "vite";
 import db from "./server/database";
 
-async function startServer() {
-  const app = express();
-  const PORT = 3000;
+const app = express();
+const PORT = 3000;
 
-  app.use(express.json());
+app.use(express.json());
 
-  // --- API Routes ---
+// --- API Routes ---
 
   // Rickshaws
   app.get("/api/rickshaws", (req, res) => {
@@ -427,8 +426,8 @@ async function startServer() {
         params.push(driver_id);
       }
 
-      const totalIncome = db.prepare(`SELECT SUM(amount) as total FROM transactions WHERE type = 'income' AND category != 'rent_pending'${driverFilter}`).get(...params) as { total: number };
-      const totalExpense = db.prepare(`SELECT SUM(amount) as total FROM transactions WHERE type = 'expense' AND category != 'rent_pending'${driverFilter}`).get(...params) as { total: number };
+      const totalIncome = db.prepare(`SELECT SUM(amount) as total FROM transactions WHERE type = 'income' AND category != 'rent_pending'${driverFilter}`).get(...params) as any;
+      const totalExpense = db.prepare(`SELECT SUM(amount) as total FROM transactions WHERE type = 'expense' AND category != 'rent_pending'${driverFilter}`).get(...params) as any;
       
       let totalInvestment = { total: 0 };
       if (driver_id) {
@@ -437,9 +436,9 @@ async function startServer() {
           FROM rickshaws r
           JOIN rickshaw_assignments a ON r.id = a.rickshaw_id
           WHERE a.driver_id = ? AND a.end_date IS NULL
-        `).get(driver_id) as { total: number };
+        `).get(driver_id) as any;
       } else {
-        totalInvestment = db.prepare("SELECT SUM(investment_cost) as total FROM rickshaws").get() as { total: number };
+        totalInvestment = db.prepare("SELECT SUM(investment_cost) as total FROM rickshaws").get() as any;
       }
       
       const monthlyData = db.prepare(`
@@ -465,9 +464,9 @@ async function startServer() {
 
       let pendingBalance = { total: 0 };
       if (driver_id) {
-        pendingBalance = db.prepare("SELECT pending_balance as total FROM drivers WHERE id = ?").get(driver_id) as { total: number };
+        pendingBalance = db.prepare("SELECT pending_balance as total FROM drivers WHERE id = ?").get(driver_id) as any;
       } else {
-        pendingBalance = db.prepare("SELECT SUM(pending_balance) as total FROM drivers").get() as { total: number };
+        pendingBalance = db.prepare("SELECT SUM(pending_balance) as total FROM drivers").get() as any;
       }
 
       let activeRickshaws = { count: 0 };
@@ -478,30 +477,30 @@ async function startServer() {
           FROM rickshaws r
           JOIN rickshaw_assignments a ON r.id = a.rickshaw_id
           WHERE a.driver_id = ? AND a.end_date IS NULL
-        `).get(driver_id) as { count: number };
+        `).get(driver_id) as any;
         totalRickshaws = db.prepare(`
           SELECT COUNT(DISTINCT r.id) as count
           FROM rickshaws r
           JOIN rickshaw_assignments a ON r.id = a.rickshaw_id
           WHERE a.driver_id = ?
-        `).get(driver_id) as { count: number };
+        `).get(driver_id) as any;
       } else {
         activeRickshaws = db.prepare(`
           SELECT COUNT(DISTINCT rickshaw_id) as count 
           FROM rickshaw_assignments 
           WHERE end_date IS NULL
-        `).get() as { count: number };
+        `).get() as any;
         totalRickshaws = db.prepare(`
           SELECT COUNT(id) as count 
           FROM rickshaws
-        `).get() as { count: number };
+        `).get() as any;
       }
 
       res.json({
-        totalIncome: totalIncome.total || 0,
-        totalExpense: totalExpense.total || 0,
-        totalInvestment: totalInvestment.total || 0,
-        profit: (totalIncome.total || 0) - (totalExpense.total || 0),
+        totalIncome: totalIncome?.total || 0,
+        totalExpense: totalExpense?.total || 0,
+        totalInvestment: totalInvestment?.total || 0,
+        profit: (totalIncome?.total || 0) - (totalExpense?.total || 0),
         pendingBalance: pendingBalance?.total || 0,
         activeRickshaws: activeRickshaws?.count || 0,
         totalRickshaws: totalRickshaws?.count || 0,
@@ -524,9 +523,10 @@ async function startServer() {
     app.use(express.static("dist"));
   }
 
-  app.listen(PORT, "0.0.0.0", () => {
-    console.log(`Server running on http://localhost:${PORT}`);
-  });
-}
+  if (require.main === module) {
+    app.listen(PORT, "0.0.0.0", () => {
+      console.log(`Server running on http://localhost:${PORT}`);
+    });
+  }
 
-startServer();
+export default app;

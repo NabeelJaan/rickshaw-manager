@@ -2,7 +2,9 @@ import Database from 'better-sqlite3';
 import path from 'path';
 import fs from 'fs';
 
-const dbPath = path.resolve(process.cwd(), 'rickshaw_manager.db');
+const dbPath = process.env.VERCEL 
+  ? path.join('/tmp', 'rickshaw_manager.db')
+  : path.resolve(process.cwd(), 'rickshaw_manager.db');
 const db = new Database(dbPath);
 
 // Initialize database schema
