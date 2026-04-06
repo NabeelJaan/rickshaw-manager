@@ -1,13 +1,10 @@
 import { useState, useEffect } from 'react';
-import { LayoutDashboard, Users, Car, Receipt, Settings, Menu, X, ChevronDown, Upload } from 'lucide-react';
+import { LayoutDashboard, Users, Car, Receipt, Settings, Menu, X, ChevronDown } from 'lucide-react';
 import Dashboard from './components/Dashboard';
 import Rickshaws from './components/Rickshaws';
 import Drivers from './components/Drivers';
 import Transactions from './components/Transactions';
 import SettingsPage from './components/Settings';
-import GoogleSheetsImport from './components/GoogleSheetsImport';
-import SimpleImport from './components/SimpleImport';
-import TestButton from './components/TestButton';
 import { Driver } from './types';
 
 export default function App() {
@@ -30,7 +27,6 @@ export default function App() {
     { id: 'rickshaws', label: 'Rickshaws', icon: Car },
     { id: 'drivers', label: 'Drivers', icon: Users },
     { id: 'transactions', label: 'Transactions', icon: Receipt },
-    { id: 'import', label: 'Import', icon: Upload },
     { id: 'settings', label: 'Settings', icon: Settings },
   ];
 
@@ -40,7 +36,6 @@ export default function App() {
       case 'rickshaws': return <Rickshaws selectedDriverId={selectedDriverId} />;
       case 'drivers': return <Drivers onDriverAdded={fetchDrivers} defaultShowForm={showAddDriverForm} />;
       case 'transactions': return <Transactions selectedDriverId={selectedDriverId} />;
-      case 'import': return <SimpleImport />;
       case 'settings': return <SettingsPage />;
       default: return <Dashboard selectedDriverId={selectedDriverId} />;
     }
