@@ -1,108 +1,91 @@
-import Database from 'better-sqlite3';
-import path from 'path';
-import fs from 'fs';
+import { sql } from '@vercel/postgres';
 
-const dbPath = process.env.VERCEL 
-  ? path.join('/tmp', 'rickshaw_manager.db')
-  : path.resolve(process.cwd(), 'rickshaw_manager.db');
-const db = new Database(dbPath);
+export async function initializeDatabase() {
+  await sql`
+    CREATE TABLE IF NOT EXISTS rickshaws (
+      id SERIAL PRIMARY KEY,
+      number TEXT UNIQUE NOT NULL,
+      purchase_date TEXT NOT NULL,
+      investment_cost REAL NOT NULL,
+      status TEXT DEFAULT 'active'
+    )
+  `;
 
-// Initialize database schema
-db.exec(`
-  CREATE TABLE IF NOT EXISTS rickshaws (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    number TEXT UNIQUE NOT NULL,
-    purchase_date TEXT NOT NULL,
-    investment_cost REAL NOT NULL,
-    status TEXT DEFAULT 'active'
-  );
+  await sql`
+    CREATE TABLE IF NOT EXISTS drivers (
+      id SERIAL PRIMARY KEY,
+      name TEXT NOT NULL,
+      phone TEXT,
+      join_date TEXT NOT NULL,
+      status TEXT DEFAULT 'active',
+      pending_balance REAL DEFAULT 0
+    )
+  `;
 
-  CREATE TABLE IF NOT EXISTS drivers (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    name TEXT NOT NULL,
-    phone TEXT,
-    join_date TEXT NOT NULL,
-    status TEXT DEFAULT 'active',
-    pending_balance REAL DEFAULT 0
-  );
+  await sql`
+    CREATE TABLE IF NOT EXISTS rickshaw_assignments (
+      id SERIAL PRIMARY KEY,
+      rickshaw_id INTEGER NOT NULL REFERENCES rickshaws(id),
+      driver_id INTEGER NOT NULL REFERENCES drivers(id),
+      start_date TEXT NOT NULL,
+      end_date TEXT
+    )
+  `;
 
-  CREATE TABLE IF NOT EXISTS rickshaw_assignments (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    rickshaw_id INTEGER NOT NULL,
-    driver_id INTEGER NOT NULL,
-    start_date TEXT NOT NULL,
-    end_date TEXT,
-    FOREIGN KEY (rickshaw_id) REFERENCES rickshaws (id),
-    FOREIGN KEY (driver_id) REFERENCES drivers (id)
-  );
+  await sql`
+    CREATE TABLE IF NOT EXISTS transactions (
+      id SERIAL PRIMARY KEY,
+      date TEXT NOT NULL,
+      type TEXT NOT NULL,
+      category TEXT NOT NULL,
+      amount REAL NOT NULL,
+      rickshaw_id INTEGER REFERENCES rickshaws(id),
+      driver_id INTEGER REFERENCES drivers(id),
+      notes TEXT
+    )
+  `;
 
-  CREATE TABLE IF NOT EXISTS transactions (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    date TEXT NOT NULL,
-    type TEXT NOT NULL, -- 'income' or 'expense'
-    category TEXT NOT NULL, -- 'rent', 'tips', 'fuel', 'maintenance', etc.
-    amount REAL NOT NULL,
-    rickshaw_id INTEGER,
-    driver_id INTEGER,
-    notes TEXT,
-    FOREIGN KEY (rickshaw_id) REFERENCES rickshaws (id),
-    FOREIGN KEY (driver_id) REFERENCES drivers (id)
-  );
+  await sql`
+    CREATE TABLE IF NOT EXISTS settings (
+      id INTEGER PRIMARY KEY DEFAULT 1,
+      currency TEXT DEFAULT 'PKR',
+      currency_symbol TEXT DEFAULT 'Rs.',
+      date_format TEXT DEFAULT 'DD-MM-YYYY',
+      auto_backup INTEGER DEFAULT 0,
+      report_format TEXT DEFAULT 'pdf'
+    )
+  `;
 
-  CREATE TABLE IF NOT EXISTS users (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    username TEXT UNIQUE NOT NULL,
-    password_hash TEXT NOT NULL
-  );
+  await sql`
+    CREATE TABLE IF NOT EXISTS categories (
+      id SERIAL PRIMARY KEY,
+      name TEXT NOT NULL,
+      type TEXT NOT NULL CHECK (type IN ('income', 'expense')),
+      is_default INTEGER DEFAULT 0,
+      created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+      UNIQUE(name, type)
+    )
+  `;
 
-  CREATE TABLE IF NOT EXISTS settings (
-    id INTEGER PRIMARY KEY,
-    currency TEXT DEFAULT 'PKR',
-    currency_symbol TEXT DEFAULT 'Rs.',
-    date_format TEXT DEFAULT 'DD-MM-YYYY',
-    auto_backup INTEGER DEFAULT 0,
-    report_format TEXT DEFAULT 'pdf'
-  );
+  const defaults: [string, string][] = [
+    ['rent', 'income'],
+    ['rent_recovery', 'income'],
+    ['tips', 'income'],
+    ['other', 'income'],
+    ['fuel', 'expense'],
+    ['maintenance', 'expense'],
+    ['salary', 'expense'],
+    ['rent_pending', 'expense'],
+    ['other', 'expense'],
+  ];
 
-  CREATE TABLE IF NOT EXISTS categories (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    name TEXT NOT NULL,
-    type TEXT NOT NULL CHECK (type IN ('income', 'expense')),
-    is_default INTEGER DEFAULT 0,
-    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE(name, type)
-  );
-`);
-
-try {
-  db.exec(`ALTER TABLE drivers ADD COLUMN pending_balance REAL DEFAULT 0;`);
-} catch (e) {
-  // Column might already exist
+  for (const [name, type] of defaults) {
+    await sql`
+      INSERT INTO categories (name, type, is_default)
+      VALUES (${name}, ${type}, 1)
+      ON CONFLICT (name, type) DO NOTHING
+    `;
+  }
 }
 
-// Add unique constraint to categories table (if it doesn't exist)
-try {
-  db.exec(`CREATE UNIQUE INDEX IF NOT EXISTS idx_categories_name_type ON categories (name, type);`);
-} catch (e) {
-  // Index might already exist
-}
-
-// Insert default categories if they don't exist
-const defaultCategories = [
-  { name: 'rent', type: 'income' },
-  { name: 'rent_recovery', type: 'income' },
-  { name: 'tips', type: 'income' },
-  { name: 'other', type: 'income' },
-  { name: 'fuel', type: 'expense' },
-  { name: 'maintenance', type: 'expense' },
-  { name: 'salary', type: 'expense' },
-  { name: 'rent_pending', type: 'expense' },
-  { name: 'other', type: 'expense' }
-];
-
-const insertCategory = db.prepare("INSERT OR IGNORE INTO categories (name, type, is_default) VALUES (?, ?, 1)");
-defaultCategories.forEach(cat => {
-  insertCategory.run(cat.name, cat.type);
-});
-
-export default db;
+export { sql };
