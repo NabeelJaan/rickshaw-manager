@@ -1,9 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { Lock, User, AlertCircle, ArrowLeft, KeyRound, Eye, EyeOff } from 'lucide-react';
+import { Lock, User, AlertCircle, ArrowLeft, KeyRound, Eye, EyeOff, UserPlus } from 'lucide-react';
 
 export default function LoginPage() {
-  const [view, setView] = useState<'login' | 'forgot' | 'reset'>('login');
+  const [view, setView] = useState<'login' | 'forgot' | 'reset' | 'register'>('login');
+  const [canRegister, setCanRegister] = useState(false);
+  const [checkingRegistration, setCheckingRegistration] = useState(true);
   
   // Login state
   const [username, setUsername] = useState('');
@@ -25,6 +27,31 @@ export default function LoginPage() {
   const [success, setSuccess] = useState('');
   const [loading, setLoading] = useState(false);
   const { login } = useAuth();
+
+  // Registration state
+  const [regUsername, setRegUsername] = useState('');
+  const [regPassword, setRegPassword] = useState('');
+  const [regConfirmPassword, setRegConfirmPassword] = useState('');
+  const [showRegPassword, setShowRegPassword] = useState(false);
+
+  // Check if registration is available
+  useEffect(() => {
+    const checkRegistration = async () => {
+      try {
+        const res = await fetch('/api/auth/can-register');
+        const data = await res.json();
+        setCanRegister(data.canRegister);
+        if (data.canRegister) {
+          setView('register');
+        }
+      } catch (err) {
+        console.error('Failed to check registration status');
+      } finally {
+        setCheckingRegistration(false);
+      }
+    };
+    checkRegistration();
+  }, []);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -121,6 +148,45 @@ export default function LoginPage() {
         }, 3000);
       } else {
         setError(data.error || 'Failed to reset password');
+      }
+    } catch (err) {
+      setError('An error occurred. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleRegistration = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setError('');
+    setSuccess('');
+
+    if (regPassword !== regConfirmPassword) {
+      setError('Passwords do not match');
+      setLoading(false);
+      return;
+    }
+
+    if (regPassword.length < 6) {
+      setError('Password must be at least 6 characters');
+      setLoading(false);
+      return;
+    }
+
+    try {
+      const res = await fetch('/api/auth/register-first', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username: regUsername, password: regPassword }),
+      });
+
+      const data = await res.json();
+
+      if (res.ok) {
+        login(data.token, data.user);
+      } else {
+        setError(data.error || 'Registration failed');
       }
     } catch (err) {
       setError('An error occurred. Please try again.');
@@ -361,29 +427,118 @@ export default function LoginPage() {
     </form>
   );
 
+  const renderRegistrationForm = () => (
+    <form onSubmit={handleRegistration} className="space-y-6">
+      {error && (
+        <div className="bg-rose-500/10 border border-rose-500/20 text-rose-500 p-4 rounded-xl text-sm flex items-center gap-3">
+          <AlertCircle className="w-5 h-5 shrink-0" />
+          {error}
+        </div>
+      )}
+
+      <div className="bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 p-4 rounded-xl text-sm mb-4">
+        <p className="font-medium">🎉 First Time Setup</p>
+        <p className="text-emerald-300 text-xs mt-1">Create your super admin account to get started.</p>
+      </div>
+
+      <div className="space-y-2">
+        <label className="text-xs font-semibold text-zinc-400 uppercase tracking-wider ml-1">Username</label>
+        <div className="relative">
+          <UserPlus className="absolute left-4 top-3.5 w-5 h-5 text-zinc-500" />
+          <input
+            type="text"
+            required
+            value={regUsername}
+            onChange={(e) => setRegUsername(e.target.value)}
+            className="w-full bg-zinc-800 border border-zinc-700 text-white pl-12 pr-4 py-3.5 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all"
+            placeholder="Choose a username"
+          />
+        </div>
+      </div>
+
+      <div className="space-y-2">
+        <label className="text-xs font-semibold text-zinc-400 uppercase tracking-wider ml-1">Password</label>
+        <div className="relative">
+          <Lock className="absolute left-4 top-3.5 w-5 h-5 text-zinc-500" />
+          <input
+            type={showRegPassword ? 'text' : 'password'}
+            required
+            value={regPassword}
+            onChange={(e) => setRegPassword(e.target.value)}
+            className="w-full bg-zinc-800 border border-zinc-700 text-white pl-12 pr-12 py-3.5 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all"
+            placeholder="Create password (min 6 chars)"
+            minLength={6}
+          />
+          <button
+            type="button"
+            onClick={() => setShowRegPassword(!showRegPassword)}
+            className="absolute right-4 top-3.5 text-zinc-500 hover:text-zinc-400"
+          >
+            {showRegPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+          </button>
+        </div>
+      </div>
+
+      <div className="space-y-2">
+        <label className="text-xs font-semibold text-zinc-400 uppercase tracking-wider ml-1">Confirm Password</label>
+        <div className="relative">
+          <Lock className="absolute left-4 top-3.5 w-5 h-5 text-zinc-500" />
+          <input
+            type="password"
+            required
+            value={regConfirmPassword}
+            onChange={(e) => setRegConfirmPassword(e.target.value)}
+            className="w-full bg-zinc-800 border border-zinc-700 text-white pl-12 pr-4 py-3.5 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all"
+            placeholder="Confirm password"
+          />
+        </div>
+      </div>
+
+      <button
+        type="submit"
+        disabled={loading}
+        className="w-full bg-emerald-500 hover:bg-emerald-600 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold py-4 rounded-xl transition-all shadow-lg shadow-emerald-500/20"
+      >
+        {loading ? 'Creating Account...' : 'Create Super Admin Account'}
+      </button>
+    </form>
+  );
+
   return (
     <div className="min-h-screen bg-zinc-950 flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         <div className="bg-zinc-900 border border-zinc-800 rounded-3xl p-8 shadow-2xl">
-          <div className="text-center mb-8">
-            <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-emerald-500/10 mb-4">
-              <Lock className="w-8 h-8 text-emerald-500" />
+          {checkingRegistration ? (
+            <div className="text-center py-8">
+              <div className="w-8 h-8 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+              <p className="text-zinc-500 text-sm">Checking system status...</p>
             </div>
-            <h1 className="text-2xl font-bold text-white tracking-tight">
-              {view === 'login' && 'Welcome Back'}
-              {view === 'forgot' && 'Forgot Password'}
-              {view === 'reset' && 'Reset Password'}
-            </h1>
-            <p className="text-zinc-500 text-sm mt-2">
-              {view === 'login' && 'Rickshaw Manager Super Admin'}
-              {view === 'forgot' && 'Generate a reset token to recover your account'}
-              {view === 'reset' && 'Enter your token and new password'}
-            </p>
-          </div>
+          ) : (
+            <>
+              <div className="text-center mb-8">
+                <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-emerald-500/10 mb-4">
+                  {view === 'register' ? <UserPlus className="w-8 h-8 text-emerald-500" /> : <Lock className="w-8 h-8 text-emerald-500" />}
+                </div>
+                <h1 className="text-2xl font-bold text-white tracking-tight">
+                  {view === 'login' && 'Welcome Back'}
+                  {view === 'register' && 'First Time Setup'}
+                  {view === 'forgot' && 'Forgot Password'}
+                  {view === 'reset' && 'Reset Password'}
+                </h1>
+                <p className="text-zinc-500 text-sm mt-2">
+                  {view === 'login' && 'Rickshaw Manager Admin'}
+                  {view === 'register' && 'Create your super admin account'}
+                  {view === 'forgot' && 'Generate a reset token to recover your account'}
+                  {view === 'reset' && 'Enter your token and new password'}
+                </p>
+              </div>
 
-          {view === 'login' && renderLoginForm()}
-          {view === 'forgot' && renderForgotForm()}
-          {view === 'reset' && renderResetForm()}
+              {view === 'login' && renderLoginForm()}
+              {view === 'register' && renderRegistrationForm()}
+              {view === 'forgot' && renderForgotForm()}
+              {view === 'reset' && renderResetForm()}
+            </>
+          )}
         </div>
         <p className="text-center text-zinc-600 text-xs mt-8">
           &copy; 2026 Rickshaw Manager. Secure Administration.

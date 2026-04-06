@@ -248,6 +248,68 @@ app.post('/api/auth/reset-password', async (req, res) => {
   }
 });
 
+// Public registration - first user becomes super admin
+app.post('/api/auth/register-first', async (req, res) => {
+  try {
+    await ensureDb();
+    const { username, password } = req.body;
+    
+    if (!username || !password) {
+      return res.status(400).json({ error: 'Username and password are required' });
+    }
+    
+    if (password.length < 6) {
+      return res.status(400).json({ error: 'Password must be at least 6 characters' });
+    }
+    
+    // Check if any user exists
+    const existingUsers = await sql`SELECT * FROM users LIMIT 1`;
+    if (existingUsers.rowCount > 0) {
+      return res.status(400).json({ error: 'Registration closed. Please contact administrator.' });
+    }
+    
+    // Check if username already exists
+    const existingUser = await sql`SELECT * FROM users WHERE username = ${username}`;
+    if (existingUser.rowCount > 0) {
+      return res.status(400).json({ error: 'Username already exists' });
+    }
+    
+    const hashedPassword = await bcrypt.hash(password, 10);
+    const result = await sql`
+      INSERT INTO users (username, password, role) 
+      VALUES (${username}, ${hashedPassword}, 'super_admin') 
+      RETURNING id, username, role
+    `;
+    
+    // Auto-login after registration
+    const token = jwt.sign(
+      { id: result.rows[0].id, username: result.rows[0].username, role: result.rows[0].role },
+      JWT_SECRET,
+      { expiresIn: '24h' }
+    );
+    
+    res.json({ 
+      success: true, 
+      user: result.rows[0],
+      token,
+      message: 'Super admin account created successfully!'
+    });
+  } catch (e: any) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// Check if registration is available (no users exist yet)
+app.get('/api/auth/can-register', async (req, res) => {
+  try {
+    await ensureDb();
+    const users = await sql`SELECT * FROM users LIMIT 1`;
+    res.json({ canRegister: users.rowCount === 0 });
+  } catch (e: any) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 app.post('/api/auth/seed', async (req, res) => {
   try {
     await ensureDb();
