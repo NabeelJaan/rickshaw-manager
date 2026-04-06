@@ -81,6 +81,173 @@ async function ensureDb() {
 
 // ─── Auth ─────────────────────────────────────────────────────────────────────
 
+// Helper: Generate random reset token
+function generateResetToken() {
+  return Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+}
+
+// Register new user (super admin only)
+app.post('/api/auth/register', authenticate, async (req, res) => {
+  try {
+    await ensureDb();
+    const { username, password, role = 'admin' } = req.body;
+    
+    // Only super_admin can create new users
+    if (req.user.role !== 'super_admin') {
+      return res.status(403).json({ error: 'Only super admin can create new users' });
+    }
+    
+    // Validate role
+    if (!['admin', 'super_admin'].includes(role)) {
+      return res.status(400).json({ error: 'Invalid role. Must be admin or super_admin' });
+    }
+    
+    const hashedPassword = await bcrypt.hash(password, 10);
+    const result = await sql`
+      INSERT INTO users (username, password, role) 
+      VALUES (${username}, ${hashedPassword}, ${role}) 
+      RETURNING id, username, role
+    `;
+    
+    res.json({ success: true, user: result.rows[0] });
+  } catch (e: any) {
+    if (e.message.includes('unique constraint')) {
+      return res.status(400).json({ error: 'Username already exists' });
+    }
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// Get all users (super admin only)
+app.get('/api/auth/users', authenticate, async (req, res) => {
+  try {
+    await ensureDb();
+    
+    if (req.user.role !== 'super_admin') {
+      return res.status(403).json({ error: 'Only super admin can view users' });
+    }
+    
+    const result = await sql`SELECT id, username, role, created_at FROM users ORDER BY id`;
+    res.json(result.rows);
+  } catch (e: any) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// Delete user (super admin only, cannot delete self)
+app.delete('/api/auth/users/:id', authenticate, async (req, res) => {
+  try {
+    await ensureDb();
+    const { id } = req.params;
+    
+    if (req.user.role !== 'super_admin') {
+      return res.status(403).json({ error: 'Only super admin can delete users' });
+    }
+    
+    if (parseInt(id) === req.user.id) {
+      return res.status(400).json({ error: 'Cannot delete your own account' });
+    }
+    
+    await sql`DELETE FROM users WHERE id=${id}`;
+    res.json({ success: true });
+  } catch (e: any) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// Change password (authenticated users)
+app.post('/api/auth/change-password', authenticate, async (req, res) => {
+  try {
+    await ensureDb();
+    const { currentPassword, newPassword } = req.body;
+    
+    const result = await sql`SELECT * FROM users WHERE id=${req.user.id}`;
+    const user = result.rows[0];
+    
+    if (!user || !(await bcrypt.compare(currentPassword, user.password))) {
+      return res.status(401).json({ error: 'Current password is incorrect' });
+    }
+    
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    await sql`UPDATE users SET password=${hashedPassword} WHERE id=${req.user.id}`;
+    
+    res.json({ success: true });
+  } catch (e: any) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// Request password reset (generates a reset token)
+app.post('/api/auth/forgot-password', async (req, res) => {
+  try {
+    await ensureDb();
+    const { username } = req.body;
+    
+    const result = await sql`SELECT * FROM users WHERE username=${username}`;
+    const user = result.rows[0];
+    
+    if (!user) {
+      // Don't reveal if user exists
+      return res.json({ message: 'If the user exists, a reset token has been generated' });
+    }
+    
+    // Generate reset token (valid for 1 hour)
+    const resetToken = generateResetToken();
+    const expiresAt = new Date(Date.now() + 60 * 60 * 1000).toISOString(); // 1 hour
+    
+    // Store token (create password_resets table if not exists)
+    await sql`CREATE TABLE IF NOT EXISTS password_resets (
+      id SERIAL PRIMARY KEY,
+      user_id INTEGER NOT NULL REFERENCES users(id),
+      token TEXT NOT NULL,
+      expires_at TEXT NOT NULL,
+      used INTEGER DEFAULT 0
+    )`;
+    
+    await sql`INSERT INTO password_resets (user_id, token, expires_at) VALUES (${user.id}, ${resetToken}, ${expiresAt})`;
+    
+    // Return token directly (since no email in serverless)
+    res.json({ 
+      success: true, 
+      message: 'Password reset token generated',
+      resetToken,
+      expiresAt,
+      note: 'Use this token with /api/auth/reset-password to set a new password'
+    });
+  } catch (e: any) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// Reset password with token
+app.post('/api/auth/reset-password', async (req, res) => {
+  try {
+    await ensureDb();
+    const { token, newPassword } = req.body;
+    
+    const result = await sql`
+      SELECT pr.*, u.username 
+      FROM password_resets pr 
+      JOIN users u ON pr.user_id = u.id 
+      WHERE pr.token=${token} AND pr.used=0 AND pr.expires_at > ${new Date().toISOString()}
+      LIMIT 1
+    `;
+    
+    const reset = result.rows[0];
+    if (!reset) {
+      return res.status(400).json({ error: 'Invalid or expired reset token' });
+    }
+    
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    await sql`UPDATE users SET password=${hashedPassword} WHERE id=${reset.user_id}`;
+    await sql`UPDATE password_resets SET used=1 WHERE id=${reset.id}`;
+    
+    res.json({ success: true, message: 'Password has been reset successfully' });
+  } catch (e: any) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 app.post('/api/auth/seed', async (req, res) => {
   try {
     await ensureDb();

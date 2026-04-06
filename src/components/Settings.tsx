@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Settings as SettingsIcon, Plus, Trash2, Edit, Save, Download, FileText, AlertTriangle, RefreshCw } from 'lucide-react';
+import { Settings as SettingsIcon, Plus, Trash2, Edit, Save, Download, FileText, AlertTriangle, RefreshCw, Users } from 'lucide-react';
+import UserManagement from './UserManagement';
+import { useAuth } from '../contexts/AuthContext';
 
 interface Category {
   id: string;
@@ -24,7 +26,9 @@ const defaultSettings: AppSettings = {
 };
 
 export default function Settings() {
-  const [activeTab, setActiveTab] = useState<'categories' | 'general' | 'reports' | 'data'>('general');
+  const [activeTab, setActiveTab] = useState<'categories' | 'general' | 'reports' | 'data' | 'users'>('general');
+  const [showUserManagement, setShowUserManagement] = useState(false);
+  const { user: currentUser } = useAuth();
   const [categories, setCategories] = useState<Category[]>([]);
   const [newCategory, setNewCategory] = useState({ name: '', type: 'income' as 'income' | 'expense' });
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
@@ -491,9 +495,19 @@ export default function Settings() {
         >
           Data Management
         </button>
+        {currentUser?.role === 'super_admin' && (
+          <button
+            onClick={() => setActiveTab('users')}
+            className={`px-6 py-3 text-sm font-medium border-b-2 transition-colors ${
+              activeTab === 'users'
+                ? 'border-emerald-500 text-emerald-600'
+                : 'border-transparent text-zinc-500 hover:text-zinc-700'
+            }`}
+          >
+            Users
+          </button>
+        )}
       </div>
-
-      {/* Categories Tab */}
       {activeTab === 'categories' && (
         <div className="space-y-6">
           <div className="bg-white p-6 rounded-2xl shadow-sm border border-zinc-200/60">
@@ -774,6 +788,37 @@ export default function Settings() {
         </div>
       )}
 
+      {/* Users Tab */}
+      {activeTab === 'users' && currentUser?.role === 'super_admin' && (
+        <div className="space-y-6">
+          <div className="bg-white p-6 rounded-2xl shadow-sm border border-zinc-200/60">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="w-12 h-12 rounded-xl bg-emerald-500/10 flex items-center justify-center">
+                <Users className="w-6 h-6 text-emerald-500" />
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold text-zinc-900">User Management</h3>
+                <p className="text-sm text-zinc-500">Create and manage admin users</p>
+              </div>
+            </div>
+
+            <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-6">
+              <p className="text-sm text-amber-700">
+                <strong>Note:</strong> Only Super Admins can create new users. Regular admins can access the system but cannot manage other users.
+              </p>
+            </div>
+
+            <button
+              onClick={() => setShowUserManagement(true)}
+              className="w-full sm:w-auto px-6 py-3 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl transition-colors flex items-center justify-center gap-2 font-medium"
+            >
+              <Users className="w-5 h-5" />
+              Open User Management
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Data Management Tab */}
       {activeTab === 'data' && (
         <div className="space-y-6">
@@ -886,6 +931,10 @@ export default function Settings() {
             )}
           </div>
         </div>
+      )}
+
+      {showUserManagement && (
+        <UserManagement onClose={() => setShowUserManagement(false)} />
       )}
     </div>
   );
