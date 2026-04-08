@@ -8,19 +8,35 @@ app.use(express.json());
 
 const JWT_SECRET = process.env.JWT_SECRET || 'super-secret-key-change-me';
 
+// ─── Auth Middleware ──────────────────────────────────────────────────────────
+// MUST be defined before any route that uses it
+
+const authenticate = (req: any, res: any, next: any) => {
+  const token = req.headers.authorization?.split(' ')[1];
+  if (!token) return res.status(401).json({ error: 'Unauthorized' });
+  try {
+    const decoded = jwt.verify(token, JWT_SECRET);
+    req.user = decoded;
+    next();
+  } catch (e) {
+    res.status(401).json({ error: 'Invalid token' });
+  }
+};
+
 // ─── DB Init ──────────────────────────────────────────────────────────────────
 
 let dbReady = false;
 async function ensureDb() {
   if (dbReady) return;
-  
+
   await sql`CREATE TABLE IF NOT EXISTS users (
     id SERIAL PRIMARY KEY,
     username TEXT UNIQUE NOT NULL,
     password TEXT NOT NULL,
-    role TEXT DEFAULT 'admin'
+    role TEXT DEFAULT 'admin',
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP
   )`;
-  
+
   await sql`CREATE TABLE IF NOT EXISTS rickshaws (
     id SERIAL PRIMARY KEY,
     number TEXT UNIQUE NOT NULL,
@@ -28,6 +44,7 @@ async function ensureDb() {
     investment_cost REAL NOT NULL,
     status TEXT DEFAULT 'active'
   )`;
+
   await sql`CREATE TABLE IF NOT EXISTS drivers (
     id SERIAL PRIMARY KEY,
     name TEXT NOT NULL,
@@ -36,6 +53,7 @@ async function ensureDb() {
     status TEXT DEFAULT 'active',
     pending_balance REAL DEFAULT 0
   )`;
+
   await sql`CREATE TABLE IF NOT EXISTS rickshaw_assignments (
     id SERIAL PRIMARY KEY,
     rickshaw_id INTEGER NOT NULL REFERENCES rickshaws(id),
@@ -43,6 +61,7 @@ async function ensureDb() {
     start_date TEXT NOT NULL,
     end_date TEXT
   )`;
+
   await sql`CREATE TABLE IF NOT EXISTS transactions (
     id SERIAL PRIMARY KEY,
     date TEXT NOT NULL,
@@ -53,6 +72,7 @@ async function ensureDb() {
     driver_id INTEGER REFERENCES drivers(id),
     notes TEXT
   )`;
+
   await sql`CREATE TABLE IF NOT EXISTS settings (
     id INTEGER PRIMARY KEY DEFAULT 1,
     currency TEXT DEFAULT 'PKR',
@@ -61,6 +81,7 @@ async function ensureDb() {
     auto_backup INTEGER DEFAULT 0,
     report_format TEXT DEFAULT 'pdf'
   )`;
+
   await sql`CREATE TABLE IF NOT EXISTS categories (
     id SERIAL PRIMARY KEY,
     name TEXT NOT NULL,
@@ -69,51 +90,196 @@ async function ensureDb() {
     created_at TEXT DEFAULT CURRENT_TIMESTAMP,
     UNIQUE(name, type)
   )`;
+
+  await sql`CREATE TABLE IF NOT EXISTS password_resets (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER NOT NULL REFERENCES users(id),
+    token TEXT NOT NULL,
+    expires_at TEXT NOT NULL,
+    used INTEGER DEFAULT 0
+  )`;
+
   const defaults: [string, string][] = [
-    ['rent','income'],['rent_recovery','income'],['tips','income'],['other','income'],
-    ['fuel','expense'],['maintenance','expense'],['salary','expense'],['rent_pending','expense'],['other','expense'],
+    ['rent', 'income'], ['rent_recovery', 'income'], ['tips', 'income'], ['other', 'income'],
+    ['fuel', 'expense'], ['maintenance', 'expense'], ['salary', 'expense'], ['rent_pending', 'expense'], ['other', 'expense'],
   ];
   for (const [n, t] of defaults) {
     await sql`INSERT INTO categories (name,type,is_default) VALUES (${n},${t},1) ON CONFLICT (name,type) DO NOTHING`;
   }
+
   dbReady = true;
 }
 
-// ─── Auth ─────────────────────────────────────────────────────────────────────
+// ─── Auth Routes ──────────────────────────────────────────────────────────────
 
-// Helper: Generate random reset token
-function generateResetToken() {
-  return Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
-}
-
-// Register new user (super admin only)
-app.post('/api/auth/register', authenticate, async (req, res) => {
+// Check if first-time setup is needed (no users exist)
+app.get('/api/auth/can-register', async (req, res) => {
   try {
     await ensureDb();
-    const { username, password, role = 'admin' } = req.body;
-    
-    // Only super_admin can create new users
-    if (req.user.role !== 'super_admin') {
-      return res.status(403).json({ error: 'Only super admin can create new users' });
+    const users = await sql`SELECT id FROM users LIMIT 1`;
+    res.json({ canRegister: users.rowCount === 0 });
+  } catch (e: any) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// First-time registration — creates the super admin account
+app.post('/api/auth/register-first', async (req, res) => {
+  try {
+    await ensureDb();
+    const { username, password } = req.body;
+
+    if (!username || !password) {
+      return res.status(400).json({ error: 'Username and password are required' });
     }
-    
-    // Validate role
-    if (!['admin', 'super_admin'].includes(role)) {
-      return res.status(400).json({ error: 'Invalid role. Must be admin or super_admin' });
+    if (password.length < 6) {
+      return res.status(400).json({ error: 'Password must be at least 6 characters' });
     }
-    
+
+    const existing = await sql`SELECT id FROM users LIMIT 1`;
+    if (existing.rowCount > 0) {
+      return res.status(400).json({ error: 'Registration closed. Please contact administrator.' });
+    }
+
     const hashedPassword = await bcrypt.hash(password, 10);
     const result = await sql`
-      INSERT INTO users (username, password, role) 
-      VALUES (${username}, ${hashedPassword}, ${role}) 
+      INSERT INTO users (username, password, role)
+      VALUES (${username}, ${hashedPassword}, 'super_admin')
       RETURNING id, username, role
     `;
-    
-    res.json({ success: true, user: result.rows[0] });
+
+    const newUser = result.rows[0];
+    const token = jwt.sign(
+      { id: newUser.id, username: newUser.username, role: newUser.role },
+      JWT_SECRET,
+      { expiresIn: '24h' }
+    );
+
+    res.json({ success: true, user: newUser, token });
   } catch (e: any) {
-    if (e.message.includes('unique constraint')) {
-      return res.status(400).json({ error: 'Username already exists' });
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// Login
+app.post('/api/auth/login', async (req, res) => {
+  try {
+    await ensureDb();
+    const { username, password } = req.body;
+
+    const result = await sql`SELECT * FROM users WHERE username = ${username}`;
+    const user = result.rows[0];
+
+    if (!user || !(await bcrypt.compare(password, user.password))) {
+      return res.status(401).json({ error: 'Invalid username or password' });
     }
+
+    const token = jwt.sign(
+      { id: user.id, username: user.username, role: user.role },
+      JWT_SECRET,
+      { expiresIn: '24h' }
+    );
+
+    res.json({ token, user: { id: user.id, username: user.username, role: user.role } });
+  } catch (e: any) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// Get current user (used by AuthContext to validate token on page load)
+app.get('/api/auth/me', authenticate, async (req, res) => {
+  try {
+    await ensureDb();
+    const result = await sql`SELECT id, username, role FROM users WHERE id = ${req.user.id}`;
+    const user = result.rows[0];
+    if (!user) return res.status(401).json({ error: 'User not found' });
+    res.json(user);
+  } catch (e: any) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// Forgot password — generates a reset token (shown on screen, no email needed)
+app.post('/api/auth/forgot-password', async (req, res) => {
+  try {
+    await ensureDb();
+    const { username } = req.body;
+
+    const result = await sql`SELECT * FROM users WHERE username = ${username}`;
+    const user = result.rows[0];
+
+    if (!user) {
+      // Don't reveal whether the user exists
+      return res.json({ message: 'If the user exists, a reset token has been generated' });
+    }
+
+    const resetToken =
+      Math.random().toString(36).substring(2, 15) +
+      Math.random().toString(36).substring(2, 15);
+    const expiresAt = new Date(Date.now() + 60 * 60 * 1000).toISOString();
+
+    await sql`INSERT INTO password_resets (user_id, token, expires_at) VALUES (${user.id}, ${resetToken}, ${expiresAt})`;
+
+    res.json({
+      success: true,
+      resetToken,
+      expiresAt,
+      message: 'Copy this token and use it to reset your password. Valid for 1 hour.',
+    });
+  } catch (e: any) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// Reset password using token
+app.post('/api/auth/reset-password', async (req, res) => {
+  try {
+    await ensureDb();
+    const { token, newPassword } = req.body;
+
+    const result = await sql`
+      SELECT pr.*, u.username
+      FROM password_resets pr
+      JOIN users u ON pr.user_id = u.id
+      WHERE pr.token = ${token}
+        AND pr.used = 0
+        AND pr.expires_at > ${new Date().toISOString()}
+      LIMIT 1
+    `;
+
+    const reset = result.rows[0];
+    if (!reset) {
+      return res.status(400).json({ error: 'Invalid or expired reset token' });
+    }
+
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    await sql`UPDATE users SET password = ${hashedPassword} WHERE id = ${reset.user_id}`;
+    await sql`UPDATE password_resets SET used = 1 WHERE id = ${reset.id}`;
+
+    res.json({ success: true, message: 'Password reset successfully' });
+  } catch (e: any) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// Change password (while logged in)
+app.post('/api/auth/change-password', authenticate, async (req, res) => {
+  try {
+    await ensureDb();
+    const { currentPassword, newPassword } = req.body;
+
+    const result = await sql`SELECT * FROM users WHERE id = ${req.user.id}`;
+    const user = result.rows[0];
+
+    if (!user || !(await bcrypt.compare(currentPassword, user.password))) {
+      return res.status(401).json({ error: 'Current password is incorrect' });
+    }
+
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    await sql`UPDATE users SET password = ${hashedPassword} WHERE id = ${req.user.id}`;
+
+    res.json({ success: true });
+  } catch (e: any) {
     res.status(500).json({ error: e.message });
   }
 });
@@ -122,14 +288,42 @@ app.post('/api/auth/register', authenticate, async (req, res) => {
 app.get('/api/auth/users', authenticate, async (req, res) => {
   try {
     await ensureDb();
-    
     if (req.user.role !== 'super_admin') {
       return res.status(403).json({ error: 'Only super admin can view users' });
     }
-    
     const result = await sql`SELECT id, username, role, created_at FROM users ORDER BY id`;
     res.json(result.rows);
   } catch (e: any) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// Create new user (super admin only)
+app.post('/api/auth/register', authenticate, async (req, res) => {
+  try {
+    await ensureDb();
+    if (req.user.role !== 'super_admin') {
+      return res.status(403).json({ error: 'Only super admin can create new users' });
+    }
+
+    const { username, password, role = 'admin' } = req.body;
+
+    if (!['admin', 'super_admin'].includes(role)) {
+      return res.status(400).json({ error: 'Invalid role' });
+    }
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+    const result = await sql`
+      INSERT INTO users (username, password, role)
+      VALUES (${username}, ${hashedPassword}, ${role})
+      RETURNING id, username, role
+    `;
+
+    res.json({ success: true, user: result.rows[0] });
+  } catch (e: any) {
+    if (e.message?.includes('unique')) {
+      return res.status(400).json({ error: 'Username already exists' });
+    }
     res.status(500).json({ error: e.message });
   }
 });
@@ -138,242 +332,18 @@ app.get('/api/auth/users', authenticate, async (req, res) => {
 app.delete('/api/auth/users/:id', authenticate, async (req, res) => {
   try {
     await ensureDb();
-    const { id } = req.params;
-    
     if (req.user.role !== 'super_admin') {
       return res.status(403).json({ error: 'Only super admin can delete users' });
     }
-    
-    if (parseInt(id) === req.user.id) {
+    if (parseInt(req.params.id) === req.user.id) {
       return res.status(400).json({ error: 'Cannot delete your own account' });
     }
-    
-    await sql`DELETE FROM users WHERE id=${id}`;
+    await sql`DELETE FROM users WHERE id = ${req.params.id}`;
     res.json({ success: true });
   } catch (e: any) {
     res.status(500).json({ error: e.message });
   }
 });
-
-// Change password (authenticated users)
-app.post('/api/auth/change-password', authenticate, async (req, res) => {
-  try {
-    await ensureDb();
-    const { currentPassword, newPassword } = req.body;
-    
-    const result = await sql`SELECT * FROM users WHERE id=${req.user.id}`;
-    const user = result.rows[0];
-    
-    if (!user || !(await bcrypt.compare(currentPassword, user.password))) {
-      return res.status(401).json({ error: 'Current password is incorrect' });
-    }
-    
-    const hashedPassword = await bcrypt.hash(newPassword, 10);
-    await sql`UPDATE users SET password=${hashedPassword} WHERE id=${req.user.id}`;
-    
-    res.json({ success: true });
-  } catch (e: any) {
-    res.status(500).json({ error: e.message });
-  }
-});
-
-// Request password reset (generates a reset token)
-app.post('/api/auth/forgot-password', async (req, res) => {
-  try {
-    await ensureDb();
-    const { username } = req.body;
-    
-    const result = await sql`SELECT * FROM users WHERE username=${username}`;
-    const user = result.rows[0];
-    
-    if (!user) {
-      // Don't reveal if user exists
-      return res.json({ message: 'If the user exists, a reset token has been generated' });
-    }
-    
-    // Generate reset token (valid for 1 hour)
-    const resetToken = generateResetToken();
-    const expiresAt = new Date(Date.now() + 60 * 60 * 1000).toISOString(); // 1 hour
-    
-    // Store token (create password_resets table if not exists)
-    await sql`CREATE TABLE IF NOT EXISTS password_resets (
-      id SERIAL PRIMARY KEY,
-      user_id INTEGER NOT NULL REFERENCES users(id),
-      token TEXT NOT NULL,
-      expires_at TEXT NOT NULL,
-      used INTEGER DEFAULT 0
-    )`;
-    
-    await sql`INSERT INTO password_resets (user_id, token, expires_at) VALUES (${user.id}, ${resetToken}, ${expiresAt})`;
-    
-    // Return token directly (since no email in serverless)
-    res.json({ 
-      success: true, 
-      message: 'Password reset token generated',
-      resetToken,
-      expiresAt,
-      note: 'Use this token with /api/auth/reset-password to set a new password'
-    });
-  } catch (e: any) {
-    res.status(500).json({ error: e.message });
-  }
-});
-
-// Reset password with token
-app.post('/api/auth/reset-password', async (req, res) => {
-  try {
-    await ensureDb();
-    const { token, newPassword } = req.body;
-    
-    const result = await sql`
-      SELECT pr.*, u.username 
-      FROM password_resets pr 
-      JOIN users u ON pr.user_id = u.id 
-      WHERE pr.token=${token} AND pr.used=0 AND pr.expires_at > ${new Date().toISOString()}
-      LIMIT 1
-    `;
-    
-    const reset = result.rows[0];
-    if (!reset) {
-      return res.status(400).json({ error: 'Invalid or expired reset token' });
-    }
-    
-    const hashedPassword = await bcrypt.hash(newPassword, 10);
-    await sql`UPDATE users SET password=${hashedPassword} WHERE id=${reset.user_id}`;
-    await sql`UPDATE password_resets SET used=1 WHERE id=${reset.id}`;
-    
-    res.json({ success: true, message: 'Password has been reset successfully' });
-  } catch (e: any) {
-    res.status(500).json({ error: e.message });
-  }
-});
-
-// Public registration - first user becomes super admin
-app.post('/api/auth/register-first', async (req, res) => {
-  try {
-    await ensureDb();
-    const { username, password } = req.body;
-    
-    if (!username || !password) {
-      return res.status(400).json({ error: 'Username and password are required' });
-    }
-    
-    if (password.length < 6) {
-      return res.status(400).json({ error: 'Password must be at least 6 characters' });
-    }
-    
-    // Check if any user exists
-    const existingUsers = await sql`SELECT * FROM users LIMIT 1`;
-    if (existingUsers.rowCount > 0) {
-      return res.status(400).json({ error: 'Registration closed. Please contact administrator.' });
-    }
-    
-    // Check if username already exists
-    const existingUser = await sql`SELECT * FROM users WHERE username = ${username}`;
-    if (existingUser.rowCount > 0) {
-      return res.status(400).json({ error: 'Username already exists' });
-    }
-    
-    const hashedPassword = await bcrypt.hash(password, 10);
-    const result = await sql`
-      INSERT INTO users (username, password, role) 
-      VALUES (${username}, ${hashedPassword}, 'super_admin') 
-      RETURNING id, username, role
-    `;
-    
-    // Auto-login after registration
-    const token = jwt.sign(
-      { id: result.rows[0].id, username: result.rows[0].username, role: result.rows[0].role },
-      JWT_SECRET,
-      { expiresIn: '24h' }
-    );
-    
-    res.json({ 
-      success: true, 
-      user: result.rows[0],
-      token,
-      message: 'Super admin account created successfully!'
-    });
-  } catch (e: any) {
-    res.status(500).json({ error: e.message });
-  }
-});
-
-// Check if registration is available (no users exist yet)
-app.get('/api/auth/can-register', async (req, res) => {
-  try {
-    await ensureDb();
-    const users = await sql`SELECT * FROM users LIMIT 1`;
-    res.json({ canRegister: users.rowCount === 0 });
-  } catch (e: any) {
-    res.status(500).json({ error: e.message });
-  }
-});
-
-app.post('/api/auth/seed', async (req, res) => {
-  try {
-    await ensureDb();
-    const { username, password } = req.body;
-    
-    // Check if any user exists
-    const users = await sql`SELECT * FROM users LIMIT 1`;
-    if (users.rowCount > 0) {
-      return res.status(400).json({ error: 'System already seeded' });
-    }
-    
-    const hashedPassword = await bcrypt.hash(password, 10);
-    const result = await sql`
-      INSERT INTO users (username, password, role) 
-      VALUES (${username}, ${hashedPassword}, 'super_admin') 
-      RETURNING id, username, role
-    `;
-    
-    res.json({ success: true, user: result.rows[0] });
-  } catch (e: any) {
-    res.status(500).json({ error: e.message });
-  }
-});
-
-app.post('/api/auth/login', async (req, res) => {
-  try {
-    await ensureDb();
-    const { username, password } = req.body;
-    
-    const result = await sql`SELECT * FROM users WHERE username = ${username}`;
-    const user = result.rows[0];
-    
-    if (!user || !(await bcrypt.compare(password, user.password))) {
-      return res.status(401).json({ error: 'Invalid credentials' });
-    }
-    
-    const token = jwt.sign(
-      { id: user.id, username: user.username, role: user.role },
-      JWT_SECRET,
-      { expiresIn: '24h' }
-    );
-    
-    res.json({ 
-      token, 
-      user: { id: user.id, username: user.username, role: user.role } 
-    });
-  } catch (e: any) {
-    res.status(500).json({ error: e.message });
-  }
-});
-
-// Middleware to check auth
-const authenticate = (req: any, res: any, next: any) => {
-  const token = req.headers.authorization?.split(' ')[1];
-  if (!token) return res.status(401).json({ error: 'Unauthorized' });
-  
-  try {
-    const decoded = jwt.verify(token, JWT_SECRET);
-    req.user = decoded;
-    next();
-  } catch (e) {
-    res.status(401).json({ error: 'Invalid token' });
-  }
-};
 
 // ─── Rickshaws ────────────────────────────────────────────────────────────────
 
@@ -438,7 +408,7 @@ app.post('/api/drivers', authenticate, async (req, res) => {
   try {
     await ensureDb();
     const { name, phone, join_date } = req.body;
-    const r = await sql`INSERT INTO drivers (name,phone,join_date) VALUES (${name},${phone??null},${join_date}) RETURNING *`;
+    const r = await sql`INSERT INTO drivers (name,phone,join_date) VALUES (${name},${phone ?? null},${join_date}) RETURNING *`;
     res.json(r.rows[0]);
   } catch (e: any) { res.status(400).json({ error: e.message }); }
 });
@@ -447,7 +417,7 @@ app.put('/api/drivers/:id', authenticate, async (req, res) => {
   try {
     await ensureDb();
     const { name, phone, join_date } = req.body;
-    const r = await sql`UPDATE drivers SET name=${name},phone=${phone??null},join_date=${join_date} WHERE id=${req.params.id} RETURNING *`;
+    const r = await sql`UPDATE drivers SET name=${name},phone=${phone ?? null},join_date=${join_date} WHERE id=${req.params.id} RETURNING *`;
     if (r.rowCount === 0) return res.status(404).json({ error: 'Not found' });
     res.json(r.rows[0]);
   } catch (e: any) { res.status(400).json({ error: e.message }); }
@@ -516,15 +486,15 @@ app.post('/api/transactions', authenticate, async (req, res) => {
     await ensureDb();
     const { date, type, category, amount, rickshaw_id, driver_id, notes } = req.body;
     let fa = amount;
-    if ((category==='rent_pending'||type==='pending') && (!amount||amount===0) && notes) {
+    if ((category === 'rent_pending' || type === 'pending') && (!amount || amount === 0) && notes) {
       const m = notes.match(/(\d+)/); if (m) fa = parseFloat(m[1]);
     }
     const r = await sql`INSERT INTO transactions (date,type,category,amount,rickshaw_id,driver_id,notes)
-      VALUES (${date},${type},${category},${fa},${rickshaw_id??null},${driver_id??null},${notes??null}) RETURNING *`;
+      VALUES (${date},${type},${category},${fa},${rickshaw_id ?? null},${driver_id ?? null},${notes ?? null}) RETURNING *`;
     if (driver_id) {
-      if (type==='pending'||category==='rent_pending')
+      if (type === 'pending' || category === 'rent_pending')
         await sql`UPDATE drivers SET pending_balance=pending_balance+${fa} WHERE id=${driver_id}`;
-      else if (category==='rent_recovery')
+      else if (category === 'rent_recovery')
         await sql`UPDATE drivers SET pending_balance=pending_balance-${fa} WHERE id=${driver_id}`;
     }
     res.json(r.rows[0]);
@@ -538,26 +508,26 @@ app.put('/api/transactions/:id', authenticate, async (req, res) => {
     const { date, type, category, amount, rickshaw_id, driver_id, notes } = req.body;
     const old = (await sql`SELECT * FROM transactions WHERE id=${id}`).rows[0] as any;
     let fa = amount;
-    if ((category==='rent_pending'||type==='pending') && (!amount||amount===0) && notes) {
+    if ((category === 'rent_pending' || type === 'pending') && (!amount || amount === 0) && notes) {
       const m = notes.match(/(\d+)/); if (m) fa = parseFloat(m[1]);
     }
     if (old?.driver_id) {
       let oa = old.amount;
-      if ((old.category==='rent_pending'||old.type==='pending') && !old.amount && old.notes) {
+      if ((old.category === 'rent_pending' || old.type === 'pending') && !old.amount && old.notes) {
         const m = old.notes.match(/(\d+)/); if (m) oa = parseFloat(m[1]);
       }
-      if (old.type==='pending'||old.category==='rent_pending')
+      if (old.type === 'pending' || old.category === 'rent_pending')
         await sql`UPDATE drivers SET pending_balance=pending_balance-${oa} WHERE id=${old.driver_id}`;
-      else if (old.category==='rent_recovery')
+      else if (old.category === 'rent_recovery')
         await sql`UPDATE drivers SET pending_balance=pending_balance+${oa} WHERE id=${old.driver_id}`;
     }
     const r = await sql`UPDATE transactions SET date=${date},type=${type},category=${category},amount=${fa},
-      rickshaw_id=${rickshaw_id??null},driver_id=${driver_id??null},notes=${notes??null} WHERE id=${id} RETURNING *`;
-    if (r.rowCount===0) return res.status(404).json({ error: 'Not found' });
+      rickshaw_id=${rickshaw_id ?? null},driver_id=${driver_id ?? null},notes=${notes ?? null} WHERE id=${id} RETURNING *`;
+    if (r.rowCount === 0) return res.status(404).json({ error: 'Not found' });
     if (driver_id) {
-      if (category==='rent_pending'||type==='pending')
+      if (category === 'rent_pending' || type === 'pending')
         await sql`UPDATE drivers SET pending_balance=pending_balance+${fa} WHERE id=${driver_id}`;
-      else if (category==='rent_recovery')
+      else if (category === 'rent_recovery')
         await sql`UPDATE drivers SET pending_balance=pending_balance-${fa} WHERE id=${driver_id}`;
     }
     res.json(r.rows[0]);
@@ -571,12 +541,12 @@ app.delete('/api/transactions/:id', authenticate, async (req, res) => {
     const tx = (await sql`SELECT * FROM transactions WHERE id=${id}`).rows[0] as any;
     if (tx?.driver_id) {
       let fa = tx.amount;
-      if ((tx.category==='rent_pending'||tx.type==='pending') && !tx.amount && tx.notes) {
+      if ((tx.category === 'rent_pending' || tx.type === 'pending') && !tx.amount && tx.notes) {
         const m = tx.notes.match(/(\d+)/); if (m) fa = parseFloat(m[1]);
       }
-      if (tx.type==='pending'||tx.category==='rent_pending')
+      if (tx.type === 'pending' || tx.category === 'rent_pending')
         await sql`UPDATE drivers SET pending_balance=pending_balance-${fa} WHERE id=${tx.driver_id}`;
-      else if (tx.category==='rent_recovery')
+      else if (tx.category === 'rent_recovery')
         await sql`UPDATE drivers SET pending_balance=pending_balance+${fa} WHERE id=${tx.driver_id}`;
     }
     await sql`DELETE FROM transactions WHERE id=${id}`;
@@ -610,7 +580,7 @@ app.put('/api/categories/:id', authenticate, async (req, res) => {
   try {
     await ensureDb();
     const r = await sql`UPDATE categories SET name=${req.body.name} WHERE id=${req.params.id} RETURNING *`;
-    if (r.rowCount===0) return res.status(404).json({ error: 'Not found' });
+    if (r.rowCount === 0) return res.status(404).json({ error: 'Not found' });
     res.json(r.rows[0]);
   } catch (e: any) { res.status(400).json({ error: e.message }); }
 });
@@ -644,7 +614,7 @@ app.post('/api/settings', authenticate, async (req, res) => {
     await ensureDb();
     const { currency, currencySymbol, dateFormat, autoBackup, reportFormat } = req.body;
     await sql`INSERT INTO settings (id,currency,currency_symbol,date_format,auto_backup,report_format)
-      VALUES (1,${currency},${currencySymbol},${dateFormat},${autoBackup?1:0},${reportFormat})
+      VALUES (1,${currency},${currencySymbol},${dateFormat},${autoBackup ? 1 : 0},${reportFormat})
       ON CONFLICT (id) DO UPDATE SET
         currency=EXCLUDED.currency, currency_symbol=EXCLUDED.currency_symbol,
         date_format=EXCLUDED.date_format, auto_backup=EXCLUDED.auto_backup, report_format=EXCLUDED.report_format`;
@@ -700,7 +670,7 @@ app.get('/api/stats', authenticate, async (req, res) => {
       totalIncome:     Number(incR.rows[0]?.total) || 0,
       totalExpense:    Number(expR.rows[0]?.total) || 0,
       totalInvestment: Number(invR.rows[0]?.total) || 0,
-      profit:          (Number(incR.rows[0]?.total)||0) - (Number(expR.rows[0]?.total)||0),
+      profit:          (Number(incR.rows[0]?.total) || 0) - (Number(expR.rows[0]?.total) || 0),
       pendingBalance:  Number(pendR.rows[0]?.total) || 0,
       activeRickshaws: Number(actR.rows[0]?.count) || 0,
       totalRickshaws:  Number(totR.rows[0]?.count) || 0,

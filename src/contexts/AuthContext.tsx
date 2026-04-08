@@ -1,9 +1,9 @@
-import React, { useState, createContext, useContext, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect } from 'react';
 
 interface User {
   id: number;
   username: string;
-  role: string;
+  role: 'admin' | 'super_admin';
 }
 
 interface AuthContextType {
@@ -28,7 +28,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       try {
         setToken(savedToken);
         setUser(JSON.parse(savedUser));
-      } catch (e) {
+      } catch {
         localStorage.removeItem('auth_token');
         localStorage.removeItem('auth_user');
       }
@@ -50,6 +50,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     localStorage.removeItem('auth_user');
   };
 
+  // Show nothing while restoring session from localStorage
   if (loading) return null;
 
   return (

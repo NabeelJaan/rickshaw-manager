@@ -39,13 +39,24 @@ export default function LoginPage() {
     const checkRegistration = async () => {
       try {
         const res = await fetch('/api/auth/can-register');
+        
+        // If API doesn't exist (404), assume fresh deployment - show registration
+        if (res.status === 404) {
+          setCanRegister(true);
+          setView('register');
+          return;
+        }
+        
         const data = await res.json();
         setCanRegister(data.canRegister);
         if (data.canRegister) {
           setView('register');
         }
       } catch (err) {
-        console.error('Failed to check registration status');
+        // On error, assume fresh deployment - show registration
+        console.error('Failed to check registration status, showing registration form');
+        setCanRegister(true);
+        setView('register');
       } finally {
         setCheckingRegistration(false);
       }
