@@ -285,6 +285,24 @@ app.post('/api/auth/register', authenticate, async (req, res) => {
   }
 });
 
+// Super admin resets another user's password
+app.post('/api/auth/users/:id/reset-password', authenticate, async (req, res) => {
+  try {
+    await ensureDb();
+    if (req.user.role !== 'super_admin') return res.status(403).json({ error: 'Forbidden' });
+    const { newPassword } = req.body;
+    if (!newPassword || newPassword.length < 6) {
+      return res.status(400).json({ error: 'Password must be at least 6 characters' });
+    }
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    const r = await sql`UPDATE users SET password = ${hashedPassword} WHERE id = ${req.params.id} RETURNING id, username`;
+    if (r.rowCount === 0) return res.status(404).json({ error: 'User not found' });
+    res.json({ success: true, username: r.rows[0].username });
+  } catch (e: any) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 // Delete user (super admin only)
 app.delete('/api/auth/users/:id', authenticate, async (req, res) => {
   try {
