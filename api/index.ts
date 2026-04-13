@@ -403,6 +403,17 @@ app.delete('/api/drivers/:id', authenticate, async (req, res) => {
   } catch (e: any) { res.status(400).json({ error: e.message }); }
 });
 
+app.post('/api/drivers/:id/pending-balance', authenticate, async (req, res) => {
+  try {
+    await ensureDb();
+    const { amount, notes } = req.body;
+    const id = req.params.id;
+    const r = await sql`UPDATE drivers SET pending_balance = pending_balance + ${amount} WHERE id=${id} RETURNING *`;
+    if (r.rowCount === 0) return res.status(404).json({ error: 'Driver not found' });
+    res.json(r.rows[0]);
+  } catch (e: any) { res.status(400).json({ error: e.message }); }
+});
+
 // ─── Assignments ──────────────────────────────────────────────────────────────
 app.get('/api/assignments', authenticate, async (req, res) => {
   try {

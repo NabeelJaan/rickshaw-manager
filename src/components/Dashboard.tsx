@@ -5,6 +5,7 @@ import { DashboardStats, Transaction } from '../types';
 import LogRentModal from './LogRentModal';
 import ExpenseModal from './ExpenseModal';
 import EditTransactionModal from './EditTransactionModal';
+import AddPendingBalanceModal from './AddPendingBalanceModal';
 
 export default function Dashboard({ selectedDriverId }: { selectedDriverId?: string }) {
   const [stats, setStats] = useState<DashboardStats | null>(null);
@@ -13,6 +14,7 @@ export default function Dashboard({ selectedDriverId }: { selectedDriverId?: str
   const [chartView, setChartView] = useState<'monthly' | 'daily'>('daily');
   const [isLogRentModalOpen, setIsLogRentModalOpen] = useState(false);
   const [isExpenseModalOpen, setIsExpenseModalOpen] = useState(false);
+  const [isPendingBalanceModalOpen, setIsPendingBalanceModalOpen] = useState(false);
   const [editTransaction, setEditTransaction] = useState<Transaction | null>(null);
   const [selectedDriverName, setSelectedDriverName] = useState('');
   const [currency, setCurrency] = useState('Rs.');
@@ -212,7 +214,7 @@ export default function Dashboard({ selectedDriverId }: { selectedDriverId?: str
                 </button>
                 <button 
                   onClick={() => {
-                    setIsLogRentModalOpen(true);
+                    setIsPendingBalanceModalOpen(true);
                     setShowTransactionDropdown(false);
                   }}
                   className="w-full text-left px-4 py-2.5 text-sm text-zinc-700 hover:bg-zinc-50 transition-colors flex items-center gap-2"
@@ -472,6 +474,12 @@ export default function Dashboard({ selectedDriverId }: { selectedDriverId?: str
         onSubmit={fetchData}
         onSuccess={fetchData}
         selectedDriverId={selectedDriverId}
+      />
+      
+      <AddPendingBalanceModal
+        isOpen={isPendingBalanceModalOpen}
+        onClose={() => setIsPendingBalanceModalOpen(false)}
+        onSuccess={fetchData}
       />
       
       <EditTransactionModal 
