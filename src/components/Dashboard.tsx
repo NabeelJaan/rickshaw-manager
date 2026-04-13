@@ -127,7 +127,7 @@ export default function Dashboard({ selectedDriverId }: { selectedDriverId?: str
     { title: 'Net Profit', value: stats.profit, icon: DollarSign, color: 'text-blue-500', bg: 'bg-blue-500/10', prefix: currency + ' ' },
     { title: 'Pending Balance', value: stats.pendingBalance, icon: TrendingDown, color: 'text-amber-500', bg: 'bg-amber-500/10', prefix: currency + ' ' },
     { title: 'Total Investment', value: stats.totalInvestment, icon: Car, color: 'text-purple-500', bg: 'bg-purple-500/10', prefix: currency + ' ' },
-    { title: 'Remaining Investment', value: Math.max(0, stats.totalInvestment - stats.profit), icon: TrendingDown, color: 'text-orange-500', bg: 'bg-orange-500/10', prefix: currency + ' ' },
+    { title: 'Remaining Investment', value: Math.max(0, stats.totalInvestment - stats.allTimeProfit), icon: TrendingDown, color: 'text-orange-500', bg: 'bg-orange-500/10', prefix: currency + ' ' },
     { title: 'Active Rickshaws', value: stats.activeRickshaws, icon: Car, color: 'text-indigo-500', bg: 'bg-indigo-500/10', prefix: '', hideOnDriver: true },
     { title: 'Total Rickshaws', value: stats.totalRickshaws, icon: Car, color: 'text-zinc-500', bg: 'bg-zinc-500/10', prefix: '', hideOnDriver: true },
   ];
@@ -242,80 +242,6 @@ export default function Dashboard({ selectedDriverId }: { selectedDriverId?: str
             </div>
           </div>
         ))}
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="bg-white p-6 rounded-2xl shadow-sm border border-zinc-200/60">
-          <div className="flex justify-between items-center mb-8">
-            <h3 className="text-base font-semibold text-zinc-900">Income vs Expense</h3>
-            <div className="flex bg-zinc-100/80 p-1 rounded-lg border border-zinc-200/50">
-              <button 
-                onClick={() => setChartView('daily')}
-                className={`px-3 py-1.5 text-xs rounded-md transition-all ${chartView === 'daily' ? 'bg-white shadow-sm text-zinc-900 font-medium' : 'text-zinc-500 hover:text-zinc-700'}`}
-              >
-                Daily
-              </button>
-              <button 
-                onClick={() => setChartView('monthly')}
-                className={`px-3 py-1.5 text-xs rounded-md transition-all ${chartView === 'monthly' ? 'bg-white shadow-sm text-zinc-900 font-medium' : 'text-zinc-500 hover:text-zinc-700'}`}
-              >
-                Monthly
-              </button>
-            </div>
-          </div>
-          <div className="h-64 md:h-72">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={chartView === 'daily' ? stats.dailyData : stats.monthlyData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f4f4f5" />
-                <XAxis 
-                  dataKey={chartView === 'daily' ? 'date' : 'month'} 
-                  axisLine={false} 
-                  tickLine={false} 
-                  tick={{ fontSize: 10, fill: '#71717a' }} 
-                  dy={10}
-                  interval="preserveStartEnd"
-                  minTickGap={20}
-                />
-                <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#71717a' }} />
-                <Tooltip 
-                  cursor={{ fill: '#f4f4f5', opacity: 0.4 }} 
-                  contentStyle={{ borderRadius: '12px', border: '1px solid #e4e4e7', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
-                  itemStyle={{ fontSize: '13px', fontWeight: 500 }}
-                  labelStyle={{ fontSize: '12px', color: '#71717a', marginBottom: '4px' }}
-                />
-                <Bar dataKey="income" fill="#10b981" radius={[4, 4, 0, 0]} name="Income" maxBarSize={40} />
-                <Bar dataKey="expense" fill="#f43f5e" radius={[4, 4, 0, 0]} name="Expense" maxBarSize={40} />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-
-        <div className="bg-white p-6 rounded-2xl shadow-sm border border-zinc-200/60">
-          <h3 className="text-base font-semibold text-zinc-900 mb-6">Total Income by Month (Last Year)</h3>
-          <div className="h-64 md:h-72">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={stats.monthlyData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f4f4f5" />
-                <XAxis 
-                  dataKey="month" 
-                  axisLine={false} 
-                  tickLine={false} 
-                  tick={{ fontSize: 10, fill: '#71717a' }} 
-                  dy={10}
-                  interval="preserveStartEnd"
-                />
-                <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#71717a' }} />
-                <Tooltip 
-                  cursor={{ fill: '#f4f4f5', opacity: 0.4 }} 
-                  contentStyle={{ borderRadius: '12px', border: '1px solid #e4e4e7', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
-                  itemStyle={{ fontSize: '13px', fontWeight: 500 }}
-                  labelStyle={{ fontSize: '12px', color: '#71717a', marginBottom: '4px' }}
-                />
-                <Bar dataKey="income" fill="#10b981" radius={[4, 4, 0, 0]} name="Income" maxBarSize={40} />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
       </div>
 
       <div className="bg-white rounded-2xl shadow-sm border border-zinc-200/60 overflow-hidden">
@@ -464,6 +390,80 @@ export default function Dashboard({ selectedDriverId }: { selectedDriverId?: str
             No recent transactions
           </div>
         )}
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="bg-white p-6 rounded-2xl shadow-sm border border-zinc-200/60">
+          <div className="flex justify-between items-center mb-8">
+            <h3 className="text-base font-semibold text-zinc-900">Income vs Expense</h3>
+            <div className="flex bg-zinc-100/80 p-1 rounded-lg border border-zinc-200/50">
+              <button 
+                onClick={() => setChartView('daily')}
+                className={`px-3 py-1.5 text-xs rounded-md transition-all ${chartView === 'daily' ? 'bg-white shadow-sm text-zinc-900 font-medium' : 'text-zinc-500 hover:text-zinc-700'}`}
+              >
+                Daily
+              </button>
+              <button 
+                onClick={() => setChartView('monthly')}
+                className={`px-3 py-1.5 text-xs rounded-md transition-all ${chartView === 'monthly' ? 'bg-white shadow-sm text-zinc-900 font-medium' : 'text-zinc-500 hover:text-zinc-700'}`}
+              >
+                Monthly
+              </button>
+            </div>
+          </div>
+          <div className="h-64 md:h-72">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={chartView === 'daily' ? stats.dailyData : stats.monthlyData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f4f4f5" />
+                <XAxis 
+                  dataKey={chartView === 'daily' ? 'date' : 'month'} 
+                  axisLine={false} 
+                  tickLine={false} 
+                  tick={{ fontSize: 10, fill: '#71717a' }} 
+                  dy={10}
+                  interval="preserveStartEnd"
+                  minTickGap={20}
+                />
+                <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#71717a' }} />
+                <Tooltip 
+                  cursor={{ fill: '#f4f4f5', opacity: 0.4 }} 
+                  contentStyle={{ borderRadius: '12px', border: '1px solid #e4e4e7', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+                  itemStyle={{ fontSize: '13px', fontWeight: 500 }}
+                  labelStyle={{ fontSize: '12px', color: '#71717a', marginBottom: '4px' }}
+                />
+                <Bar dataKey="income" fill="#10b981" radius={[4, 4, 0, 0]} name="Income" maxBarSize={40} />
+                <Bar dataKey="expense" fill="#f43f5e" radius={[4, 4, 0, 0]} name="Expense" maxBarSize={40} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+
+        <div className="bg-white p-6 rounded-2xl shadow-sm border border-zinc-200/60">
+          <h3 className="text-base font-semibold text-zinc-900 mb-6">Total Income by Month (Last Year)</h3>
+          <div className="h-64 md:h-72">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={stats.monthlyData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f4f4f5" />
+                <XAxis 
+                  dataKey="month" 
+                  axisLine={false} 
+                  tickLine={false} 
+                  tick={{ fontSize: 10, fill: '#71717a' }} 
+                  dy={10}
+                  interval="preserveStartEnd"
+                />
+                <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#71717a' }} />
+                <Tooltip 
+                  cursor={{ fill: '#f4f4f5', opacity: 0.4 }} 
+                  contentStyle={{ borderRadius: '12px', border: '1px solid #e4e4e7', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+                  itemStyle={{ fontSize: '13px', fontWeight: 500 }}
+                  labelStyle={{ fontSize: '12px', color: '#71717a', marginBottom: '4px' }}
+                />
+                <Bar dataKey="income" fill="#10b981" radius={[4, 4, 0, 0]} name="Income" maxBarSize={40} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
       </div>
 
       <LogRentModal 

@@ -605,6 +605,12 @@ app.get('/api/stats', authenticate, async (req, res) => {
       sql.query(`SELECT SUM(amount) as total FROM transactions WHERE type='expense' AND category!='rent_pending' ${monthFilter} ${df}`, da),
     ]);
 
+    // Calculate all-time profit for remaining investment (not filtered by month)
+    const [allTimeIncR, allTimeExpR] = await Promise.all([
+      sql.query(`SELECT SUM(amount) as total FROM transactions WHERE type='income' AND category!='rent_pending' ${df}`, da),
+      sql.query(`SELECT SUM(amount) as total FROM transactions WHERE type='expense' AND category!='rent_pending' ${df}`, da),
+    ]);
+
     const pendR = driver_id
       ? await sql`SELECT pending_balance as total FROM drivers WHERE id=${driver_id as string}`
       : await sql`SELECT SUM(pending_balance) as total FROM drivers`;
@@ -640,6 +646,7 @@ app.get('/api/stats', authenticate, async (req, res) => {
       totalExpense:    Number(expR.rows[0]?.total) || 0,
       totalInvestment: Number(invR.rows[0]?.total) || 0,
       profit:          (Number(incR.rows[0]?.total)||0) - (Number(expR.rows[0]?.total)||0),
+      allTimeProfit:   (Number(allTimeIncR.rows[0]?.total)||0) - (Number(allTimeExpR.rows[0]?.total)||0),
       pendingBalance:  Number(pendR.rows[0]?.total) || 0,
       activeRickshaws: Number(actR.rows[0]?.count) || 0,
       totalRickshaws:  Number(totR.rows[0]?.count) || 0,
