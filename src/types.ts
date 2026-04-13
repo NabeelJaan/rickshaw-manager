@@ -46,6 +46,8 @@ export interface DashboardStats {
   totalInvestment: number;
   profit: number;
   allTimeProfit: number;
+  allTimeIncome: number;
+  allTimeExpense: number;
   pendingBalance: number;
   activeRickshaws: number;
   totalRickshaws: number;

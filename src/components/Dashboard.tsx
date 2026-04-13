@@ -130,6 +130,8 @@ export default function Dashboard({ selectedDriverId }: { selectedDriverId?: str
     { title: 'Pending Balance', value: stats.pendingBalance, icon: TrendingDown, color: 'text-amber-500', bg: 'bg-amber-500/10', prefix: currency + ' ' },
     { title: 'Total Investment', value: stats.totalInvestment, icon: Car, color: 'text-purple-500', bg: 'bg-purple-500/10', prefix: currency + ' ' },
     { title: 'Remaining Investment', value: Math.max(0, stats.totalInvestment - stats.allTimeProfit), icon: TrendingDown, color: 'text-orange-500', bg: 'bg-orange-500/10', prefix: currency + ' ' },
+    { title: 'All-Time Income', value: stats.allTimeIncome, icon: TrendingUp, color: 'text-teal-500', bg: 'bg-teal-500/10', prefix: currency + ' ' },
+    { title: 'All-Time Expense', value: stats.allTimeExpense, icon: TrendingDown, color: 'text-red-500', bg: 'bg-red-500/10', prefix: currency + ' ' },
     { title: 'Active Rickshaws', value: stats.activeRickshaws, icon: Car, color: 'text-indigo-500', bg: 'bg-indigo-500/10', prefix: '', hideOnDriver: true },
     { title: 'Total Rickshaws', value: stats.totalRickshaws, icon: Car, color: 'text-zinc-500', bg: 'bg-zinc-500/10', prefix: '', hideOnDriver: true },
   ];
@@ -365,7 +367,7 @@ export default function Dashboard({ selectedDriverId }: { selectedDriverId?: str
                     )}
                   </td>
                   <td className="p-4 text-right">
-                    <div className="flex items-center gap-2 justify-end opacity-0 group-hover:opacity-100 transition-opacity">
+                    <div className="flex items-center gap-2 justify-end">
                       <button 
                         onClick={() => handleEditTransaction(t)} 
                         className="text-zinc-400 hover:text-emerald-500 transition-colors"
