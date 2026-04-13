@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import { TrendingUp, TrendingDown, DollarSign, Car, Plus, Edit, ChevronDown, Trash2 } from 'lucide-react';
+import { TrendingUp, TrendingDown, DollarSign, Car, Plus, Edit, ChevronDown, Trash2, Users } from 'lucide-react';
 import { DashboardStats, Transaction } from '../types';
 import LogRentModal from './LogRentModal';
 import ExpenseModal from './ExpenseModal';
