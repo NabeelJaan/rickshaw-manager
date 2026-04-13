@@ -595,9 +595,10 @@ app.get('/api/stats', authenticate, async (req, res) => {
     const df = driver_id ? 'AND driver_id = $1' : '';
     const da = driver_id ? [driver_id] : [];
 
+    // Calculate stats for current month only
     const [incR, expR] = await Promise.all([
-      sql.query(`SELECT SUM(amount) as total FROM transactions WHERE type='income' AND category!='rent_pending' ${df}`, da),
-      sql.query(`SELECT SUM(amount) as total FROM transactions WHERE type='expense' AND category!='rent_pending' ${df}`, da),
+      sql.query(`SELECT SUM(amount) as total FROM transactions WHERE type='income' AND category!='rent_pending' AND TO_CHAR(TO_DATE(date,'YYYY-MM-DD'),'YYYY-MM') = TO_CHAR(CURRENT_DATE,'YYYY-MM') ${df}`, da),
+      sql.query(`SELECT SUM(amount) as total FROM transactions WHERE type='expense' AND category!='rent_pending' AND TO_CHAR(TO_DATE(date,'YYYY-MM-DD'),'YYYY-MM') = TO_CHAR(CURRENT_DATE,'YYYY-MM') ${df}`, da),
     ]);
 
     const pendR = driver_id
@@ -642,6 +643,60 @@ app.get('/api/stats', authenticate, async (req, res) => {
       dailyData:   dayR.rows,
     });
   } catch (e: any) { res.status(500).json({ error: e.message }); }
+});
+
+// ─── Reports ─────────────────────────────────────────────────────────────────
+app.get('/api/reports/:type', authenticate, async (req, res) => {
+  try {
+    await ensureDb();
+    const { type } = req.params;
+    const { driver_id, start_date, end_date } = req.query;
+    
+    let query = '';
+    let params: any[] = [];
+    
+    if (driver_id) {
+      params.push(driver_id);
+    }
+    
+    const df = driver_id ? 'AND driver_id = $' + (params.length) : '';
+    
+    if (type === 'income') {
+      query = `
+        SELECT t.*, r.number as rickshaw_number, d.name as driver_name
+        FROM transactions t
+        LEFT JOIN rickshaws r ON t.rickshaw_id = r.id
+        LEFT JOIN drivers d ON t.driver_id = d.id
+        WHERE t.type = 'income' AND t.category != 'rent_pending' ${df}
+        ORDER BY t.date DESC, t.id DESC
+      `;
+    } else if (type === 'expense') {
+      query = `
+        SELECT t.*, r.number as rickshaw_number, d.name as driver_name
+        FROM transactions t
+        LEFT JOIN rickshaws r ON t.rickshaw_id = r.id
+        LEFT JOIN drivers d ON t.driver_id = d.id
+        WHERE t.type = 'expense' AND t.category != 'rent_pending' ${df}
+        ORDER BY t.date DESC, t.id DESC
+      `;
+    } else if (type === 'summary') {
+      query = `
+        SELECT t.*, r.number as rickshaw_number, d.name as driver_name
+        FROM transactions t
+        LEFT JOIN rickshaws r ON t.rickshaw_id = r.id
+        LEFT JOIN drivers d ON t.driver_id = d.id
+        WHERE t.category != 'rent_pending' ${df}
+        ORDER BY t.date DESC, t.id DESC
+      `;
+    } else {
+      return res.status(400).json({ error: 'Invalid report type' });
+    }
+    
+    const result = await sql.query(query, params);
+    res.json(result.rows);
+  } catch (e: any) {
+    res.status(500).json({ error: e.message });
+  }
 });
 
 export default app;

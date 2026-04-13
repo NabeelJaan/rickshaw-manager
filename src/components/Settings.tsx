@@ -220,9 +220,52 @@ export default function Settings() {
     }
   };
 
-  const generateReport = (type: 'income' | 'expense' | 'summary') => {
-    // This would integrate with a backend API to generate reports
-    alert(`Generating ${type} report in ${settings.reportFormat.toUpperCase()} format...`);
+  const generateReport = async (type: 'income' | 'expense' | 'summary') => {
+    try {
+      const token = localStorage.getItem('auth_token');
+      const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+      
+      const response = await fetch(`/api/reports/${type}`, { headers });
+      if (!response.ok) {
+        alert('Failed to generate report');
+        return;
+      }
+      
+      const data = await response.json();
+      
+      if (!Array.isArray(data)) {
+        alert('Invalid data received');
+        return;
+      }
+      
+      // Generate CSV
+      if (data.length === 0) {
+        alert('No data available for this report');
+        return;
+      }
+      
+      const headers_row = Object.keys(data[0]).join(',');
+      const csv_content = [
+        headers_row,
+        ...data.map(row => Object.values(row).map(val => 
+          typeof val === 'string' && (val.includes(',') || val.includes('"')) 
+            ? `"${val.replace(/"/g, '""')}"` 
+            : val
+        ).join(','))
+      ].join('\n');
+      
+      const blob = new Blob([csv_content], { type: 'text/csv' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${type}-report-${new Date().toISOString().split('T')[0]}.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+      
+    } catch (error) {
+      console.error('Report generation error:', error);
+      alert('Failed to generate report');
+    }
   };
 
   const exportData = () => {

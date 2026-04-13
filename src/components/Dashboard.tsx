@@ -114,9 +114,9 @@ export default function Dashboard({ selectedDriverId }: { selectedDriverId?: str
   if (loading || !stats) return <div className="animate-pulse flex space-x-4">Loading...</div>;
 
   const statCards = [
-    { title: 'Total Revenue', value: stats.totalIncome, icon: TrendingUp, color: 'text-emerald-500', bg: 'bg-emerald-500/10', prefix: currency + ' ' },
-    { title: 'Total Expense', value: stats.totalExpense, icon: TrendingDown, color: 'text-rose-500', bg: 'bg-rose-500/10', prefix: currency + ' ' },
-    { title: 'Net Profit', value: stats.profit, icon: DollarSign, color: 'text-blue-500', bg: 'bg-blue-500/10', prefix: currency + ' ' },
+    { title: 'Revenue (This Month)', value: stats.totalIncome, icon: TrendingUp, color: 'text-emerald-500', bg: 'bg-emerald-500/10', prefix: currency + ' ' },
+    { title: 'Expense (This Month)', value: stats.totalExpense, icon: TrendingDown, color: 'text-rose-500', bg: 'bg-rose-500/10', prefix: currency + ' ' },
+    { title: 'Net Profit (This Month)', value: stats.profit, icon: DollarSign, color: 'text-blue-500', bg: 'bg-blue-500/10', prefix: currency + ' ' },
     { title: 'Pending Balance', value: stats.pendingBalance, icon: TrendingDown, color: 'text-amber-500', bg: 'bg-amber-500/10', prefix: currency + ' ' },
     { title: 'Total Investment', value: stats.totalInvestment, icon: Car, color: 'text-purple-500', bg: 'bg-purple-500/10', prefix: currency + ' ' },
     { title: 'Remaining Investment', value: Math.max(0, stats.totalInvestment - stats.profit), icon: TrendingDown, color: 'text-orange-500', bg: 'bg-orange-500/10', prefix: currency + ' ' },
