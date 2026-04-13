@@ -126,7 +126,8 @@ export default function Dashboard({ selectedDriverId }: { selectedDriverId?: str
   const statCards = [
     { title: 'Total Revenue', value: stats.totalIncome, icon: TrendingUp, color: 'text-emerald-500', bg: 'bg-emerald-500/10', prefix: currency + ' ' },
     { title: 'Total Expense', value: stats.totalExpense, icon: TrendingDown, color: 'text-rose-500', bg: 'bg-rose-500/10', prefix: currency + ' ' },
-    { title: 'Net Profit', value: stats.profit, icon: DollarSign, color: 'text-blue-500', bg: 'bg-blue-500/10', prefix: currency + ' ' },
+    { title: 'Net Profit (Excl. Pending)', value: stats.profit, icon: DollarSign, color: 'text-blue-500', bg: 'bg-blue-500/10', prefix: currency + ' ' },
+    { title: 'Total Profit (Incl. Pending)', value: stats.profitIncludingPending, icon: DollarSign, color: 'text-cyan-500', bg: 'bg-cyan-500/10', prefix: currency + ' ' },
     { title: 'Pending Balance', value: stats.pendingBalance, icon: TrendingDown, color: 'text-amber-500', bg: 'bg-amber-500/10', prefix: currency + ' ' },
     { title: 'Total Investment', value: stats.totalInvestment, icon: Car, color: 'text-purple-500', bg: 'bg-purple-500/10', prefix: currency + ' ' },
     { title: 'Remaining Investment', value: Math.max(0, stats.totalInvestment - stats.allTimeProfit), icon: TrendingDown, color: 'text-orange-500', bg: 'bg-orange-500/10', prefix: currency + ' ' },
@@ -155,6 +156,7 @@ export default function Dashboard({ selectedDriverId }: { selectedDriverId?: str
               className="px-3 py-1.5 bg-zinc-50 border border-zinc-200 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
             >
               <option value="">Current Month</option>
+              <option value="all">All Months</option>
               {Array.from({ length: 12 }, (_, i) => {
                 const date = new Date();
                 date.setMonth(date.getMonth() - i);

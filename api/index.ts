@@ -608,12 +608,18 @@ app.get('/api/stats', authenticate, async (req, res) => {
 
     // Calculate stats for specified month or current month
     const monthFilter = month 
-      ? `AND TO_CHAR(TO_DATE(date,'YYYY-MM-DD'),'YYYY-MM') = '${month}'`
+      ? (month === 'all' ? '' : `AND TO_CHAR(TO_DATE(date,'YYYY-MM-DD'),'YYYY-MM') = '${month}'`)
       : `AND TO_CHAR(TO_DATE(date,'YYYY-MM-DD'),'YYYY-MM') = TO_CHAR(CURRENT_DATE,'YYYY-MM')`;
 
     const [incR, expR] = await Promise.all([
       sql.query(`SELECT SUM(amount) as total FROM transactions WHERE type='income' AND category!='rent_pending' ${monthFilter} ${df}`, da),
       sql.query(`SELECT SUM(amount) as total FROM transactions WHERE type='expense' AND category!='rent_pending' ${monthFilter} ${df}`, da),
+    ]);
+
+    // Calculate profit including pending (for "total profit before excluding pending")
+    const [incWithPendingR, expWithPendingR] = await Promise.all([
+      sql.query(`SELECT SUM(amount) as total FROM transactions WHERE type='income' ${monthFilter} ${df}`, da),
+      sql.query(`SELECT SUM(amount) as total FROM transactions WHERE type='expense' ${monthFilter} ${df}`, da),
     ]);
 
     // Calculate all-time profit for remaining investment (not filtered by month)
@@ -655,6 +661,7 @@ app.get('/api/stats', authenticate, async (req, res) => {
       totalExpense:    Number(expR.rows[0]?.total) || 0,
       totalInvestment: Number(invR.rows[0]?.total) || 0,
       profit:          (Number(incR.rows[0]?.total)||0) - (Number(expR.rows[0]?.total)||0),
+      profitIncludingPending: (Number(incWithPendingR.rows[0]?.total)||0) - (Number(expWithPendingR.rows[0]?.total)||0),
       allTimeProfit:   (Number(allTimeIncR.rows[0]?.total)||0) - (Number(allTimeExpR.rows[0]?.total)||0),
       allTimeIncome:   Number(allTimeIncR.rows[0]?.total) || 0,
       allTimeExpense:  Number(allTimeExpR.rows[0]?.total) || 0,
