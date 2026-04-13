@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Settings as SettingsIcon, Plus, Trash2, Edit, Save, Download, FileText, AlertTriangle, RefreshCw, Users } from 'lucide-react';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line } from 'recharts';
 import UserManagement from './UserManagement';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -36,11 +37,39 @@ export default function Settings() {
   const [tempSettings, setTempSettings] = useState<AppSettings>(defaultSettings);
   const [hasChanges, setHasChanges] = useState(false);
   const [isResetting, setIsResetting] = useState(false);
+  const [chartData, setChartData] = useState<any[]>([]);
+  const [loadingChartData, setLoadingChartData] = useState(false);
 
   useEffect(() => {
     fetchCategories();
     fetchSettings();
   }, []);
+
+  useEffect(() => {
+    if (activeTab === 'reports') {
+      fetchChartData();
+    }
+  }, [activeTab]);
+
+  const fetchChartData = async () => {
+    try {
+      setLoadingChartData(true);
+      const token = localStorage.getItem('auth_token');
+      const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+      
+      const response = await fetch('/api/stats', { headers });
+      if (response.ok) {
+        const data = await response.json();
+        if (data.monthlyData && Array.isArray(data.monthlyData)) {
+          setChartData(data.monthlyData);
+        }
+      }
+    } catch (error) {
+      console.error('Failed to fetch chart data:', error);
+    } finally {
+      setLoadingChartData(false);
+    }
+  };
 
   const fetchCategories = async () => {
     try {
@@ -238,29 +267,81 @@ export default function Settings() {
         return;
       }
       
-      // Generate CSV
       if (data.length === 0) {
         alert('No data available for this report');
         return;
       }
-      
-      const headers_row = Object.keys(data[0]).join(',');
-      const csv_content = [
-        headers_row,
-        ...data.map(row => Object.values(row).map(val => 
-          typeof val === 'string' && (val.includes(',') || val.includes('"')) 
-            ? `"${val.replace(/"/g, '""')}"` 
-            : val
-        ).join(','))
-      ].join('\n');
-      
-      const blob = new Blob([csv_content], { type: 'text/csv' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `${type}-report-${new Date().toISOString().split('T')[0]}.csv`;
-      a.click();
-      URL.revokeObjectURL(url);
+
+      if (settings.reportFormat === 'excel') {
+        // Generate CSV
+        const headers_row = Object.keys(data[0]).join(',');
+        const csv_content = [
+          headers_row,
+          ...data.map(row => Object.values(row).map(val => 
+            typeof val === 'string' && (val.includes(',') || val.includes('"')) 
+              ? `"${val.replace(/"/g, '""')}"` 
+              : val
+          ).join(','))
+        ].join('\n');
+        
+        const blob = new Blob([csv_content], { type: 'text/csv' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${type}-report-${new Date().toISOString().split('T')[0]}.csv`;
+        a.click();
+        URL.revokeObjectURL(url);
+      } else {
+        // Generate PDF using HTML
+        const html = `
+          <!DOCTYPE html>
+          <html>
+          <head>
+            <title>${type.charAt(0).toUpperCase() + type.slice(1)} Report</title>
+            <style>
+              body { font-family: Arial, sans-serif; padding: 20px; }
+              h1 { color: #333; }
+              table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+              th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+              th { background-color: #f4f4f4; }
+              tr:nth-child(even) { background-color: #f9f9f9; }
+              .summary { margin-top: 20px; padding: 10px; background: #f0f0f0; }
+            </style>
+          </head>
+          <body>
+            <h1>${type.charAt(0).toUpperCase() + type.slice(1)} Report</h1>
+            <p>Generated: ${new Date().toLocaleString()}</p>
+            <table>
+              <thead>
+                <tr>
+                  ${Object.keys(data[0]).map(key => `<th>${key}</th>`).join('')}
+                </tr>
+              </thead>
+              <tbody>
+                ${data.map(row => `
+                  <tr>
+                    ${Object.values(row).map(val => `<td>${val !== null ? val : ''}</td>`).join('')}
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+            <div class="summary">
+              <p>Total Records: ${data.length}</p>
+            </div>
+          </body>
+          </html>
+        `;
+        
+        const blob = new Blob([html], { type: 'text/html' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${type}-report-${new Date().toISOString().split('T')[0]}.html`;
+        a.click();
+        URL.revokeObjectURL(url);
+        
+        alert('Report generated as HTML. Open the file and print to PDF (Ctrl+P).');
+      }
       
     } catch (error) {
       console.error('Report generation error:', error);
@@ -835,6 +916,26 @@ export default function Settings() {
                 <div className="text-sm font-medium text-blue-700">Summary Report</div>
               </button>
             </div>
+          </div>
+
+          <div className="bg-white p-6 rounded-2xl shadow-sm border border-zinc-200/60">
+            <h3 className="text-lg font-semibold text-zinc-900 mb-6">Monthly Income vs Expense</h3>
+            {loadingChartData ? (
+              <div className="h-64 flex items-center justify-center text-zinc-500">Loading chart...</div>
+            ) : chartData.length > 0 ? (
+              <ResponsiveContainer width="100%" height={300}>
+                <BarChart data={chartData}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="month" />
+                  <YAxis />
+                  <Tooltip />
+                  <Bar dataKey="income" fill="#10b981" name="Income" />
+                  <Bar dataKey="expense" fill="#f43f5e" name="Expense" />
+                </BarChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="h-64 flex items-center justify-center text-zinc-500">No data available</div>
+            )}
           </div>
 
           <div className="bg-white p-6 rounded-2xl shadow-sm border border-zinc-200/60">

@@ -17,6 +17,7 @@ export default function Dashboard({ selectedDriverId }: { selectedDriverId?: str
   const [selectedDriverName, setSelectedDriverName] = useState('');
   const [currency, setCurrency] = useState('Rs.');
   const [showTransactionDropdown, setShowTransactionDropdown] = useState(false);
+  const [selectedMonth, setSelectedMonth] = useState<string>('');
 
   // Load currency from settings
   useEffect(() => {
@@ -60,7 +61,10 @@ export default function Dashboard({ selectedDriverId }: { selectedDriverId?: str
 
   const fetchData = () => {
     setLoading(true);
-    const query = selectedDriverId ? `?driver_id=${selectedDriverId}` : '';
+    const queryParts = [];
+    if (selectedDriverId) queryParts.push(`driver_id=${selectedDriverId}`);
+    if (selectedMonth) queryParts.push(`month=${selectedMonth}`);
+    const query = queryParts.length > 0 ? `?${queryParts.join('&')}` : '';
     const token = localStorage.getItem('auth_token');
     const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
     
@@ -111,12 +115,16 @@ export default function Dashboard({ selectedDriverId }: { selectedDriverId?: str
     }
   }, [selectedDriverId]);
 
+  useEffect(() => {
+    fetchData();
+  }, [selectedMonth]);
+
   if (loading || !stats) return <div className="animate-pulse flex space-x-4">Loading...</div>;
 
   const statCards = [
-    { title: 'Revenue (This Month)', value: stats.totalIncome, icon: TrendingUp, color: 'text-emerald-500', bg: 'bg-emerald-500/10', prefix: currency + ' ' },
-    { title: 'Expense (This Month)', value: stats.totalExpense, icon: TrendingDown, color: 'text-rose-500', bg: 'bg-rose-500/10', prefix: currency + ' ' },
-    { title: 'Net Profit (This Month)', value: stats.profit, icon: DollarSign, color: 'text-blue-500', bg: 'bg-blue-500/10', prefix: currency + ' ' },
+    { title: 'Total Revenue', value: stats.totalIncome, icon: TrendingUp, color: 'text-emerald-500', bg: 'bg-emerald-500/10', prefix: currency + ' ' },
+    { title: 'Total Expense', value: stats.totalExpense, icon: TrendingDown, color: 'text-rose-500', bg: 'bg-rose-500/10', prefix: currency + ' ' },
+    { title: 'Net Profit', value: stats.profit, icon: DollarSign, color: 'text-blue-500', bg: 'bg-blue-500/10', prefix: currency + ' ' },
     { title: 'Pending Balance', value: stats.pendingBalance, icon: TrendingDown, color: 'text-amber-500', bg: 'bg-amber-500/10', prefix: currency + ' ' },
     { title: 'Total Investment', value: stats.totalInvestment, icon: Car, color: 'text-purple-500', bg: 'bg-purple-500/10', prefix: currency + ' ' },
     { title: 'Remaining Investment', value: Math.max(0, stats.totalInvestment - stats.profit), icon: TrendingDown, color: 'text-orange-500', bg: 'bg-orange-500/10', prefix: currency + ' ' },
@@ -131,9 +139,36 @@ export default function Dashboard({ selectedDriverId }: { selectedDriverId?: str
   return (
     <div className="space-y-8">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <h2 className="text-3xl font-bold text-zinc-900 tracking-tight">
-          {selectedDriverId ? `${selectedDriverName}'s Overview` : 'Dashboard Overview'}
-        </h2>
+        <div className="flex flex-col gap-3">
+          <h2 className="text-3xl font-bold text-zinc-900 tracking-tight">
+            {selectedDriverId ? `${selectedDriverName}'s Overview` : 'Dashboard Overview'}
+          </h2>
+          <div className="flex items-center gap-2">
+            <label className="text-sm text-zinc-600">Month:</label>
+            <select 
+              value={selectedMonth} 
+              onChange={(e) => setSelectedMonth(e.target.value)}
+              className="px-3 py-1.5 bg-zinc-50 border border-zinc-200 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+            >
+              <option value="">Current Month</option>
+              {Array.from({ length: 12 }, (_, i) => {
+                const date = new Date();
+                date.setMonth(date.getMonth() - i);
+                const monthStr = date.toISOString().slice(0, 7);
+                const monthName = date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+                return <option key={monthStr} value={monthStr}>{monthName}</option>;
+              })}
+            </select>
+            {selectedMonth && (
+              <button 
+                onClick={() => setSelectedMonth('')}
+                className="text-xs text-zinc-500 hover:text-zinc-700"
+              >
+                Clear
+              </button>
+            )}
+          </div>
+        </div>
         <div className="flex items-center gap-3">
           {selectedDriverId && (
             <button 
@@ -174,6 +209,16 @@ export default function Dashboard({ selectedDriverId }: { selectedDriverId?: str
                 >
                   <TrendingDown className="w-4 h-4 text-rose-500" />
                   Add Expense
+                </button>
+                <button 
+                  onClick={() => {
+                    setIsLogRentModalOpen(true);
+                    setShowTransactionDropdown(false);
+                  }}
+                  className="w-full text-left px-4 py-2.5 text-sm text-zinc-700 hover:bg-zinc-50 transition-colors flex items-center gap-2"
+                >
+                  <DollarSign className="w-4 h-4 text-amber-500" />
+                  Add Pending Amount
                 </button>
               </div>
             )}

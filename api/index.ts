@@ -591,14 +591,18 @@ app.post('/api/settings', authenticate, async (req, res) => {
 app.get('/api/stats', authenticate, async (req, res) => {
   try {
     await ensureDb();
-    const { driver_id } = req.query;
+    const { driver_id, month } = req.query;
     const df = driver_id ? 'AND driver_id = $1' : '';
     const da = driver_id ? [driver_id] : [];
 
-    // Calculate stats for current month only
+    // Calculate stats for specified month or current month
+    const monthFilter = month 
+      ? `AND TO_CHAR(TO_DATE(date,'YYYY-MM-DD'),'YYYY-MM') = '${month}'`
+      : `AND TO_CHAR(TO_DATE(date,'YYYY-MM-DD'),'YYYY-MM') = TO_CHAR(CURRENT_DATE,'YYYY-MM')`;
+
     const [incR, expR] = await Promise.all([
-      sql.query(`SELECT SUM(amount) as total FROM transactions WHERE type='income' AND category!='rent_pending' AND TO_CHAR(TO_DATE(date,'YYYY-MM-DD'),'YYYY-MM') = TO_CHAR(CURRENT_DATE,'YYYY-MM') ${df}`, da),
-      sql.query(`SELECT SUM(amount) as total FROM transactions WHERE type='expense' AND category!='rent_pending' AND TO_CHAR(TO_DATE(date,'YYYY-MM-DD'),'YYYY-MM') = TO_CHAR(CURRENT_DATE,'YYYY-MM') ${df}`, da),
+      sql.query(`SELECT SUM(amount) as total FROM transactions WHERE type='income' AND category!='rent_pending' ${monthFilter} ${df}`, da),
+      sql.query(`SELECT SUM(amount) as total FROM transactions WHERE type='expense' AND category!='rent_pending' ${monthFilter} ${df}`, da),
     ]);
 
     const pendR = driver_id
@@ -650,16 +654,32 @@ app.get('/api/reports/:type', authenticate, async (req, res) => {
   try {
     await ensureDb();
     const { type } = req.params;
-    const { driver_id, start_date, end_date } = req.query;
+    const { driver_id, start_date, end_date, month } = req.query;
     
     let query = '';
     let params: any[] = [];
+    let conditions: string[] = [];
     
     if (driver_id) {
       params.push(driver_id);
+      conditions.push(`driver_id = $${params.length}`);
     }
     
-    const df = driver_id ? 'AND driver_id = $' + (params.length) : '';
+    if (start_date) {
+      params.push(start_date);
+      conditions.push(`date >= $${params.length}`);
+    }
+    
+    if (end_date) {
+      params.push(end_date);
+      conditions.push(`date <= $${params.length}`);
+    }
+    
+    if (month) {
+      conditions.push(`TO_CHAR(TO_DATE(date,'YYYY-MM-DD'),'YYYY-MM') = '${month}'`);
+    }
+    
+    const df = conditions.length > 0 ? 'AND ' + conditions.join(' AND ') : '';
     
     if (type === 'income') {
       query = `
