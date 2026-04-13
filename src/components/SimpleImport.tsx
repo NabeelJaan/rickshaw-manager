@@ -55,14 +55,18 @@ export default function SimpleImport() {
   }, []);
 
   React.useEffect(() => {
-    fetch('/api/drivers')
+    const token = localStorage.getItem('auth_token');
+    const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+    fetch('/api/drivers', { headers })
       .then(res => res.json())
       .then(drivers => {
-        setAvailableDrivers(drivers);
-        // Try to find "Waseem" automatically
-        const waseem = drivers.find((d: any) => d.name.toLowerCase().includes('waseem'));
-        if (waseem) {
-          setSelectedDriver(waseem.id);
+        if (Array.isArray(drivers)) {
+          setAvailableDrivers(drivers);
+          // Try to find "Waseem" automatically
+          const waseem = drivers.find((d: any) => d.name.toLowerCase().includes('waseem'));
+          if (waseem) {
+            setSelectedDriver(waseem.id);
+          }
         }
       })
       .catch(err => console.error('Failed to load drivers:', err));
@@ -366,13 +370,19 @@ export default function SimpleImport() {
     
     try {
       // Import drivers
+      const token = localStorage.getItem('auth_token');
+      const authHeaders = {
+        'Content-Type': 'application/json',
+        ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+      };
+      
       if (importData.drivers?.length) {
         console.log('Importing drivers...');
         for (const driver of importData.drivers) {
           console.log('Importing driver:', driver);
           const response = await fetch('/api/drivers', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: authHeaders,
             body: JSON.stringify(driver)
           });
           
@@ -392,7 +402,7 @@ export default function SimpleImport() {
           console.log('Importing rickshaw:', rickshaw);
           const response = await fetch('/api/rickshaws', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: authHeaders,
             body: JSON.stringify(rickshaw)
           });
           
@@ -421,7 +431,7 @@ export default function SimpleImport() {
           
           const response = await fetch('/api/transactions', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: authHeaders,
             body: JSON.stringify(transactionData)
           });
           

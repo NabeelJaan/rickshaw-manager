@@ -154,13 +154,19 @@ export default function GoogleSheetsImport() {
     };
 
     try {
+      const token = localStorage.getItem('auth_token');
+      const authHeaders = {
+        'Content-Type': 'application/json',
+        ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+      };
+      
       // Import drivers
       if (mappedImportData.drivers?.length) {
         for (const driver of mappedImportData.drivers) {
           try {
             const response = await fetch('/api/drivers', {
               method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
+              headers: authHeaders,
               body: JSON.stringify(driver)
             });
             
@@ -182,7 +188,7 @@ export default function GoogleSheetsImport() {
           try {
             const response = await fetch('/api/rickshaws', {
               method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
+              headers: authHeaders,
               body: JSON.stringify(rickshaw)
             });
             
@@ -207,17 +213,21 @@ export default function GoogleSheetsImport() {
             let rickshawId = null;
 
             if (transaction.driver_name) {
-              const driversResponse = await fetch('/api/drivers');
+              const driversResponse = await fetch('/api/drivers', { headers: authHeaders });
               const drivers = await driversResponse.json();
-              const driver = drivers.find((d: any) => d.name.toLowerCase() === transaction.driver_name?.toLowerCase());
-              driverId = driver ? driver.id : null;
+              if (Array.isArray(drivers)) {
+                const driver = drivers.find((d: any) => d.name.toLowerCase() === transaction.driver_name?.toLowerCase());
+                driverId = driver ? driver.id : null;
+              }
             }
 
             if (transaction.rickshaw_number) {
-              const rickshawsResponse = await fetch('/api/rickshaws');
+              const rickshawsResponse = await fetch('/api/rickshaws', { headers: authHeaders });
               const rickshaws = await rickshawsResponse.json();
-              const rickshaw = rickshaws.find((r: any) => r.number.toLowerCase() === transaction.rickshaw_number?.toLowerCase());
-              rickshawId = rickshaw ? rickshaw.id : null;
+              if (Array.isArray(rickshaws)) {
+                const rickshaw = rickshaws.find((r: any) => r.number.toLowerCase() === transaction.rickshaw_number?.toLowerCase());
+                rickshawId = rickshaw ? rickshaw.id : null;
+              }
             }
 
             const transactionData = {
@@ -232,7 +242,7 @@ export default function GoogleSheetsImport() {
 
             const response = await fetch('/api/transactions', {
               method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
+              headers: authHeaders,
               body: JSON.stringify(transactionData)
             });
             

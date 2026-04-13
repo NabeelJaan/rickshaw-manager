@@ -18,7 +18,17 @@ function AppContent() {
   const [showAddDriverForm, setShowAddDriverForm] = useState(false);
 
   const fetchDrivers = () => {
-    fetch('/api/drivers').then(res => res.json()).then(setDrivers);
+    const token = localStorage.getItem('auth_token');
+    const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+    fetch('/api/drivers', { headers }).then(res => res.json()).then(data => {
+      // Ensure we only set array data, not error objects
+      if (Array.isArray(data)) {
+        setDrivers(data);
+      } else {
+        console.error('fetchDrivers error:', data);
+        setDrivers([]);
+      }
+    });
   };
 
   useEffect(() => {

@@ -45,11 +45,11 @@ export default function Drivers({ onDriverAdded, defaultShowForm }: { onDriverAd
     const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
     fetch('/api/drivers', { headers })
       .then(res => res.json())
-      .then(data => setDrivers(data));
+      .then(data => { if (Array.isArray(data)) setDrivers(data); });
     
     fetch('/api/rickshaws', { headers })
       .then(res => res.json())
-      .then(data => setRickshaws(data));
+      .then(data => { if (Array.isArray(data)) setRickshaws(data); });
   };
 
   useEffect(() => {

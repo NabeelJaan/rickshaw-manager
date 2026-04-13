@@ -42,9 +42,9 @@ export default function Rickshaws({ selectedDriverId }: { selectedDriverId?: str
   const fetchData = () => {
     const token = localStorage.getItem('auth_token');
     const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
-    fetch('/api/rickshaws', { headers }).then(res => res.json()).then(setRickshaws);
-    fetch('/api/drivers', { headers }).then(res => res.json()).then(setDrivers);
-    fetch('/api/assignments', { headers }).then(res => res.json()).then(setAssignments);
+    fetch('/api/rickshaws', { headers }).then(res => res.json()).then(data => { if (Array.isArray(data)) setRickshaws(data); });
+    fetch('/api/drivers', { headers }).then(res => res.json()).then(data => { if (Array.isArray(data)) setDrivers(data); });
+    fetch('/api/assignments', { headers }).then(res => res.json()).then(data => { if (Array.isArray(data)) setAssignments(data); });
   };
 
   useEffect(() => {

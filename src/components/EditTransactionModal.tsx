@@ -24,8 +24,10 @@ export default function EditTransactionModal({ isOpen, onClose, onSuccess, trans
 
   useEffect(() => {
     if (isOpen) {
-      fetch('/api/rickshaws').then(res => res.json()).then(setRickshaws);
-      fetch('/api/drivers').then(res => res.json()).then(setDrivers);
+      const token = localStorage.getItem('auth_token');
+      const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+      fetch('/api/rickshaws', { headers }).then(res => res.json()).then(data => { if (Array.isArray(data)) setRickshaws(data); });
+      fetch('/api/drivers', { headers }).then(res => res.json()).then(data => { if (Array.isArray(data)) setDrivers(data); });
     }
   }, [isOpen]);
 

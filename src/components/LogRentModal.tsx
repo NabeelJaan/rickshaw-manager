@@ -49,23 +49,31 @@ export default function LogRentModal({ isOpen, onClose, onSubmit, onSuccess, sel
   }, [isOpen, selectedDriverId]);
 
   const fetchDrivers = () => {
-    fetch('/api/drivers').then(res => res.json()).then(setDrivers);
+    const token = localStorage.getItem('auth_token');
+    const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+    fetch('/api/drivers', { headers }).then(res => res.json()).then(data => { if (Array.isArray(data)) setDrivers(data); });
   };
 
   const fetchRickshaws = () => {
-    fetch('/api/rickshaws').then(res => res.json()).then(setRickshaws);
+    const token = localStorage.getItem('auth_token');
+    const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+    fetch('/api/rickshaws', { headers }).then(res => res.json()).then(data => { if (Array.isArray(data)) setRickshaws(data); });
   };
 
   const fetchCategories = async () => {
     try {
-      const response = await fetch('/api/categories');
+      const token = localStorage.getItem('auth_token');
+      const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+      const response = await fetch('/api/categories', { headers });
       if (response.ok) {
         const data = await response.json();
-        // Filter for income categories but always include 'rent_pending' if it exists in expense
-        const incomeCats = data.filter((cat: Category) => 
-          cat.type === 'income' || cat.name === 'rent_pending'
-        );
-        setCategories(incomeCats);
+        if (Array.isArray(data)) {
+          // Filter for income categories but always include 'rent_pending' if it exists in expense
+          const incomeCats = data.filter((cat: Category) => 
+            cat.type === 'income' || cat.name === 'rent_pending'
+          );
+          setCategories(incomeCats);
+        }
       }
     } catch (error) {
       console.error('Failed to fetch categories:', error);

@@ -43,7 +43,7 @@ export default function ExpenseModal({ isOpen, onClose, onSuccess, driverId, dri
       const response = await fetch('/api/categories?type=expense', { headers });
       if (response.ok) {
         const data = await response.json();
-        setCategories(data);
+        if (Array.isArray(data)) setCategories(data);
       }
     } catch (error) {
       console.error('Failed to fetch categories:', error);

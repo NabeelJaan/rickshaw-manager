@@ -60,23 +60,31 @@ export default function Transactions({ selectedDriverId }: { selectedDriverId?: 
   }, [selectedDriverId]);
 
   const fetchData = () => {
+    const token = localStorage.getItem('auth_token');
+    const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
     const query = new URLSearchParams(filters as any).toString();
-    fetch(`/api/transactions?${query}`)
+    fetch(`/api/transactions?${query}`, { headers })
       .then(res => res.json())
-      .then(data => setTransactions(data));
+      .then(data => { if (Array.isArray(data)) setTransactions(data); });
   };
 
   useEffect(() => {
+    const token = localStorage.getItem('auth_token');
+    const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
     fetchData();
-    fetch('/api/rickshaws').then(res => res.json()).then(setRickshaws);
-    fetch('/api/drivers').then(res => res.json()).then(setDrivers);
+    fetch('/api/rickshaws', { headers }).then(res => res.json()).then(data => { if (Array.isArray(data)) setRickshaws(data); });
+    fetch('/api/drivers', { headers }).then(res => res.json()).then(data => { if (Array.isArray(data)) setDrivers(data); });
   }, [filters]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    const token = localStorage.getItem('auth_token');
     const res = await fetch('/api/transactions', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 
+        'Content-Type': 'application/json',
+        ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+      },
       body: JSON.stringify({
         ...formData,
         amount: formData.amount === '' ? 0 : parseFloat(formData.amount)
@@ -107,7 +115,9 @@ export default function Transactions({ selectedDriverId }: { selectedDriverId?: 
 
   const handleDelete = async (id: number) => {
     if (confirm('Are you sure you want to delete this transaction?')) {
-      await fetch(`/api/transactions/${id}`, { method: 'DELETE' });
+      const token = localStorage.getItem('auth_token');
+      const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+      await fetch(`/api/transactions/${id}`, { method: 'DELETE', headers });
       fetchData();
     }
   };
@@ -354,6 +364,7 @@ export default function Transactions({ selectedDriverId }: { selectedDriverId?: 
       <LogRentModal 
         isOpen={isLogRentModalOpen} 
         onClose={() => setIsLogRentModalOpen(false)} 
+        onSubmit={fetchData}
         onSuccess={fetchData}
         selectedDriverId={selectedDriverId}
       />

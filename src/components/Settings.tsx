@@ -44,10 +44,12 @@ export default function Settings() {
 
   const fetchCategories = async () => {
     try {
-      const response = await fetch('/api/categories');
+      const token = localStorage.getItem('auth_token');
+      const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+      const response = await fetch('/api/categories', { headers });
       if (response.ok) {
         const data = await response.json();
-        setCategories(data);
+        if (Array.isArray(data)) setCategories(data);
       }
     } catch (error) {
       console.error('Failed to fetch categories:', error);
@@ -56,7 +58,9 @@ export default function Settings() {
 
   const fetchSettings = async () => {
     try {
-      const response = await fetch('/api/settings');
+      const token = localStorage.getItem('auth_token');
+      const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+      const response = await fetch('/api/settings', { headers });
       if (response.ok) {
         const data = await response.json();
         const parsedSettings: AppSettings = {
@@ -247,13 +251,20 @@ export default function Settings() {
     
     try {
       console.log('Starting simple transaction reset...');
+      const token = localStorage.getItem('auth_token');
+      const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
       
       // Method 1: Try to get all transactions and delete them individually
       console.log('Method 1: Getting all transactions...');
-      const getResponse = await fetch('/api/transactions');
+      const getResponse = await fetch('/api/transactions', { headers });
       
       if (getResponse.ok) {
         const transactions = await getResponse.json();
+        if (!Array.isArray(transactions)) {
+          alert('Failed to retrieve transactions');
+          setIsResetting(false);
+          return;
+        }
         console.log('Found', transactions.length, 'transactions to delete');
         
         let deletedCount = 0;
@@ -262,7 +273,8 @@ export default function Settings() {
         for (const transaction of transactions) {
           try {
             const deleteResponse = await fetch(`/api/transactions/${transaction.id}`, {
-              method: 'DELETE'
+              method: 'DELETE',
+              headers
             });
             
             if (deleteResponse.ok) {
@@ -315,26 +327,28 @@ export default function Settings() {
     
     try {
       console.log('Resetting data type:', type);
+      const token = localStorage.getItem('auth_token');
+      const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
       
       switch (type) {
         case 'all':
           // Try to delete everything
           try {
-            await fetch('/api/transactions', { method: 'DELETE' });
+            await fetch('/api/transactions', { method: 'DELETE', headers });
             console.log('Transactions deleted');
           } catch (e) {
             console.log('Transactions endpoint might not support DELETE');
           }
           
           try {
-            await fetch('/api/drivers', { method: 'DELETE' });
+            await fetch('/api/drivers', { method: 'DELETE', headers });
             console.log('Drivers deleted');
           } catch (e) {
             console.log('Drivers endpoint might not support DELETE');
           }
           
           try {
-            await fetch('/api/rickshaws', { method: 'DELETE' });
+            await fetch('/api/rickshaws', { method: 'DELETE', headers });
             console.log('Rickshaws deleted');
           } catch (e) {
             console.log('Rickshaws endpoint might not support DELETE');
@@ -346,7 +360,7 @@ export default function Settings() {
           
         case 'transactions':
           try {
-            const response = await fetch('/api/transactions', { method: 'DELETE' });
+            const response = await fetch('/api/transactions', { method: 'DELETE', headers });
             console.log('Delete transactions response:', response.status);
             if (!response.ok && response.status !== 404) {
               throw new Error(`Failed to delete transactions: ${response.status}`);
@@ -354,14 +368,16 @@ export default function Settings() {
           } catch (error) {
             console.log('Transactions delete failed, trying alternative method...');
             // Alternative: Get all transactions and delete individually
-            const getResponse = await fetch('/api/transactions');
+            const getResponse = await fetch('/api/transactions', { headers });
             if (getResponse.ok) {
               const transactions = await getResponse.json();
-              for (const tx of transactions) {
-                try {
-                  await fetch(`/api/transactions/${tx.id}`, { method: 'DELETE' });
-                } catch (e) {
-                  console.log('Failed to delete transaction:', tx.id);
+              if (Array.isArray(transactions)) {
+                for (const tx of transactions) {
+                  try {
+                    await fetch(`/api/transactions/${tx.id}`, { method: 'DELETE', headers });
+                  } catch (e) {
+                    console.log('Failed to delete transaction:', tx.id);
+                  }
                 }
               }
             }
@@ -370,7 +386,7 @@ export default function Settings() {
           
         case 'drivers':
           try {
-            const response = await fetch('/api/drivers', { method: 'DELETE' });
+            const response = await fetch('/api/drivers', { method: 'DELETE', headers });
             console.log('Delete drivers response:', response.status);
             if (!response.ok && response.status !== 404) {
               throw new Error(`Failed to delete drivers: ${response.status}`);
@@ -378,14 +394,16 @@ export default function Settings() {
           } catch (error) {
             console.log('Drivers delete failed, trying alternative method...');
             // Alternative: Get all drivers and delete individually
-            const getResponse = await fetch('/api/drivers');
+            const getResponse = await fetch('/api/drivers', { headers });
             if (getResponse.ok) {
               const drivers = await getResponse.json();
-              for (const driver of drivers) {
-                try {
-                  await fetch(`/api/drivers/${driver.id}`, { method: 'DELETE' });
-                } catch (e) {
-                  console.log('Failed to delete driver:', driver.id);
+              if (Array.isArray(drivers)) {
+                for (const driver of drivers) {
+                  try {
+                    await fetch(`/api/drivers/${driver.id}`, { method: 'DELETE', headers });
+                  } catch (e) {
+                    console.log('Failed to delete driver:', driver.id);
+                  }
                 }
               }
             }
@@ -394,7 +412,7 @@ export default function Settings() {
           
         case 'rickshaws':
           try {
-            const response = await fetch('/api/rickshaws', { method: 'DELETE' });
+            const response = await fetch('/api/rickshaws', { method: 'DELETE', headers });
             console.log('Delete rickshaws response:', response.status);
             if (!response.ok && response.status !== 404) {
               throw new Error(`Failed to delete rickshaws: ${response.status}`);
@@ -402,14 +420,16 @@ export default function Settings() {
           } catch (error) {
             console.log('Rickshaws delete failed, trying alternative method...');
             // Alternative: Get all rickshaws and delete individually
-            const getResponse = await fetch('/api/rickshaws');
+            const getResponse = await fetch('/api/rickshaws', { headers });
             if (getResponse.ok) {
               const rickshaws = await getResponse.json();
-              for (const rickshaw of rickshaws) {
-                try {
-                  await fetch(`/api/rickshaws/${rickshaw.id}`, { method: 'DELETE' });
-                } catch (e) {
-                  console.log('Failed to delete rickshaw:', rickshaw.id);
+              if (Array.isArray(rickshaws)) {
+                for (const rickshaw of rickshaws) {
+                  try {
+                    await fetch(`/api/rickshaws/${rickshaw.id}`, { method: 'DELETE', headers });
+                  } catch (e) {
+                    console.log('Failed to delete rickshaw:', rickshaw.id);
+                  }
                 }
               }
             }
