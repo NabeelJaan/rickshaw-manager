@@ -396,41 +396,78 @@ export default function Dashboard({ selectedDriverId }: { selectedDriverId?: str
 
       <div className="bg-white rounded-2xl shadow-sm border border-zinc-200/60 overflow-hidden">
         <div className="p-4 md:p-6 border-b border-zinc-100">
-          <h3 className="text-base font-semibold text-zinc-900">Recent Transactions</h3>
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+            <h3 className="text-base font-semibold text-zinc-900">Recent Transactions</h3>
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2 px-3 py-1.5 bg-emerald-50 rounded-lg">
+                <div className="w-2 h-2 rounded-full bg-emerald-500"></div>
+                <span className="text-xs font-medium text-emerald-700">
+                  {transactions.filter(t => t.type === 'income').length} Income
+                </span>
+              </div>
+              <div className="flex items-center gap-2 px-3 py-1.5 bg-rose-50 rounded-lg">
+                <div className="w-2 h-2 rounded-full bg-rose-500"></div>
+                <span className="text-xs font-medium text-rose-700">
+                  {transactions.filter(t => t.type === 'expense').length} Expense
+                </span>
+              </div>
+              <div className="flex items-center gap-2 px-3 py-1.5 bg-amber-50 rounded-lg">
+                <div className="w-2 h-2 rounded-full bg-amber-500"></div>
+                <span className="text-xs font-medium text-amber-700">
+                  {transactions.filter(t => t.category === 'rent_pending').length} Pending
+                </span>
+              </div>
+            </div>
+          </div>
         </div>
         
         {/* Mobile View: Cards */}
         <div className="block md:hidden divide-y divide-zinc-100">
           {transactions.map(t => (
-            <div key={t.id} className="p-4 space-y-3">
+            <div key={t.id} className="p-4 space-y-3 bg-gradient-to-r from-transparent to-zinc-50/30 hover:from-zinc-50/50 transition-colors">
               <div className="flex justify-between items-start">
-                <div>
-                  <p className="text-[10px] text-zinc-500 uppercase font-semibold tracking-wider mb-0.5">
-                    {new Date(t.date).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
-                  </p>
+                <div className="flex-1">
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className={`p-1.5 rounded-lg ${
+                      t.type === 'income' ? 'bg-emerald-100' : 
+                      t.category === 'rent_pending' ? 'bg-amber-100' :
+                      'bg-rose-100'
+                    }`}>
+                      {t.type === 'income' ? (
+                        <TrendingUp className="w-3.5 h-3.5 text-emerald-600" />
+                      ) : t.category === 'rent_pending' ? (
+                        <DollarSign className="w-3.5 h-3.5 text-amber-600" />
+                      ) : (
+                        <TrendingDown className="w-3.5 h-3.5 text-rose-600" />
+                      )}
+                    </div>
+                    <span className="text-[10px] text-zinc-500 uppercase font-semibold tracking-wider">
+                      {new Date(t.date).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
+                    </span>
+                  </div>
                   <p className="text-sm font-semibold text-zinc-900 capitalize">{t.category.replace('_', ' ')}</p>
                 </div>
-                <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium border ${
-                  t.type === 'income' ? 'bg-emerald-50 text-emerald-700 border-emerald-200/50' : 
-                  t.type === 'pending' ? 'bg-amber-50 text-amber-700 border-amber-200/50' :
-                  'bg-rose-50 text-rose-700 border-rose-200/50'
+                <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-semibold ${
+                  t.type === 'income' ? 'bg-emerald-100 text-emerald-700' : 
+                  t.category === 'rent_pending' ? 'bg-amber-100 text-amber-700' :
+                  'bg-rose-100 text-rose-700'
                 }`}>
-                  {t.type}
+                  {currency}{t.amount.toLocaleString()}
                 </span>
               </div>
               
-              <div className="flex justify-between items-end">
-                <div className="space-y-1">
+              <div className="flex justify-between items-center gap-2">
+                <div className="flex items-center gap-3">
                   {t.rickshaw_number && (
-                    <div className="flex items-center gap-1.5 text-xs text-zinc-500">
-                      <Car className="w-3 h-3" />
-                      {t.rickshaw_number}
+                    <div className="flex items-center gap-1.5 text-xs text-zinc-600 bg-zinc-100 px-2 py-1 rounded-md">
+                      <Car className="w-3 h-3 text-zinc-500" />
+                      <span className="font-medium">{t.rickshaw_number}</span>
                     </div>
                   )}
                   {t.driver_name && (
-                    <div className="flex items-center gap-1.5 text-xs text-zinc-500">
-                      <Users className="w-3 h-3" />
-                      {t.driver_name}
+                    <div className="flex items-center gap-1.5 text-xs text-zinc-600 bg-zinc-100 px-2 py-1 rounded-md">
+                      <Users className="w-3 h-3 text-zinc-500" />
+                      <span className="font-medium">{t.driver_name}</span>
                     </div>
                   )}
                 </div>
@@ -471,63 +508,95 @@ export default function Dashboard({ selectedDriverId }: { selectedDriverId?: str
         <div className="hidden md:block overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="bg-zinc-50/50 border-b border-zinc-200/60 text-[11px] font-semibold text-zinc-500 uppercase tracking-wider">
-                <th className="p-4">Date</th>
+              <tr className="bg-gradient-to-r from-zinc-50 to-zinc-100/50 border-b border-zinc-200/60 text-[11px] font-semibold text-zinc-500 uppercase tracking-wider">
+                <th className="p-4 rounded-tl-lg">Date</th>
                 <th className="p-4">Type</th>
                 <th className="p-4">Category</th>
                 <th className="p-4">Amount</th>
                 <th className="p-4">Rickshaw</th>
                 <th className="p-4">Driver</th>
                 <th className="p-4">Notes</th>
-                <th className="p-4 text-right">Actions</th>
+                <th className="p-4 text-right rounded-tr-lg">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-zinc-100">
+            <tbody className="divide-y divide-zinc-100/80">
               {transactions.map(t => (
-                <tr key={t.id} className="hover:bg-zinc-50/50 transition-colors group">
-                  <td className="p-4 text-sm text-zinc-600 font-number">
-                    {new Date(t.date).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
+                <tr key={t.id} className="hover:bg-gradient-to-r hover:from-zinc-50/50 hover:to-transparent transition-all group">
+                  <td className="p-4 text-sm text-zinc-600 font-medium">
+                    <div className="flex items-center gap-2">
+                      <div className={`w-2 h-2 rounded-full ${
+                        t.type === 'income' ? 'bg-emerald-500' : 
+                        t.category === 'rent_pending' ? 'bg-amber-500' :
+                        'bg-rose-500'
+                      }`}></div>
+                      {new Date(t.date).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
+                    </div>
                   </td>
                   <td className="p-4">
-                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-md text-[11px] font-medium border ${
-                      t.type === 'income' ? 'bg-emerald-50 text-emerald-700 border-emerald-200/50' : 
-                      t.type === 'pending' ? 'bg-amber-50 text-amber-700 border-amber-200/50' :
-                      'bg-rose-50 text-rose-700 border-rose-200/50'
+                    <div className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-semibold ${
+                      t.type === 'income' ? 'bg-emerald-100 text-emerald-700' : 
+                      t.category === 'rent_pending' ? 'bg-amber-100 text-amber-700' :
+                      'bg-rose-100 text-rose-700'
                     }`}>
+                      {t.type === 'income' ? (
+                        <TrendingUp className="w-3 h-3" />
+                      ) : t.category === 'rent_pending' ? (
+                        <DollarSign className="w-3 h-3" />
+                      ) : (
+                        <TrendingDown className="w-3 h-3" />
+                      )}
                       {t.type}
-                    </span>
+                    </div>
                   </td>
-                  <td className="p-4 text-sm text-zinc-700 capitalize">{t.category.replace('_', ' ')}</td>
-                  <td className={`p-4 text-sm font-medium font-number ${
+                  <td className="p-4 text-sm text-zinc-700 capitalize font-medium">{t.category.replace('_', ' ')}</td>
+                  <td className={`p-4 text-sm font-bold font-number ${
                     t.type === 'income' ? 'text-emerald-600' : 
-                    t.type === 'pending' ? 'text-amber-600' :
+                    t.category === 'rent_pending' ? 'text-amber-600' :
                     'text-rose-600'
                   }`}>
-                    {t.type === 'income' ? '+' : t.type === 'pending' ? '' : '-'}{currency} {t.amount.toLocaleString()}
+                    {t.type === 'income' ? '+' : t.category === 'rent_pending' ? '' : '-'}{currency}{t.amount.toLocaleString()}
                   </td>
-                  <td className="p-4 text-sm text-zinc-600">{t.rickshaw_number || '-'}</td>
-                  <td className="p-4 text-sm text-zinc-600">{t.driver_name || '-'}</td>
+                  <td className="p-4">
+                    {t.rickshaw_number ? (
+                      <div className="flex items-center gap-1.5 text-xs text-zinc-600 bg-zinc-100 px-2.5 py-1 rounded-full w-fit">
+                        <Car className="w-3 h-3 text-zinc-500" />
+                        <span className="font-medium">{t.rickshaw_number}</span>
+                      </div>
+                    ) : (
+                      <span className="text-zinc-400 text-xs">-</span>
+                    )}
+                  </td>
+                  <td className="p-4">
+                    {t.driver_name ? (
+                      <div className="flex items-center gap-1.5 text-xs text-zinc-600 bg-zinc-100 px-2.5 py-1 rounded-full w-fit">
+                        <Users className="w-3 h-3 text-zinc-500" />
+                        <span className="font-medium">{t.driver_name}</span>
+                      </div>
+                    ) : (
+                      <span className="text-zinc-400 text-xs">-</span>
+                    )}
+                  </td>
                   <td className="p-4 text-sm text-zinc-500">
                     {t.notes ? (
                       <div className="max-w-xs">
-                        <p className="truncate" title={t.notes}>{t.notes}</p>
+                        <p className="truncate text-xs" title={t.notes}>{t.notes}</p>
                       </div>
                     ) : (
-                      <span className="text-zinc-400">-</span>
+                      <span className="text-zinc-400 text-xs">-</span>
                     )}
                   </td>
                   <td className="p-4 text-right">
-                    <div className="flex items-center gap-2 justify-end">
+                    <div className="flex items-center gap-1.5 justify-end">
                       <button 
                         onClick={() => handleEditTransaction(t)} 
-                        className="text-zinc-400 hover:text-emerald-500 transition-colors"
+                        className="p-1.5 text-zinc-400 hover:text-emerald-500 hover:bg-emerald-50 rounded-lg transition-all"
                         title="Edit transaction"
                       >
                         <Edit className="w-4 h-4" />
                       </button>
                       <button 
                         onClick={() => handleDeleteTransaction(t.id)} 
-                        className="text-zinc-400 hover:text-rose-500 transition-colors"
+                        className="p-1.5 text-zinc-400 hover:text-rose-500 hover:bg-rose-50 rounded-lg transition-all"
                         title="Delete transaction"
                       >
                         <Trash2 className="w-4 h-4" />
