@@ -322,8 +322,7 @@ app.get('/api/rickshaws', authenticate, async (req, res) => {
     await ensureDb();
     const r = await sql`
       SELECT r.*,
-        COALESCE((SELECT SUM(amount) FROM transactions WHERE rickshaw_id=r.id AND type='income' AND category!='rent_pending'),0) -
-        COALESCE((SELECT SUM(amount) FROM transactions WHERE rickshaw_id=r.id AND type='expense' AND category!='rent_pending'),0) as recovered_cost
+        COALESCE((SELECT SUM(CASE WHEN type='income' AND category!='rent_pending' THEN amount WHEN type='expense' AND category!='rent_pending' THEN -amount ELSE 0 END) FROM transactions WHERE rickshaw_id=r.id),0) as recovered_cost
       FROM rickshaws r ORDER BY r.id DESC`;
     res.json(r.rows);
   } catch (e: any) { res.status(500).json({ error: e.message }); }
