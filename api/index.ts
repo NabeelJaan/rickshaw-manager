@@ -325,8 +325,12 @@ app.get('/api/rickshaws', authenticate, async (req, res) => {
         COALESCE((SELECT SUM(amount) FROM transactions WHERE rickshaw_id=r.id AND type='income' AND category!='rent_pending'),0) -
         COALESCE((SELECT SUM(amount) FROM transactions WHERE rickshaw_id=r.id AND type='expense' AND category!='rent_pending'),0) as recovered_cost
       FROM rickshaws r ORDER BY r.id DESC`;
-    res.json(r.rows);
-  } catch (e: any) { res.status(500).json({ error: e.message }); }
+    console.log('Rickshaws API returning:', r.rows.length, 'rickshaws');
+    res.json(Array.isArray(r.rows) ? r.rows : []);
+  } catch (e: any) { 
+    console.error('Rickshaws API error:', e);
+    res.status(500).json({ error: e.message }); 
+  }
 });
 
 app.post('/api/rickshaws', authenticate, async (req, res) => {
@@ -370,8 +374,12 @@ app.get('/api/drivers', authenticate, async (req, res) => {
       LEFT JOIN rickshaw_assignments a ON d.id=a.driver_id AND a.end_date IS NULL
       LEFT JOIN rickshaws rk ON a.rickshaw_id=rk.id
       ORDER BY d.id DESC`;
-    res.json(r.rows);
-  } catch (e: any) { res.status(500).json({ error: e.message }); }
+    console.log('Drivers API returning:', r.rows.length, 'drivers');
+    res.json(Array.isArray(r.rows) ? r.rows : []);
+  } catch (e: any) { 
+    console.error('Drivers API error:', e);
+    res.status(500).json({ error: e.message }); 
+  }
 });
 
 app.post('/api/drivers', authenticate, async (req, res) => {
@@ -629,6 +637,8 @@ app.get('/api/stats', authenticate, async (req, res) => {
     const monthFilter = month 
       ? (month === 'all' ? '' : `AND TO_CHAR(TO_DATE(date,'YYYY-MM-DD'),'YYYY-MM') = '${month}'`)
       : '';
+
+    console.log('Stats API called with:', { driver_id, month, rickshaw_id, monthFilter });
 
     const [incR, expR] = await Promise.all([
       sql.query(`SELECT SUM(amount) as total FROM transactions WHERE type='income' AND category!='rent_pending' ${monthFilter} ${df} ${rf}`, da),

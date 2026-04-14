@@ -85,15 +85,15 @@ export default function Dashboard({ selectedDriverId }: { selectedDriverId?: str
     const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
     
     Promise.all([
-      fetch(`/api/stats${query}`, { headers }).then(res => res.json()),
-      fetch(`/api/transactions${query ? query + '&' : '?'}limit=10`, { headers }).then(res => res.json())
+      fetch(`/api/stats${query}`, { headers }).then(res => res.json()).catch(() => ({})),
+      fetch(`/api/transactions${query ? query + '&' : '?'}limit=10`, { headers }).then(res => res.json()).catch(() => [])
     ]).then(([statsData, txData]) => {
       console.log('Dashboard received stats:', statsData);
       console.log('Dashboard received transactions:', txData);
-      console.log('Number of transactions:', txData.length || 0);
+      console.log('Number of transactions:', Array.isArray(txData) ? txData.length : 0);
       
       // Log each transaction's driver_id for debugging
-      if (txData && txData.length > 0) {
+      if (Array.isArray(txData) && txData.length > 0) {
         console.log('Transaction driver_ids:', txData.map((t: any) => ({
           id: t.id,
           driver_id: t.driver_id,
@@ -103,11 +103,13 @@ export default function Dashboard({ selectedDriverId }: { selectedDriverId?: str
         })));
       }
       
-      setStats(statsData);
-      setTransactions(txData);
+      setStats(statsData || {});
+      setTransactions(Array.isArray(txData) ? txData : []);
       setLoading(false);
     }).catch(error => {
       console.error('Dashboard fetch error:', error);
+      setStats({});
+      setTransactions([]);
       setLoading(false);
     });
   };
@@ -135,7 +137,7 @@ export default function Dashboard({ selectedDriverId }: { selectedDriverId?: str
     fetchData();
   }, [selectedMonth, selectedRickshawIds]);
 
-  if (loading || !stats) return <div className="animate-pulse flex space-x-4">Loading...</div>;
+  if (loading) return <div className="p-8 text-center text-zinc-500">Loading...</div>;
 
   const statCards = [
     { title: 'Total Revenue', value: stats.totalIncome || 0, icon: TrendingUp, color: 'text-emerald-500', bg: 'bg-emerald-500/10', prefix: currency + ' ' },
