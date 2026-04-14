@@ -148,7 +148,7 @@ export default function Dashboard({ selectedDriverId }: { selectedDriverId?: str
 
   // Extract engine oil change records from transactions
   const oilChangeRecords = transactions.filter(t => 
-    t.notes && (t.notes.toLowerCase().includes('oil') || t.notes.toLowerCase().includes('engine'))
+    t.category && (t.category.toLowerCase().includes('oil') || t.category.toLowerCase().includes('engine'))
   );
 
   return (
@@ -262,31 +262,21 @@ export default function Dashboard({ selectedDriverId }: { selectedDriverId?: str
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="bg-white rounded-2xl shadow-sm border border-zinc-200/60 overflow-hidden">
-          <div className="p-4 md:p-5 border-b border-zinc-100">
+          <div className="p-4 md:p-5 border-b border-zinc-100 flex justify-between items-center">
             <h3 className="text-base font-semibold text-zinc-900 flex items-center gap-2">
               <Users className="w-4 h-4 text-amber-500" />
               Monthly Leave
             </h3>
+            <span className="text-sm font-medium text-zinc-600">{leaveRecords.length} leaves</span>
           </div>
           <div className="p-4 md:p-5">
             {leaveRecords.length === 0 ? (
               <p className="text-sm text-zinc-500 text-center py-4">No leave records this month</p>
             ) : (
-              <div className="space-y-3">
+              <div className="space-y-2">
                 {leaveRecords.map(t => (
-                  <div key={t.id} className="flex justify-between items-start p-3 bg-zinc-50 rounded-lg">
-                    <div className="flex-1">
-                      <p className="text-sm font-medium text-zinc-900">{t.driver_name || 'Unknown'}</p>
-                      <p className="text-xs text-zinc-500">{t.date}</p>
-                      {t.notes && (
-                        <p className="text-xs text-zinc-600 mt-1 italic">"{t.notes}"</p>
-                      )}
-                    </div>
-                    <span className={`text-sm font-medium font-number ${
-                      t.type === 'expense' ? 'text-rose-600' : 'text-emerald-600'
-                    }`}>
-                      {t.type === 'expense' ? '-' : '+'}{currency}{t.amount.toLocaleString()}
-                    </span>
+                  <div key={t.id} className="flex justify-center p-2 bg-zinc-50 rounded-lg">
+                    <p className="text-sm font-medium text-zinc-900">{t.date}</p>
                   </div>
                 ))}
               </div>
