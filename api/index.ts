@@ -322,7 +322,8 @@ app.get('/api/rickshaws', authenticate, async (req, res) => {
     await ensureDb();
     const r = await sql`
       SELECT r.*,
-        COALESCE((SELECT SUM(amount) FROM transactions WHERE rickshaw_id=r.id AND type='income' AND category!='rent_pending'),0) as recovered_cost
+        COALESCE((SELECT SUM(amount) FROM transactions WHERE rickshaw_id=r.id AND type='income' AND category!='rent_pending'),0) -
+        COALESCE((SELECT SUM(amount) FROM transactions WHERE rickshaw_id=r.id AND type='expense' AND category!='rent_pending'),0) as recovered_cost
       FROM rickshaws r ORDER BY r.id DESC`;
     res.json(r.rows);
   } catch (e: any) { res.status(500).json({ error: e.message }); }
@@ -363,7 +364,8 @@ app.get('/api/drivers', authenticate, async (req, res) => {
   try {
     await ensureDb();
     const r = await sql`
-      SELECT d.*, rk.number as assigned_rickshaw
+      SELECT d.*, rk.number as assigned_rickshaw,
+        COALESCE((SELECT SUM(amount) FROM transactions WHERE driver_id=d.id AND category='rent_pending'),0) as pending_balance
       FROM drivers d
       LEFT JOIN rickshaw_assignments a ON d.id=a.driver_id AND a.end_date IS NULL
       LEFT JOIN rickshaws rk ON a.rickshaw_id=rk.id
