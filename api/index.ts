@@ -602,9 +602,10 @@ app.post('/api/settings', authenticate, async (req, res) => {
 app.get('/api/stats', authenticate, async (req, res) => {
   try {
     await ensureDb();
-    const { driver_id, month } = req.query;
+    const { driver_id, month, rickshaw_id } = req.query;
     const df = driver_id ? 'AND driver_id = $1' : '';
-    const da = driver_id ? [driver_id] : [];
+    const rf = rickshaw_id ? 'AND rickshaw_id = $2' : '';
+    const da = driver_id ? (rickshaw_id ? [driver_id, rickshaw_id] : [driver_id]) : (rickshaw_id ? [rickshaw_id] : []);
 
     // Calculate stats for specified month or current month
     const monthFilter = month 
@@ -612,23 +613,23 @@ app.get('/api/stats', authenticate, async (req, res) => {
       : `AND TO_CHAR(TO_DATE(date,'YYYY-MM-DD'),'YYYY-MM') = TO_CHAR(CURRENT_DATE,'YYYY-MM')`;
 
     const [incR, expR] = await Promise.all([
-      sql.query(`SELECT SUM(amount) as total FROM transactions WHERE type='income' AND category!='rent_pending' ${monthFilter} ${df}`, da),
-      sql.query(`SELECT SUM(amount) as total FROM transactions WHERE type='expense' AND category!='rent_pending' ${monthFilter} ${df}`, da),
+      sql.query(`SELECT SUM(amount) as total FROM transactions WHERE type='income' AND category!='rent_pending' ${monthFilter} ${df} ${rf}`, da),
+      sql.query(`SELECT SUM(amount) as total FROM transactions WHERE type='expense' AND category!='rent_pending' ${monthFilter} ${df} ${rf}`, da),
     ]);
 
     // Calculate profit including pending (for "total profit before excluding pending")
     const [incWithPendingR, expWithPendingR] = await Promise.all([
-      sql.query(`SELECT SUM(amount) as total FROM transactions WHERE type='income' ${monthFilter} ${df}`, da),
-      sql.query(`SELECT SUM(amount) as total FROM transactions WHERE type='expense' ${monthFilter} ${df}`, da),
+      sql.query(`SELECT SUM(amount) as total FROM transactions WHERE type='income' ${monthFilter} ${df} ${rf}`, da),
+      sql.query(`SELECT SUM(amount) as total FROM transactions WHERE type='expense' ${monthFilter} ${df} ${rf}`, da),
     ]);
 
     // Calculate all-time profit for remaining investment (not filtered by month)
     const [allTimeIncR, allTimeExpR] = await Promise.all([
-      sql.query(`SELECT SUM(amount) as total FROM transactions WHERE type='income' AND category!='rent_pending' ${df}`, da),
-      sql.query(`SELECT SUM(amount) as total FROM transactions WHERE type='expense' AND category!='rent_pending' ${df}`, da),
+      sql.query(`SELECT SUM(amount) as total FROM transactions WHERE type='income' AND category!='rent_pending' ${df} ${rf}`, da),
+      sql.query(`SELECT SUM(amount) as total FROM transactions WHERE type='expense' AND category!='rent_pending' ${df} ${rf}`, da),
     ]);
 
-    const pendR = await sql.query(`SELECT SUM(amount) as total FROM transactions WHERE category='rent_pending' ${monthFilter} ${df}`, da);
+    const pendR = await sql.query(`SELECT SUM(amount) as total FROM transactions WHERE category='rent_pending' ${monthFilter} ${df} ${rf}`, da);
 
     const invR = driver_id
       ? await sql`SELECT SUM(rk.investment_cost) as total FROM rickshaws rk JOIN rickshaw_assignments a ON rk.id=a.rickshaw_id WHERE a.driver_id=${driver_id as string} AND a.end_date IS NULL`

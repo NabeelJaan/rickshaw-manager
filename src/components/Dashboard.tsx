@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { TrendingUp, TrendingDown, DollarSign, Car, Plus, Edit, ChevronDown, Trash2, Users } from 'lucide-react';
-import { DashboardStats, Transaction } from '../types';
+import { DashboardStats, Transaction, Rickshaw } from '../types';
 import LogRentModal from './LogRentModal';
 import ExpenseModal from './ExpenseModal';
 import EditTransactionModal from './EditTransactionModal';
@@ -20,6 +20,8 @@ export default function Dashboard({ selectedDriverId }: { selectedDriverId?: str
   const [currency, setCurrency] = useState('Rs.');
   const [showTransactionDropdown, setShowTransactionDropdown] = useState(false);
   const [selectedMonth, setSelectedMonth] = useState<string>('');
+  const [selectedRickshawId, setSelectedRickshawId] = useState<string>('');
+  const [rickshaws, setRickshaws] = useState<Rickshaw[]>([]);
 
   // Load currency from settings
   useEffect(() => {
@@ -45,6 +47,16 @@ export default function Dashboard({ selectedDriverId }: { selectedDriverId?: str
     };
   }, []);
 
+  const fetchRickshaws = () => {
+    const token = localStorage.getItem('auth_token');
+    const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+    fetch('/api/rickshaws', { headers }).then(res => res.json()).then(data => { if (Array.isArray(data)) setRickshaws(data); });
+  };
+
+  useEffect(() => {
+    fetchRickshaws();
+  }, []);
+
   const handleEditTransaction = (transaction: Transaction) => {
     setEditTransaction(transaction);
   };
@@ -66,6 +78,7 @@ export default function Dashboard({ selectedDriverId }: { selectedDriverId?: str
     const queryParts = [];
     if (selectedDriverId) queryParts.push(`driver_id=${selectedDriverId}`);
     if (selectedMonth) queryParts.push(`month=${selectedMonth}`);
+    if (selectedRickshawId) queryParts.push(`rickshaw_id=${selectedRickshawId}`);
     const query = queryParts.length > 0 ? `?${queryParts.join('&')}` : '';
     const token = localStorage.getItem('auth_token');
     const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
@@ -119,7 +132,7 @@ export default function Dashboard({ selectedDriverId }: { selectedDriverId?: str
 
   useEffect(() => {
     fetchData();
-  }, [selectedMonth]);
+  }, [selectedMonth, selectedRickshawId]);
 
   if (loading || !stats) return <div className="animate-pulse flex space-x-4">Loading...</div>;
 
@@ -158,30 +171,57 @@ export default function Dashboard({ selectedDriverId }: { selectedDriverId?: str
           <h2 className="text-3xl font-bold text-zinc-900 tracking-tight">
             {selectedDriverId ? `${selectedDriverName}'s Overview` : 'Dashboard Overview'}
           </h2>
-          <div className="flex items-center gap-2">
-            <label className="text-sm text-zinc-600">Month:</label>
-            <select 
-              value={selectedMonth} 
-              onChange={(e) => setSelectedMonth(e.target.value)}
-              className="px-3 py-1.5 bg-zinc-50 border border-zinc-200 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
-            >
-              <option value="">Current Month</option>
-              <option value="all">All Months</option>
-              {Array.from({ length: 12 }, (_, i) => {
-                const date = new Date();
-                date.setMonth(date.getMonth() - i);
-                const monthStr = date.toISOString().slice(0, 7);
-                const monthName = date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
-                return <option key={monthStr} value={monthStr}>{monthName}</option>;
-              })}
-            </select>
-            {selectedMonth && (
-              <button 
-                onClick={() => setSelectedMonth('')}
-                className="text-xs text-zinc-500 hover:text-zinc-700"
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2">
+              <label className="text-sm text-zinc-600">Month:</label>
+              <select 
+                value={selectedMonth} 
+                onChange={(e) => setSelectedMonth(e.target.value)}
+                className="px-3 py-1.5 bg-zinc-50 border border-zinc-200 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
               >
-                Clear
-              </button>
+                <option value="">Current Month</option>
+                <option value="all">All Months</option>
+                {Array.from({ length: 12 }, (_, i) => {
+                  const date = new Date();
+                  date.setMonth(date.getMonth() - i);
+                  const monthStr = date.toISOString().slice(0, 7);
+                  const monthName = date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+                  return <option key={monthStr} value={monthStr}>{monthName}</option>;
+                })}
+              </select>
+              {selectedMonth && (
+                <button 
+                  onClick={() => setSelectedMonth('')}
+                  className="text-xs text-zinc-500 hover:text-zinc-700"
+                >
+                  Clear
+                </button>
+              )}
+            </div>
+            {!selectedDriverId && (
+              <div className="flex items-center gap-2">
+                <label className="text-sm text-zinc-600">Rickshaw:</label>
+                <select 
+                  value={selectedRickshawId} 
+                  onChange={(e) => setSelectedRickshawId(e.target.value)}
+                  className="px-3 py-1.5 bg-zinc-50 border border-zinc-200 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+                >
+                  <option value="">All Rickshaws</option>
+                  {rickshaws.map(rickshaw => (
+                    <option key={rickshaw.id} value={rickshaw.id}>
+                      {rickshaw.number || `Rickshaw ${rickshaw.id}`}
+                    </option>
+                  ))}
+                </select>
+                {selectedRickshawId && (
+                  <button 
+                    onClick={() => setSelectedRickshawId('')}
+                    className="text-xs text-zinc-500 hover:text-zinc-700"
+                  >
+                    Clear
+                  </button>
+                )}
+              </div>
             )}
           </div>
         </div>
@@ -277,7 +317,9 @@ export default function Dashboard({ selectedDriverId }: { selectedDriverId?: str
                 <div className="space-y-2">
                   {leaveRecords.map(t => (
                     <div key={t.id} className="flex justify-center p-2 bg-zinc-50 rounded-lg">
-                      <p className="text-sm font-medium text-zinc-900">{t.date}</p>
+                      <p className="text-sm font-medium text-zinc-900">
+                        {new Date(t.date).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
+                      </p>
                     </div>
                   ))}
                 </div>
