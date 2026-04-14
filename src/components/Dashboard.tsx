@@ -141,6 +141,16 @@ export default function Dashboard({ selectedDriverId }: { selectedDriverId?: str
     ? statCards.filter(card => !card.hideOnDriver) 
     : statCards;
 
+  // Extract leave records from transactions
+  const leaveRecords = transactions.filter(t => 
+    t.notes && (t.notes.toLowerCase().includes('leave') || t.notes.toLowerCase().includes('off'))
+  );
+
+  // Extract engine oil change records from transactions
+  const oilChangeRecords = transactions.filter(t => 
+    t.notes && (t.notes.toLowerCase().includes('oil') || t.notes.toLowerCase().includes('engine'))
+  );
+
   return (
     <div className="space-y-8">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -248,6 +258,81 @@ export default function Dashboard({ selectedDriverId }: { selectedDriverId?: str
             </div>
           </div>
         ))}
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="bg-white rounded-2xl shadow-sm border border-zinc-200/60 overflow-hidden">
+          <div className="p-4 md:p-5 border-b border-zinc-100">
+            <h3 className="text-base font-semibold text-zinc-900 flex items-center gap-2">
+              <Users className="w-4 h-4 text-amber-500" />
+              Monthly Leave
+            </h3>
+          </div>
+          <div className="p-4 md:p-5">
+            {leaveRecords.length === 0 ? (
+              <p className="text-sm text-zinc-500 text-center py-4">No leave records this month</p>
+            ) : (
+              <div className="space-y-3">
+                {leaveRecords.map(t => (
+                  <div key={t.id} className="flex justify-between items-start p-3 bg-zinc-50 rounded-lg">
+                    <div className="flex-1">
+                      <p className="text-sm font-medium text-zinc-900">{t.driver_name || 'Unknown'}</p>
+                      <p className="text-xs text-zinc-500">{t.date}</p>
+                      {t.notes && (
+                        <p className="text-xs text-zinc-600 mt-1 italic">"{t.notes}"</p>
+                      )}
+                    </div>
+                    <span className={`text-sm font-medium font-number ${
+                      t.type === 'expense' ? 'text-rose-600' : 'text-emerald-600'
+                    }`}>
+                      {t.type === 'expense' ? '-' : '+'}{currency}{t.amount.toLocaleString()}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+
+        <div className="bg-white rounded-2xl shadow-sm border border-zinc-200/60 overflow-hidden">
+          <div className="p-4 md:p-5 border-b border-zinc-100">
+            <h3 className="text-base font-semibold text-zinc-900 flex items-center gap-2">
+              <Car className="w-4 h-4 text-blue-500" />
+              Recent Engine Oil Change
+            </h3>
+          </div>
+          <div className="p-4 md:p-5">
+            {oilChangeRecords.length === 0 ? (
+              <p className="text-sm text-zinc-500 text-center py-4">No oil change records this month</p>
+            ) : (
+              <div className="space-y-3">
+                {oilChangeRecords.map(t => (
+                  <div key={t.id} className="flex justify-between items-start p-3 bg-zinc-50 rounded-lg">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2">
+                        {t.rickshaw_number && (
+                          <p className="text-sm font-medium text-zinc-900">Rickshaw {t.rickshaw_number}</p>
+                        )}
+                        {t.driver_name && (
+                          <p className="text-sm text-zinc-600">- {t.driver_name}</p>
+                        )}
+                      </div>
+                      <p className="text-xs text-zinc-500">{t.date}</p>
+                      {t.notes && (
+                        <p className="text-xs text-zinc-600 mt-1 italic">"{t.notes}"</p>
+                      )}
+                    </div>
+                    <span className={`text-sm font-medium font-number ${
+                      t.type === 'expense' ? 'text-rose-600' : 'text-emerald-600'
+                    }`}>
+                      {t.type === 'expense' ? '-' : '+'}{currency}{t.amount.toLocaleString()}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
       </div>
 
       <div className="bg-white rounded-2xl shadow-sm border border-zinc-200/60 overflow-hidden">
