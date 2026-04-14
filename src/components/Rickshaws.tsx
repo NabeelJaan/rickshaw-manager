@@ -295,18 +295,18 @@ export default function Rickshaws({ selectedDriverId }: { selectedDriverId?: str
                 <div className="flex justify-between text-[11px] mb-1.5">
                   <span className="font-medium text-zinc-500 uppercase tracking-wider">Recovery Progress</span>
                   <span className="text-emerald-600 font-semibold font-number">
-                    {Math.min(100, Math.max(0, ((r.recovered_cost || 0) / r.investment_cost) * 100)).toFixed(1)}%
+                    {Math.min(100, Math.max(0, ((Math.min(r.recovered_cost || 0, r.investment_cost)) / r.investment_cost) * 100)).toFixed(1)}%
                   </span>
                 </div>
                 <div className="w-full bg-zinc-100 rounded-full h-1.5 overflow-hidden">
                   <div 
                     className="bg-emerald-500 h-1.5 rounded-full transition-all duration-1000 ease-out" 
-                    style={{ width: `${Math.min(100, Math.max(0, ((r.recovered_cost || 0) / r.investment_cost) * 100))}%` }}
+                    style={{ width: `${Math.min(100, Math.max(0, ((Math.min(r.recovered_cost || 0, r.investment_cost)) / r.investment_cost) * 100))}%` }}
                   ></div>
                 </div>
                 <div className="flex justify-between text-[11px] mt-2 text-zinc-500 font-number">
-                  <span className="text-emerald-600 font-medium">{currency} {(r.recovered_cost || 0).toLocaleString()}</span>
-                  <span>{currency} {Math.max(0, r.investment_cost - (r.recovered_cost || 0)).toLocaleString()} left</span>
+                  <span className="text-emerald-600 font-medium">{currency} {Math.min(r.recovered_cost || 0, r.investment_cost).toLocaleString()}</span>
+                  <span>{currency} {Math.max(0, r.investment_cost - Math.min(r.recovered_cost || 0, r.investment_cost)).toLocaleString()} left</span>
                 </div>
               </div>
 
