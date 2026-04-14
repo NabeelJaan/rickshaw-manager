@@ -156,12 +156,12 @@ export default function Dashboard({ selectedDriverId }: { selectedDriverId?: str
     : statCards;
 
   // Extract leave records from transactions
-  const leaveRecords = transactions.filter(t => 
+  const leaveRecords = (Array.isArray(transactions) ? transactions : []).filter(t => 
     t.notes && (t.notes.toLowerCase().includes('leave') || t.notes.toLowerCase().includes('off'))
   );
 
   // Extract engine oil change records from transactions
-  const oilChangeRecords = transactions.filter(t => 
+  const oilChangeRecords = (Array.isArray(transactions) ? transactions : []).filter(t => 
     t.category && (t.category.toLowerCase().includes('oil') || t.category.toLowerCase().includes('engine'))
   ).slice(0, 1);
 
@@ -408,19 +408,19 @@ export default function Dashboard({ selectedDriverId }: { selectedDriverId?: str
               <div className="flex items-center gap-2 px-3 py-1.5 bg-emerald-50 rounded-lg">
                 <div className="w-2 h-2 rounded-full bg-emerald-500"></div>
                 <span className="text-xs font-medium text-emerald-700">
-                  {transactions.filter(t => t.type === 'income').length} Income
+                  {(Array.isArray(transactions) ? transactions : []).filter(t => t.type === 'income').length} Income
                 </span>
               </div>
               <div className="flex items-center gap-2 px-3 py-1.5 bg-rose-50 rounded-lg">
                 <div className="w-2 h-2 rounded-full bg-rose-500"></div>
                 <span className="text-xs font-medium text-rose-700">
-                  {transactions.filter(t => t.type === 'expense').length} Expense
+                  {(Array.isArray(transactions) ? transactions : []).filter(t => t.type === 'expense').length} Expense
                 </span>
               </div>
               <div className="flex items-center gap-2 px-3 py-1.5 bg-amber-50 rounded-lg">
                 <div className="w-2 h-2 rounded-full bg-amber-500"></div>
                 <span className="text-xs font-medium text-amber-700">
-                  {transactions.filter(t => t.category === 'rent_pending').length} Pending
+                  {(Array.isArray(transactions) ? transactions : []).filter(t => t.category === 'rent_pending').length} Pending
                 </span>
               </div>
             </div>
@@ -429,7 +429,7 @@ export default function Dashboard({ selectedDriverId }: { selectedDriverId?: str
         
         {/* Mobile View: Cards */}
         <div className="block md:hidden divide-y divide-zinc-100">
-          {transactions.map(t => (
+          {(Array.isArray(transactions) ? transactions : []).map(t => (
             <div key={t.id} className="p-4 space-y-3 bg-gradient-to-r from-transparent to-zinc-50/30 hover:from-zinc-50/50 transition-colors">
               <div className="flex justify-between items-start">
                 <div className="flex-1">
@@ -526,7 +526,7 @@ export default function Dashboard({ selectedDriverId }: { selectedDriverId?: str
               </tr>
             </thead>
             <tbody className="divide-y divide-zinc-100/80">
-              {transactions.map(t => (
+              {(Array.isArray(transactions) ? transactions : []).map(t => (
                 <tr key={t.id} className="hover:bg-gradient-to-r hover:from-zinc-50/50 hover:to-transparent transition-all group">
                   <td className="p-4 text-sm text-zinc-600 font-medium">
                     <div className="flex items-center gap-2">
