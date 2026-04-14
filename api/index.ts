@@ -447,11 +447,8 @@ app.get('/api/transactions', authenticate, async (req, res) => {
     const conds = ['1=1']; const args: any[] = []; let i = 1;
     if (start_date)  { conds.push(`t.date >= $${i++}`);       args.push(start_date); }
     if (end_date)    { conds.push(`t.date <= $${i++}`);       args.push(end_date); }
-    if (month) {
-      const monthFilter = month === 'all' ? '' : `AND TO_CHAR(TO_DATE(t.date,'YYYY-MM-DD'),'YYYY-MM') = '${month}'`;
-      if (monthFilter) { conds.push(monthFilter.replace('AND ', '')); }
-    } else {
-      conds.push(`TO_CHAR(TO_DATE(t.date,'YYYY-MM-DD'),'YYYY-MM') = TO_CHAR(CURRENT_DATE,'YYYY-MM')`);
+    if (month && month !== 'all') {
+      conds.push(`TO_CHAR(TO_DATE(t.date,'YYYY-MM-DD'),'YYYY-MM') = '${month}'`);
     }
     if (rickshaw_id) {
       if (Array.isArray(rickshaw_id)) {
