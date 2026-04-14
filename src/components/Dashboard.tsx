@@ -137,17 +137,17 @@ export default function Dashboard({ selectedDriverId }: { selectedDriverId?: str
   if (loading || !stats) return <div className="animate-pulse flex space-x-4">Loading...</div>;
 
   const statCards = [
-    { title: 'Total Revenue', value: stats.totalIncome, icon: TrendingUp, color: 'text-emerald-500', bg: 'bg-emerald-500/10', prefix: currency + ' ' },
-    { title: 'Total Expense', value: stats.totalExpense, icon: TrendingDown, color: 'text-rose-500', bg: 'bg-rose-500/10', prefix: currency + ' ' },
-    { title: 'Net Profit (Excl. Pending)', value: stats.profit, icon: DollarSign, color: 'text-blue-500', bg: 'bg-blue-500/10', prefix: currency + ' ' },
-    { title: 'Total Profit (Incl. Pending)', value: stats.profitIncludingPending, icon: DollarSign, color: 'text-cyan-500', bg: 'bg-cyan-500/10', prefix: currency + ' ' },
-    { title: 'Pending Balance', value: stats.pendingBalance, icon: TrendingDown, color: 'text-amber-500', bg: 'bg-amber-500/10', prefix: currency + ' ' },
-    { title: 'Total Investment', value: stats.totalInvestment, icon: Car, color: 'text-purple-500', bg: 'bg-purple-500/10', prefix: currency + ' ' },
-    { title: 'Remaining Investment', value: Math.max(0, stats.totalInvestment - stats.allTimeProfit), icon: TrendingDown, color: 'text-orange-500', bg: 'bg-orange-500/10', prefix: currency + ' ' },
-    { title: 'All-Time Income', value: stats.allTimeIncome, icon: TrendingUp, color: 'text-teal-500', bg: 'bg-teal-500/10', prefix: currency + ' ' },
-    { title: 'All-Time Expense', value: stats.allTimeExpense, icon: TrendingDown, color: 'text-red-500', bg: 'bg-red-500/10', prefix: currency + ' ' },
-    { title: 'Active Rickshaws', value: stats.activeRickshaws, icon: Car, color: 'text-indigo-500', bg: 'bg-indigo-500/10', prefix: '', hideOnDriver: true },
-    { title: 'Total Rickshaws', value: stats.totalRickshaws, icon: Car, color: 'text-zinc-500', bg: 'bg-zinc-500/10', prefix: '', hideOnDriver: true },
+    { title: 'Total Revenue', value: stats.totalIncome || 0, icon: TrendingUp, color: 'text-emerald-500', bg: 'bg-emerald-500/10', prefix: currency + ' ' },
+    { title: 'Total Expense', value: stats.totalExpense || 0, icon: TrendingDown, color: 'text-rose-500', bg: 'bg-rose-500/10', prefix: currency + ' ' },
+    { title: 'Net Profit (Excl. Pending)', value: stats.profit || 0, icon: DollarSign, color: 'text-blue-500', bg: 'bg-blue-500/10', prefix: currency + ' ' },
+    { title: 'Total Profit (Incl. Pending)', value: stats.profitIncludingPending || 0, icon: DollarSign, color: 'text-cyan-500', bg: 'bg-cyan-500/10', prefix: currency + ' ' },
+    { title: 'Pending Balance', value: stats.pendingBalance || 0, icon: TrendingDown, color: 'text-amber-500', bg: 'bg-amber-500/10', prefix: currency + ' ' },
+    { title: 'Total Investment', value: stats.totalInvestment || 0, icon: Car, color: 'text-purple-500', bg: 'bg-purple-500/10', prefix: currency + ' ' },
+    { title: 'Remaining Investment', value: Math.max(0, (stats.totalInvestment || 0) - (stats.allTimeProfit || 0)), icon: TrendingDown, color: 'text-orange-500', bg: 'bg-orange-500/10', prefix: currency + ' ' },
+    { title: 'All-Time Income', value: stats.allTimeIncome || 0, icon: TrendingUp, color: 'text-teal-500', bg: 'bg-teal-500/10', prefix: currency + ' ' },
+    { title: 'All-Time Expense', value: stats.allTimeExpense || 0, icon: TrendingDown, color: 'text-red-500', bg: 'bg-red-500/10', prefix: currency + ' ' },
+    { title: 'Active Rickshaws', value: stats.activeRickshaws || 0, icon: Car, color: 'text-indigo-500', bg: 'bg-indigo-500/10', prefix: '', hideOnDriver: true },
+    { title: 'Total Rickshaws', value: stats.totalRickshaws || 0, icon: Car, color: 'text-zinc-500', bg: 'bg-zinc-500/10', prefix: '', hideOnDriver: true },
   ];
 
   const filteredStatCards = selectedDriverId 
