@@ -204,7 +204,10 @@ export default function Settings() {
     
     try {
       const token = localStorage.getItem('auth_token');
-      const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+      const headers = {
+        'Content-Type': 'application/json',
+        ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+      };
       const response = await fetch(`/api/categories/${editingCategory.id}`, {
         method: 'PUT',
         headers,
