@@ -213,35 +213,41 @@ export default function Dashboard({ selectedDriverId }: { selectedDriverId?: str
                     <ChevronDown className="w-4 h-4" />
                   </button>
                   {showRickshawDropdown && (
-                    <div className="absolute top-full left-0 mt-2 bg-white border border-zinc-200 rounded-lg shadow-lg z-10 p-2 w-64 max-h-64 overflow-y-auto">
-                      <div className="space-y-2">
-                        {rickshaws.map(rickshaw => (
-                          <label key={rickshaw.id} className="flex items-center gap-2 p-2 hover:bg-zinc-50 rounded cursor-pointer">
-                            <input
-                              type="checkbox"
-                              checked={selectedRickshawIds.includes(rickshaw.id.toString())}
-                              onChange={(e) => {
-                                if (e.target.checked) {
-                                  setSelectedRickshawIds([...selectedRickshawIds, rickshaw.id.toString()]);
-                                } else {
-                                  setSelectedRickshawIds(selectedRickshawIds.filter(id => id !== rickshaw.id.toString()));
-                                }
-                              }}
-                              className="w-4 h-4 rounded border-zinc-300 text-emerald-500 focus:ring-emerald-500"
-                            />
-                            <span className="text-sm text-zinc-700">{rickshaw.number || `Rickshaw ${rickshaw.id}`}</span>
-                          </label>
-                        ))}
+                    <>
+                      <div 
+                        className="fixed inset-0 bg-black/20 z-10 md:hidden"
+                        onClick={() => setShowRickshawDropdown(false)}
+                      ></div>
+                      <div className="absolute top-full left-0 mt-2 bg-white border border-zinc-200 rounded-lg shadow-lg z-20 p-2 w-64 max-h-64 overflow-y-auto md:w-64 md:max-h-64 sm:w-80 sm:max-h-80">
+                        <div className="space-y-2">
+                          {rickshaws.map(rickshaw => (
+                            <label key={rickshaw.id} className="flex items-center gap-2 p-2 hover:bg-zinc-50 rounded cursor-pointer">
+                              <input
+                                type="checkbox"
+                                checked={selectedRickshawIds.includes(rickshaw.id.toString())}
+                                onChange={(e) => {
+                                  if (e.target.checked) {
+                                    setSelectedRickshawIds([...selectedRickshawIds, rickshaw.id.toString()]);
+                                  } else {
+                                    setSelectedRickshawIds(selectedRickshawIds.filter(id => id !== rickshaw.id.toString()));
+                                  }
+                                }}
+                                className="w-4 h-4 rounded border-zinc-300 text-emerald-500 focus:ring-emerald-500"
+                              />
+                              <span className="text-sm text-zinc-700">{rickshaw.number || `Rickshaw ${rickshaw.id}`}</span>
+                            </label>
+                          ))}
+                        </div>
+                        {selectedRickshawIds.length > 0 && (
+                          <button
+                            onClick={() => setSelectedRickshawIds([])}
+                            className="w-full mt-2 px-3 py-1.5 bg-zinc-100 hover:bg-zinc-200 rounded-lg text-sm text-zinc-700"
+                          >
+                            Clear All
+                          </button>
+                        )}
                       </div>
-                      {selectedRickshawIds.length > 0 && (
-                        <button
-                          onClick={() => setSelectedRickshawIds([])}
-                          className="w-full mt-2 px-3 py-1.5 bg-zinc-100 hover:bg-zinc-200 rounded-lg text-sm text-zinc-700"
-                        >
-                          Clear All
-                        </button>
-                      )}
-                    </div>
+                    </>
                   )}
                 </div>
               </div>

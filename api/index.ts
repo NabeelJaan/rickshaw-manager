@@ -452,7 +452,15 @@ app.get('/api/transactions', authenticate, async (req, res) => {
     } else {
       conds.push(`TO_CHAR(TO_DATE(t.date,'YYYY-MM-DD'),'YYYY-MM') = TO_CHAR(CURRENT_DATE,'YYYY-MM')`);
     }
-    if (rickshaw_id) { conds.push(`t.rickshaw_id = $${i++}`); args.push(rickshaw_id); }
+    if (rickshaw_id) {
+      if (Array.isArray(rickshaw_id)) {
+        conds.push(`t.rickshaw_id = ANY($${i++})`);
+        args.push(rickshaw_id);
+      } else {
+        conds.push(`t.rickshaw_id = $${i++}`);
+        args.push(rickshaw_id);
+      }
+    }
     if (driver_id)   { conds.push(`t.driver_id = $${i++}`);   args.push(driver_id); }
     let q = `SELECT t.*, rk.number as rickshaw_number, d.name as driver_name
       FROM transactions t
