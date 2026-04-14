@@ -467,8 +467,11 @@ app.get('/api/transactions', authenticate, async (req, res) => {
       WHERE ${conds.join(' AND ')} ORDER BY t.date DESC, t.id DESC`;
     if (limit) { q += ` LIMIT $${i++}`; args.push(parseInt(limit as string)); }
     const { rows } = await sql.query(q, args);
-    res.json(rows);
-  } catch (e: any) { res.status(500).json({ error: e.message }); }
+    res.json(Array.isArray(rows) ? rows : []);
+  } catch (e: any) { 
+    console.error('Transactions API error:', e);
+    res.status(500).json({ error: e.message }); 
+  }
 });
 
 app.post('/api/transactions', authenticate, async (req, res) => {
@@ -622,10 +625,10 @@ app.get('/api/stats', authenticate, async (req, res) => {
       : '';
     const da = driver_id ? (rickshaw_id ? [driver_id, rickshaw_id] : [driver_id]) : (rickshaw_id ? [rickshaw_id] : []);
 
-    // Calculate stats for specified month or current month
+    // Calculate stats for specified month or all time
     const monthFilter = month 
       ? (month === 'all' ? '' : `AND TO_CHAR(TO_DATE(date,'YYYY-MM-DD'),'YYYY-MM') = '${month}'`)
-      : `AND TO_CHAR(TO_DATE(date,'YYYY-MM-DD'),'YYYY-MM') = TO_CHAR(CURRENT_DATE,'YYYY-MM')`;
+      : '';
 
     const [incR, expR] = await Promise.all([
       sql.query(`SELECT SUM(amount) as total FROM transactions WHERE type='income' AND category!='rent_pending' ${monthFilter} ${df} ${rf}`, da),
