@@ -52,26 +52,30 @@ export default function AddPendingBalanceModal({ isOpen, onClose, onSuccess }: A
     setLoading(true);
     
     try {
-      const res = await fetch(`/api/drivers/${formData.driver_id}/pending-balance`, {
+      const res = await fetch('/api/transactions', {
         method: 'POST',
         headers,
         body: JSON.stringify({
+          date: new Date().toISOString().split('T')[0],
           amount: formData.amount === '' ? 0 : parseFloat(formData.amount),
+          type: 'income',
+          category: 'rent_pending',
+          driver_id: formData.driver_id,
           notes: formData.notes
         }),
       });
       
       if (!res.ok) {
         const error = await res.json();
-        alert(`Error adding pending balance: ${error.error}`);
+        alert(`Error adding pending amount: ${error.error}`);
         return;
       }
       
       onSuccess();
       onClose();
     } catch (error) {
-      console.error('Error adding pending balance:', error);
-      alert('Failed to add pending balance. Please try again.');
+      console.error('Error adding pending amount:', error);
+      alert('Failed to add pending amount. Please try again.');
     } finally {
       setLoading(false);
     }
