@@ -378,7 +378,7 @@ app.get('/api/drivers', authenticate, async (req, res) => {
     res.json(Array.isArray(r.rows) ? r.rows : []);
   } catch (e: any) { 
     console.error('Drivers API error:', e);
-    res.status(500).json({ error: e.message }); 
+    res.json([]); // Always return empty array on error
   }
 });
 
@@ -474,11 +474,13 @@ app.get('/api/transactions', authenticate, async (req, res) => {
       LEFT JOIN drivers d ON t.driver_id=d.id
       WHERE ${conds.join(' AND ')} ORDER BY t.date DESC, t.id DESC`;
     if (limit) { q += ` LIMIT $${i++}`; args.push(parseInt(limit as string)); }
+    console.log('Transactions query:', q, 'args:', args);
     const { rows } = await sql.query(q, args);
+    console.log('Transactions found:', rows?.length || 0);
     res.json(Array.isArray(rows) ? rows : []);
   } catch (e: any) { 
     console.error('Transactions API error:', e);
-    res.status(500).json({ error: e.message }); 
+    res.json([]); // Always return empty array on error
   }
 });
 
