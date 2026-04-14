@@ -604,7 +604,10 @@ app.get('/api/stats', authenticate, async (req, res) => {
     await ensureDb();
     const { driver_id, month, rickshaw_id } = req.query;
     const df = driver_id ? 'AND driver_id = $1' : '';
-    const rf = rickshaw_id ? 'AND rickshaw_id = $2' : '';
+    const rf = rickshaw_id ? (Array.isArray(rickshaw_id) 
+      ? `AND rickshaw_id = ANY($2)` 
+      : 'AND rickshaw_id = $2') 
+      : '';
     const da = driver_id ? (rickshaw_id ? [driver_id, rickshaw_id] : [driver_id]) : (rickshaw_id ? [rickshaw_id] : []);
 
     // Calculate stats for specified month or current month

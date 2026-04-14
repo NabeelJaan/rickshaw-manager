@@ -19,8 +19,9 @@ export default function Dashboard({ selectedDriverId }: { selectedDriverId?: str
   const [selectedDriverName, setSelectedDriverName] = useState('');
   const [currency, setCurrency] = useState('Rs.');
   const [showTransactionDropdown, setShowTransactionDropdown] = useState(false);
+  const [showRickshawDropdown, setShowRickshawDropdown] = useState(false);
   const [selectedMonth, setSelectedMonth] = useState<string>('');
-  const [selectedRickshawId, setSelectedRickshawId] = useState<string>('');
+  const [selectedRickshawIds, setSelectedRickshawIds] = useState<string[]>([]);
   const [rickshaws, setRickshaws] = useState<Rickshaw[]>([]);
 
   // Load currency from settings
@@ -78,7 +79,7 @@ export default function Dashboard({ selectedDriverId }: { selectedDriverId?: str
     const queryParts = [];
     if (selectedDriverId) queryParts.push(`driver_id=${selectedDriverId}`);
     if (selectedMonth) queryParts.push(`month=${selectedMonth}`);
-    if (selectedRickshawId) queryParts.push(`rickshaw_id=${selectedRickshawId}`);
+    selectedRickshawIds.forEach(id => queryParts.push(`rickshaw_id=${id}`));
     const query = queryParts.length > 0 ? `?${queryParts.join('&')}` : '';
     const token = localStorage.getItem('auth_token');
     const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
@@ -132,7 +133,7 @@ export default function Dashboard({ selectedDriverId }: { selectedDriverId?: str
 
   useEffect(() => {
     fetchData();
-  }, [selectedMonth, selectedRickshawId]);
+  }, [selectedMonth, selectedRickshawIds]);
 
   if (loading || !stats) return <div className="animate-pulse flex space-x-4">Loading...</div>;
 
@@ -200,27 +201,49 @@ export default function Dashboard({ selectedDriverId }: { selectedDriverId?: str
             </div>
             {!selectedDriverId && (
               <div className="flex items-center gap-2">
-                <label className="text-sm text-zinc-600">Rickshaw:</label>
-                <select 
-                  value={selectedRickshawId} 
-                  onChange={(e) => setSelectedRickshawId(e.target.value)}
-                  className="px-3 py-1.5 bg-zinc-50 border border-zinc-200 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
-                >
-                  <option value="">All Rickshaws</option>
-                  {rickshaws.map(rickshaw => (
-                    <option key={rickshaw.id} value={rickshaw.id}>
-                      {rickshaw.number || `Rickshaw ${rickshaw.id}`}
-                    </option>
-                  ))}
-                </select>
-                {selectedRickshawId && (
+                <label className="text-sm text-zinc-600">Rickshaws:</label>
+                <div className="relative">
                   <button 
-                    onClick={() => setSelectedRickshawId('')}
-                    className="text-xs text-zinc-500 hover:text-zinc-700"
+                    onClick={() => setShowRickshawDropdown(!showRickshawDropdown)}
+                    className="px-3 py-1.5 bg-zinc-50 border border-zinc-200 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 flex items-center gap-2"
                   >
-                    Clear
+                    {selectedRickshawIds.length > 0 
+                      ? `${selectedRickshawIds.length} selected` 
+                      : 'Select Rickshaws'}
+                    <ChevronDown className="w-4 h-4" />
                   </button>
-                )}
+                  {showRickshawDropdown && (
+                    <div className="absolute top-full left-0 mt-2 bg-white border border-zinc-200 rounded-lg shadow-lg z-10 p-2 w-64 max-h-64 overflow-y-auto">
+                      <div className="space-y-2">
+                        {rickshaws.map(rickshaw => (
+                          <label key={rickshaw.id} className="flex items-center gap-2 p-2 hover:bg-zinc-50 rounded cursor-pointer">
+                            <input
+                              type="checkbox"
+                              checked={selectedRickshawIds.includes(rickshaw.id.toString())}
+                              onChange={(e) => {
+                                if (e.target.checked) {
+                                  setSelectedRickshawIds([...selectedRickshawIds, rickshaw.id.toString()]);
+                                } else {
+                                  setSelectedRickshawIds(selectedRickshawIds.filter(id => id !== rickshaw.id.toString()));
+                                }
+                              }}
+                              className="w-4 h-4 rounded border-zinc-300 text-emerald-500 focus:ring-emerald-500"
+                            />
+                            <span className="text-sm text-zinc-700">{rickshaw.number || `Rickshaw ${rickshaw.id}`}</span>
+                          </label>
+                        ))}
+                      </div>
+                      {selectedRickshawIds.length > 0 && (
+                        <button
+                          onClick={() => setSelectedRickshawIds([])}
+                          className="w-full mt-2 px-3 py-1.5 bg-zinc-100 hover:bg-zinc-200 rounded-lg text-sm text-zinc-700"
+                        >
+                          Clear All
+                        </button>
+                      )}
+                    </div>
+                  )}
+                </div>
               </div>
             )}
           </div>
@@ -350,7 +373,9 @@ export default function Dashboard({ selectedDriverId }: { selectedDriverId?: str
                             <p className="text-sm text-zinc-600">- {t.driver_name}</p>
                           )}
                         </div>
-                        <p className="text-xs text-zinc-500">{t.date}</p>
+                        <p className="text-xs text-zinc-500">
+                        {new Date(t.date).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
+                      </p>
                         {t.notes && (
                           <p className="text-xs text-zinc-600 mt-1 italic">"{t.notes}"</p>
                         )}
@@ -380,7 +405,9 @@ export default function Dashboard({ selectedDriverId }: { selectedDriverId?: str
             <div key={t.id} className="p-4 space-y-3">
               <div className="flex justify-between items-start">
                 <div>
-                  <p className="text-[10px] text-zinc-500 uppercase font-semibold tracking-wider mb-0.5">{t.date}</p>
+                  <p className="text-[10px] text-zinc-500 uppercase font-semibold tracking-wider mb-0.5">
+                    {new Date(t.date).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
+                  </p>
                   <p className="text-sm font-semibold text-zinc-900 capitalize">{t.category.replace('_', ' ')}</p>
                 </div>
                 <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium border ${
@@ -458,7 +485,9 @@ export default function Dashboard({ selectedDriverId }: { selectedDriverId?: str
             <tbody className="divide-y divide-zinc-100">
               {transactions.map(t => (
                 <tr key={t.id} className="hover:bg-zinc-50/50 transition-colors group">
-                  <td className="p-4 text-sm text-zinc-600 font-number">{t.date}</td>
+                  <td className="p-4 text-sm text-zinc-600 font-number">
+                    {new Date(t.date).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
+                  </td>
                   <td className="p-4">
                     <span className={`inline-flex items-center px-2.5 py-0.5 rounded-md text-[11px] font-medium border ${
                       t.type === 'income' ? 'bg-emerald-50 text-emerald-700 border-emerald-200/50' : 
