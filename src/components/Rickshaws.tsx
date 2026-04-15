@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { Plus, Car, Calendar, DollarSign, UserPlus, Users, TrendingUp, TrendingDown, Edit, Trash2 } from 'lucide-react';
-import { Rickshaw, Driver, Assignment } from '../types';
+import { Rickshaw, Driver, Assignment, Transaction } from '../types';
 
 export default function Rickshaws({ selectedDriverId }: { selectedDriverId?: string }) {
   const [rickshaws, setRickshaws] = useState<Rickshaw[]>([]);
   const [drivers, setDrivers] = useState<Driver[]>([]);
   const [assignments, setAssignments] = useState<Assignment[]>([]);
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [showForm, setShowForm] = useState(false);
   const [showAssignForm, setShowAssignForm] = useState<number | null>(null);
   const [editingRickshaw, setEditingRickshaw] = useState<Rickshaw | null>(null);
@@ -45,6 +46,7 @@ export default function Rickshaws({ selectedDriverId }: { selectedDriverId?: str
     fetch('/api/rickshaws', { headers }).then(res => res.json()).then(data => { if (Array.isArray(data)) setRickshaws(data); });
     fetch('/api/drivers', { headers }).then(res => res.json()).then(data => { if (Array.isArray(data)) setDrivers(data); });
     fetch('/api/assignments', { headers }).then(res => res.json()).then(data => { if (Array.isArray(data)) setAssignments(data); });
+    fetch('/api/transactions', { headers }).then(res => res.json()).then(data => { if (Array.isArray(data)) setTransactions(data); });
   };
 
   useEffect(() => {
@@ -156,6 +158,13 @@ export default function Rickshaws({ selectedDriverId }: { selectedDriverId?: str
   const getCurrentDriver = (rickshawId: number) => {
     const activeAssignment = assignments.find(a => a.rickshaw_id === rickshawId && !a.end_date);
     return activeAssignment ? activeAssignment.driver_name : 'Unassigned';
+  };
+
+  const calculateRickshawNetIncome = (rickshawId: number) => {
+    const rickshawTransactions = transactions.filter(t => t.rickshaw_id === rickshawId);
+    const income = rickshawTransactions.filter(t => t.type === 'income' && t.category !== 'rent_pending').reduce((sum, t) => sum + t.amount, 0);
+    const expense = rickshawTransactions.filter(t => t.type === 'expense').reduce((sum, t) => sum + t.amount, 0);
+    return income - expense;
   };
 
   const filteredRickshaws = selectedDriverId 
@@ -295,20 +304,20 @@ export default function Rickshaws({ selectedDriverId }: { selectedDriverId?: str
               
               <div className="pt-3 pb-1">
                 <div className="flex justify-between text-[11px] mb-1.5">
-                  <span className="font-medium text-zinc-500 uppercase tracking-wider">Recovery Progress</span>
+                  <span className="font-medium text-zinc-500 uppercase tracking-wider">Net Income Progress</span>
                   <span className="text-emerald-600 font-semibold font-number">
-                    {Math.min(100, Math.max(0, ((r.recovered_cost || 0) / r.investment_cost) * 100)).toFixed(1)}%
+                    {Math.min(100, Math.max(0, (calculateRickshawNetIncome(r.id) / r.investment_cost) * 100)).toFixed(1)}%
                   </span>
                 </div>
                 <div className="w-full bg-zinc-100 rounded-full h-1.5 overflow-hidden">
                   <div 
                     className="bg-emerald-500 h-1.5 rounded-full transition-all duration-1000 ease-out" 
-                    style={{ width: `${Math.min(100, Math.max(0, ((r.recovered_cost || 0) / r.investment_cost) * 100))}%` }}
+                    style={{ width: `${Math.min(100, Math.max(0, (calculateRickshawNetIncome(r.id) / r.investment_cost) * 100))}%` }}
                   ></div>
                 </div>
                 <div className="flex justify-between text-[11px] mt-2 text-zinc-500 font-number">
-                  <span className="text-emerald-600 font-medium">{currency} {(r.recovered_cost || 0).toLocaleString()}</span>
-                  <span>{currency} {Math.max(0, r.investment_cost - (r.recovered_cost || 0)).toLocaleString()} left</span>
+                  <span className="text-emerald-600 font-medium">{currency} {calculateRickshawNetIncome(r.id).toLocaleString()}</span>
+                  <span>{currency} {Math.max(0, r.investment_cost - calculateRickshawNetIncome(r.id)).toLocaleString()} left</span>
                 </div>
               </div>
 
