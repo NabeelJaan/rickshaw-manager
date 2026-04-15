@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Settings as SettingsIcon, Plus, Trash2, Edit, Save, Download, FileText, AlertTriangle, RefreshCw, Users } from 'lucide-react';
+import { Settings as SettingsIcon, Plus, Trash2, Edit, Save, Download, FileText, AlertTriangle, RefreshCw, Users, TrendingUp, TrendingDown } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line } from 'recharts';
 import UserManagement from './UserManagement';
 import { useAuth } from '../contexts/AuthContext';
@@ -595,49 +595,53 @@ export default function Settings() {
 
   return (
     <div className="space-y-8">
-      <div className="flex items-center gap-4 mb-8">
-        <SettingsIcon className="w-8 h-8 text-zinc-600" />
-        <h2 className="text-3xl font-bold text-zinc-900 tracking-tight">Settings</h2>
+      <div className="bg-gradient-to-r from-violet-50 via-white to-purple-50 p-6 md:p-8 rounded-2xl border border-zinc-200/60 shadow-sm">
+        <div className="flex items-center gap-4">
+          <div className="p-3 bg-gradient-to-br from-violet-500 to-purple-600 rounded-xl shadow-lg shadow-violet-500/20">
+            <SettingsIcon className="w-6 h-6 text-white" />
+          </div>
+          <h2 className="text-2xl md:text-4xl font-bold text-zinc-900 tracking-tight">Settings</h2>
+        </div>
       </div>
 
       {/* Tab Navigation */}
-      <div className="flex border-b border-zinc-200">
+      <div className="bg-white rounded-2xl shadow-sm border border-zinc-200/60 p-2 flex flex-wrap gap-2">
         <button
           onClick={() => setActiveTab('categories')}
-          className={`px-6 py-3 text-sm font-medium border-b-2 transition-colors ${
+          className={`flex-1 min-w-[100px] px-4 py-2.5 text-sm font-medium rounded-xl transition-all ${
             activeTab === 'categories'
-              ? 'border-emerald-500 text-emerald-600'
-              : 'border-transparent text-zinc-500 hover:text-zinc-700'
+              ? 'bg-gradient-to-r from-violet-500 to-purple-600 text-white shadow-lg shadow-violet-500/20'
+              : 'text-zinc-600 hover:bg-zinc-100'
           }`}
         >
           Categories
         </button>
         <button
           onClick={() => setActiveTab('general')}
-          className={`px-6 py-3 text-sm font-medium border-b-2 transition-colors ${
+          className={`flex-1 min-w-[100px] px-4 py-2.5 text-sm font-medium rounded-xl transition-all ${
             activeTab === 'general'
-              ? 'border-emerald-500 text-emerald-600'
-              : 'border-transparent text-zinc-500 hover:text-zinc-700'
+              ? 'bg-gradient-to-r from-violet-500 to-purple-600 text-white shadow-lg shadow-violet-500/20'
+              : 'text-zinc-600 hover:bg-zinc-100'
           }`}
         >
           General
         </button>
         <button
           onClick={() => setActiveTab('reports')}
-          className={`px-6 py-3 text-sm font-medium border-b-2 transition-colors ${
+          className={`flex-1 min-w-[100px] px-4 py-2.5 text-sm font-medium rounded-xl transition-all ${
             activeTab === 'reports'
-              ? 'border-emerald-500 text-emerald-600'
-              : 'border-transparent text-zinc-500 hover:text-zinc-700'
+              ? 'bg-gradient-to-r from-violet-500 to-purple-600 text-white shadow-lg shadow-violet-500/20'
+              : 'text-zinc-600 hover:bg-zinc-100'
           }`}
         >
           Reports
         </button>
         <button
           onClick={() => setActiveTab('data')}
-          className={`px-6 py-3 text-sm font-medium border-b-2 transition-colors ${
+          className={`flex-1 min-w-[100px] px-4 py-2.5 text-sm font-medium rounded-xl transition-all ${
             activeTab === 'data'
-              ? 'border-emerald-500 text-emerald-600'
-              : 'border-transparent text-zinc-500 hover:text-zinc-700'
+              ? 'bg-gradient-to-r from-violet-500 to-purple-600 text-white shadow-lg shadow-violet-500/20'
+              : 'text-zinc-600 hover:bg-zinc-100'
           }`}
         >
           Data Management
@@ -645,10 +649,10 @@ export default function Settings() {
         {currentUser?.role === 'super_admin' && (
           <button
             onClick={() => setActiveTab('users')}
-            className={`px-6 py-3 text-sm font-medium border-b-2 transition-colors ${
+            className={`flex-1 min-w-[100px] px-4 py-2.5 text-sm font-medium rounded-xl transition-all ${
               activeTab === 'users'
-                ? 'border-emerald-500 text-emerald-600'
-                : 'border-transparent text-zinc-500 hover:text-zinc-700'
+                ? 'bg-gradient-to-r from-violet-500 to-purple-600 text-white shadow-lg shadow-violet-500/20'
+                : 'text-zinc-600 hover:bg-zinc-100'
             }`}
           >
             Users
@@ -658,17 +662,20 @@ export default function Settings() {
       {activeTab === 'categories' && (
         <div className="space-y-6">
           <div className="bg-white p-6 rounded-2xl shadow-sm border border-zinc-200/60">
-            <h3 className="text-lg font-semibold text-zinc-900 mb-4">Add New Category</h3>
+            <h3 className="text-lg font-semibold text-zinc-900 mb-4 flex items-center gap-2">
+              <Plus className="w-5 h-5 text-violet-500" />
+              Add New Category
+            </h3>
             <div className="flex gap-4">
               <input
                 type="text"
                 placeholder="Category name"
-                className="flex-1 px-4 py-2.5 bg-zinc-50 border border-zinc-200 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all text-sm"
+                className="flex-1 px-4 py-2.5 bg-zinc-50 border border-zinc-200 rounded-xl focus:ring-2 focus:ring-violet-500/20 focus:border-violet-500 transition-all text-sm"
                 value={newCategory.name}
                 onChange={(e) => setNewCategory({ ...newCategory, name: e.target.value })}
               />
               <select
-                className="px-4 py-2.5 bg-zinc-50 border border-zinc-200 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all text-sm"
+                className="px-4 py-2.5 bg-zinc-50 border border-zinc-200 rounded-xl focus:ring-2 focus:ring-violet-500/20 focus:border-violet-500 transition-all text-sm"
                 value={newCategory.type}
                 onChange={(e) => setNewCategory({ ...newCategory, type: e.target.value as 'income' | 'expense' })}
               >
@@ -677,7 +684,7 @@ export default function Settings() {
               </select>
               <button
                 onClick={addCategory}
-                className="px-6 py-2.5 bg-emerald-500 text-white rounded-xl hover:bg-emerald-600 transition-colors flex items-center gap-2 text-sm font-medium"
+                className="px-6 py-2.5 bg-gradient-to-r from-violet-500 to-purple-600 hover:from-violet-600 hover:to-purple-700 text-white rounded-xl transition-all shadow-lg shadow-violet-500/20 flex items-center gap-2 text-sm font-medium"
               >
                 <Plus className="w-4 h-4" /> Add
               </button>
@@ -686,14 +693,19 @@ export default function Settings() {
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <div className="bg-white p-6 rounded-2xl shadow-sm border border-zinc-200/60">
-              <h3 className="text-lg font-semibold text-zinc-900 mb-4 text-emerald-600">Income Categories</h3>
+              <h3 className="text-lg font-semibold text-zinc-900 mb-4 flex items-center gap-2">
+                <div className="w-8 h-8 rounded-lg bg-emerald-100 flex items-center justify-center">
+                  <TrendingUp className="w-4 h-4 text-emerald-600" />
+                </div>
+                Income Categories
+              </h3>
               <div className="space-y-2">
                 {categories.filter(cat => cat.type === 'income').map(category => (
-                  <div key={category.id} className="flex items-center justify-between p-3 bg-emerald-50 rounded-lg">
+                  <div key={category.id} className="flex items-center justify-between p-3 bg-emerald-50 rounded-lg border border-emerald-100 transition-all hover:shadow-md">
                     {editingCategory?.id === category.id ? (
                       <input
                         type="text"
-                        className="flex-1 px-3 py-1.5 bg-white border border-emerald-200 rounded-lg text-sm"
+                        className="flex-1 px-3 py-1.5 bg-white border border-emerald-200 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500/20"
                         value={editingCategory.name}
                         onChange={(e) => setEditingCategory({ ...editingCategory, name: e.target.value })}
                       />
@@ -739,14 +751,19 @@ export default function Settings() {
             </div>
 
             <div className="bg-white p-6 rounded-2xl shadow-sm border border-zinc-200/60">
-              <h3 className="text-lg font-semibold text-zinc-900 mb-4 text-rose-600">Expense Categories</h3>
+              <h3 className="text-lg font-semibold text-zinc-900 mb-4 flex items-center gap-2">
+                <div className="w-8 h-8 rounded-lg bg-rose-100 flex items-center justify-center">
+                  <TrendingDown className="w-4 h-4 text-rose-600" />
+                </div>
+                Expense Categories
+              </h3>
               <div className="space-y-2">
                 {categories.filter(cat => cat.type === 'expense').map(category => (
-                  <div key={category.id} className="flex items-center justify-between p-3 bg-rose-50 rounded-lg">
+                  <div key={category.id} className="flex items-center justify-between p-3 bg-rose-50 rounded-lg border border-rose-100 transition-all hover:shadow-md">
                     {editingCategory?.id === category.id ? (
                       <input
                         type="text"
-                        className="flex-1 px-3 py-1.5 bg-white border border-rose-200 rounded-lg text-sm"
+                        className="flex-1 px-3 py-1.5 bg-white border border-rose-200 rounded-lg text-sm focus:ring-2 focus:ring-rose-500/20"
                         value={editingCategory.name}
                         onChange={(e) => setEditingCategory({ ...editingCategory, name: e.target.value })}
                       />
