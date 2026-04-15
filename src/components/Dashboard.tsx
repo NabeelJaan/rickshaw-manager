@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import ReactApexChart from 'react-apexcharts';
 import { TrendingUp, TrendingDown, DollarSign, Car, Plus, Edit, ChevronDown, Trash2, Users } from 'lucide-react';
 import { DashboardStats, Transaction } from '../types';
 import LogRentModal from './LogRentModal';
@@ -247,9 +247,9 @@ export default function Dashboard({ selectedDriverId }: { selectedDriverId?: str
       
       <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 md:gap-4">
         {filteredStatCards.map((card, i) => (
-          <div key={i} className={`bg-white p-4 md:p-5 rounded-2xl shadow-sm border border-zinc-200/60 flex flex-col gap-3 md:gap-4 transition-shadow hover:shadow-md`}>
+          <div key={i} className={`bg-white p-4 md:p-5 rounded-2xl shadow-sm border border-zinc-200/60 flex flex-col gap-3 md:gap-4 transition-all duration-300 hover:shadow-lg hover:border-zinc-300/60 group`}>
             <div className="flex justify-between items-start">
-              <div className={`p-2 rounded-xl ${card.bg}`}>
+              <div className={`p-2.5 rounded-xl ${card.bg} group-hover:scale-110 transition-transform duration-300`}>
                 <card.icon className={`w-4 h-4 md:w-5 md:h-5 ${card.color}`} />
               </div>
             </div>
@@ -575,56 +575,135 @@ export default function Dashboard({ selectedDriverId }: { selectedDriverId?: str
             </div>
           </div>
           <div className="h-64 md:h-72">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={chartView === 'daily' ? stats.dailyData : stats.monthlyData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f4f4f5" />
-                <XAxis 
-                  dataKey={chartView === 'daily' ? 'date' : 'month'} 
-                  axisLine={false} 
-                  tickLine={false} 
-                  tick={{ fontSize: 10, fill: '#71717a' }} 
-                  dy={10}
-                  interval="preserveStartEnd"
-                  minTickGap={20}
-                />
-                <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#71717a' }} />
-                <Tooltip 
-                  cursor={{ fill: '#f4f4f5', opacity: 0.4 }} 
-                  contentStyle={{ borderRadius: '12px', border: '1px solid #e4e4e7', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
-                  itemStyle={{ fontSize: '13px', fontWeight: 500 }}
-                  labelStyle={{ fontSize: '12px', color: '#71717a', marginBottom: '4px' }}
-                />
-                <Bar dataKey="income" fill="#10b981" radius={[4, 4, 0, 0]} name="Income" maxBarSize={40} />
-                <Bar dataKey="expense" fill="#f43f5e" radius={[4, 4, 0, 0]} name="Expense" maxBarSize={40} />
-              </BarChart>
-            </ResponsiveContainer>
+            <ReactApexChart
+              options={{
+                chart: {
+                  type: 'bar',
+                  height: '100%',
+                  toolbar: { show: false },
+                  fontFamily: 'inherit',
+                },
+                plotOptions: {
+                  bar: {
+                    horizontal: false,
+                    columnWidth: '60%',
+                    borderRadius: 4,
+                    borderRadiusApplication: 'end',
+                  },
+                },
+                dataLabels: { enabled: false },
+                stroke: { show: true, width: 2, colors: ['transparent'] },
+                xaxis: {
+                  categories: (chartView === 'daily' ? stats.dailyData : stats.monthlyData)?.map((d: any) => chartView === 'daily' ? d.date : d.month) || [],
+                  labels: {
+                    style: { colors: '#71717a', fontSize: '12px' },
+                  },
+                  axisBorder: { show: false },
+                  axisTicks: { show: false },
+                },
+                yaxis: {
+                  labels: {
+                    style: { colors: '#71717a', fontSize: '12px' },
+                  },
+                },
+                fill: { opacity: 1 },
+                tooltip: {
+                  theme: 'light',
+                  style: { fontSize: '13px' },
+                },
+                colors: ['#10b981', '#f43f5e'],
+                legend: {
+                  position: 'top',
+                  horizontalAlign: 'left',
+                  markers: { radius: 12 },
+                },
+                responsive: [
+                  {
+                    breakpoint: 768,
+                    options: {
+                      chart: { height: 250 },
+                      plotOptions: { bar: { columnWidth: '50%' } },
+                      xaxis: { labels: { style: { fontSize: '10px' } } },
+                    },
+                  },
+                ],
+              }}
+              series={[
+                {
+                  name: 'Income',
+                  data: (chartView === 'daily' ? stats.dailyData : stats.monthlyData)?.map((d: any) => d.income) || [],
+                },
+                {
+                  name: 'Expense',
+                  data: (chartView === 'daily' ? stats.dailyData : stats.monthlyData)?.map((d: any) => d.expense) || [],
+                },
+              ]}
+              type="bar"
+              height="100%"
+            />
           </div>
         </div>
 
         <div className="bg-white p-6 rounded-2xl shadow-sm border border-zinc-200/60">
           <h3 className="text-base font-semibold text-zinc-900 mb-6">Total Income by Month (Last Year)</h3>
           <div className="h-64 md:h-72">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={stats.monthlyData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f4f4f5" />
-                <XAxis 
-                  dataKey="month" 
-                  axisLine={false} 
-                  tickLine={false} 
-                  tick={{ fontSize: 10, fill: '#71717a' }} 
-                  dy={10}
-                  interval="preserveStartEnd"
-                />
-                <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#71717a' }} />
-                <Tooltip 
-                  cursor={{ fill: '#f4f4f5', opacity: 0.4 }} 
-                  contentStyle={{ borderRadius: '12px', border: '1px solid #e4e4e7', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
-                  itemStyle={{ fontSize: '13px', fontWeight: 500 }}
-                  labelStyle={{ fontSize: '12px', color: '#71717a', marginBottom: '4px' }}
-                />
-                <Bar dataKey="income" fill="#10b981" radius={[4, 4, 0, 0]} name="Income" maxBarSize={40} />
-              </BarChart>
-            </ResponsiveContainer>
+            <ReactApexChart
+              options={{
+                chart: {
+                  type: 'bar',
+                  height: '100%',
+                  toolbar: { show: false },
+                  fontFamily: 'inherit',
+                },
+                plotOptions: {
+                  bar: {
+                    horizontal: false,
+                    columnWidth: '60%',
+                    borderRadius: 4,
+                    borderRadiusApplication: 'end',
+                  },
+                },
+                dataLabels: { enabled: false },
+                stroke: { show: true, width: 2, colors: ['transparent'] },
+                xaxis: {
+                  categories: stats.monthlyData?.map((d: any) => d.month) || [],
+                  labels: {
+                    style: { colors: '#71717a', fontSize: '12px' },
+                  },
+                  axisBorder: { show: false },
+                  axisTicks: { show: false },
+                },
+                yaxis: {
+                  labels: {
+                    style: { colors: '#71717a', fontSize: '12px' },
+                  },
+                },
+                fill: { opacity: 1 },
+                tooltip: {
+                  theme: 'light',
+                  style: { fontSize: '13px' },
+                },
+                colors: ['#10b981'],
+                responsive: [
+                  {
+                    breakpoint: 768,
+                    options: {
+                      chart: { height: 250 },
+                      plotOptions: { bar: { columnWidth: '50%' } },
+                      xaxis: { labels: { style: { fontSize: '10px' } } },
+                    },
+                  },
+                ],
+              }}
+              series={[
+                {
+                  name: 'Income',
+                  data: stats.monthlyData?.map((d: any) => d.income) || [],
+                },
+              ]}
+              type="bar"
+              height="100%"
+            />
           </div>
         </div>
       </div>
