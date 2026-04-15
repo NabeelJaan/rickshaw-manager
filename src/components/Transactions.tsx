@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Receipt, Trash2, Filter, DollarSign, Edit, TrendingDown, TrendingUp, Calendar } from 'lucide-react';
+import { Plus, Receipt, Trash2, Filter, DollarSign, Edit, TrendingDown, TrendingUp, Calendar, Search } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell } from 'recharts';
 import { Transaction, Rickshaw, Driver } from '../types';
 import LogRentModal from './LogRentModal';
@@ -31,6 +31,24 @@ export default function Transactions({ selectedDriverId }: { selectedDriverId?: 
     end_date: '',
     rickshaw_id: '',
     driver_id: selectedDriverId || ''
+  });
+
+  const [searchQuery, setSearchQuery] = useState('');
+  const [typeFilter, setTypeFilter] = useState('all');
+
+  // Filter transactions based on search and type
+  const filteredTransactions = (Array.isArray(transactions) ? transactions : []).filter(t => {
+    const matchesSearch = searchQuery === '' || 
+      t.category.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (t.notes && t.notes.toLowerCase().includes(searchQuery.toLowerCase())) ||
+      (t.driver_name && t.driver_name.toLowerCase().includes(searchQuery.toLowerCase())) ||
+      (t.rickshaw_number && t.rickshaw_number.toLowerCase().includes(searchQuery.toLowerCase()));
+    
+    const matchesType = typeFilter === 'all' || 
+      (typeFilter === 'pending' && t.category === 'rent_pending') ||
+      t.type === typeFilter;
+    
+    return matchesSearch && matchesType;
   });
 
   // Load currency from settings
@@ -151,61 +169,91 @@ export default function Transactions({ selectedDriverId }: { selectedDriverId?: 
   return (
     <div className="space-y-8">
       <div className="bg-gradient-to-r from-blue-50 via-white to-emerald-50 p-6 md:p-8 rounded-2xl border border-zinc-200/60 shadow-sm">
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-          <div className="flex flex-col gap-3">
+        <div className="flex flex-col gap-4">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
             <h2 className="text-3xl md:text-4xl font-bold text-zinc-900 tracking-tight">Transactions</h2>
-            <div className="flex flex-wrap items-center gap-2">
-              <label className="text-sm font-medium text-zinc-600">Quick Filters:</label>
+            <div className="flex items-center gap-3">
               <button 
-                onClick={() => setQuickFilter(1)}
-                className="px-3 py-1.5 bg-white border border-zinc-200 hover:border-zinc-300 hover:bg-zinc-50 text-zinc-700 rounded-lg text-sm font-medium transition-all shadow-sm"
+                onClick={() => setIsLogRentModalOpen(true)}
+                className="bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white px-4 py-2.5 rounded-xl flex items-center gap-2 transition-all shadow-lg shadow-emerald-500/20 text-sm font-medium"
               >
-                1 Month
+                <DollarSign className="w-4 h-4" /> Log Rent
               </button>
               <button 
-                onClick={() => setQuickFilter(2)}
-                className="px-3 py-1.5 bg-white border border-zinc-200 hover:border-zinc-300 hover:bg-zinc-50 text-zinc-700 rounded-lg text-sm font-medium transition-all shadow-sm"
+                onClick={openExpenseForm}
+                className="bg-gradient-to-r from-rose-500 to-rose-600 hover:from-rose-600 hover:to-rose-700 text-white px-4 py-2.5 rounded-xl flex items-center gap-2 transition-all shadow-lg shadow-rose-500/20 text-sm font-medium"
               >
-                2 Months
+                <TrendingDown className="w-4 h-4" /> Add Expense
               </button>
               <button 
-                onClick={() => setQuickFilter(6)}
-                className="px-3 py-1.5 bg-white border border-zinc-200 hover:border-zinc-300 hover:bg-zinc-50 text-zinc-700 rounded-lg text-sm font-medium transition-all shadow-sm"
+                onClick={() => setShowForm(!showForm)}
+                className="bg-gradient-to-r from-zinc-800 to-zinc-900 hover:from-zinc-900 hover:to-zinc-950 text-white px-4 py-2.5 rounded-xl flex items-center gap-2 transition-all shadow-lg shadow-zinc-500/20 text-sm font-medium"
               >
-                6 Months
-              </button>
-              <button 
-                onClick={() => setQuickFilter(12)}
-                className="px-3 py-1.5 bg-white border border-zinc-200 hover:border-zinc-300 hover:bg-zinc-50 text-zinc-700 rounded-lg text-sm font-medium transition-all shadow-sm"
-              >
-                1 Year
-              </button>
-              <button 
-                onClick={() => setFilters({ start_date: '', end_date: '', rickshaw_id: '', driver_id: selectedDriverId || '' })}
-                className="px-3 py-1.5 bg-rose-50 border border-rose-200 hover:bg-rose-100 hover:border-rose-300 text-rose-700 rounded-lg text-sm font-medium transition-all shadow-sm"
-              >
-                Reset
+                <Plus className="w-4 h-4" /> Add Transaction
               </button>
             </div>
           </div>
-          <div className="flex items-center gap-3">
-            <button 
-              onClick={() => setIsLogRentModalOpen(true)}
-              className="bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white px-4 py-2.5 rounded-xl flex items-center gap-2 transition-all shadow-lg shadow-emerald-500/20 text-sm font-medium"
+
+          {/* Search and Filters */}
+          <div className="flex flex-col md:flex-row gap-3">
+            <div className="flex-1 relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" />
+              <input 
+                type="text"
+                placeholder="Search transactions..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full pl-10 pr-4 py-2.5 bg-white border border-zinc-200 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all text-sm"
+              />
+            </div>
+            <select 
+              value={typeFilter}
+              onChange={(e) => setTypeFilter(e.target.value)}
+              className="px-4 py-2.5 bg-white border border-zinc-200 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all text-sm"
             >
-              <DollarSign className="w-4 h-4" /> Log Rent
+              <option value="all">All Types</option>
+              <option value="income">Income</option>
+              <option value="expense">Expense</option>
+              <option value="pending">Rent Pending</option>
+            </select>
+          </div>
+
+          {/* Quick Filters */}
+          <div className="flex flex-wrap items-center gap-2">
+            <label className="text-sm font-medium text-zinc-600">Quick Filters:</label>
+            <button 
+              onClick={() => setQuickFilter(1)}
+              className="px-3 py-1.5 bg-white border border-zinc-200 hover:border-zinc-300 hover:bg-zinc-50 text-zinc-700 rounded-lg text-sm font-medium transition-all shadow-sm"
+            >
+              1 Month
             </button>
             <button 
-              onClick={openExpenseForm}
-              className="bg-gradient-to-r from-rose-500 to-rose-600 hover:from-rose-600 hover:to-rose-700 text-white px-4 py-2.5 rounded-xl flex items-center gap-2 transition-all shadow-lg shadow-rose-500/20 text-sm font-medium"
+              onClick={() => setQuickFilter(2)}
+              className="px-3 py-1.5 bg-white border border-zinc-200 hover:border-zinc-300 hover:bg-zinc-50 text-zinc-700 rounded-lg text-sm font-medium transition-all shadow-sm"
             >
-              <TrendingDown className="w-4 h-4" /> Add Expense
+              2 Months
             </button>
             <button 
-              onClick={() => setShowForm(!showForm)}
-              className="bg-gradient-to-r from-zinc-800 to-zinc-900 hover:from-zinc-900 hover:to-zinc-950 text-white px-4 py-2.5 rounded-xl flex items-center gap-2 transition-all shadow-lg shadow-zinc-500/20 text-sm font-medium"
+              onClick={() => setQuickFilter(6)}
+              className="px-3 py-1.5 bg-white border border-zinc-200 hover:border-zinc-300 hover:bg-zinc-50 text-zinc-700 rounded-lg text-sm font-medium transition-all shadow-sm"
             >
-              <Plus className="w-4 h-4" /> Add Transaction
+              6 Months
+            </button>
+            <button 
+              onClick={() => setQuickFilter(12)}
+              className="px-3 py-1.5 bg-white border border-zinc-200 hover:border-zinc-300 hover:bg-zinc-50 text-zinc-700 rounded-lg text-sm font-medium transition-all shadow-sm"
+            >
+              1 Year
+            </button>
+            <button 
+              onClick={() => {
+                setFilters({ start_date: '', end_date: '', rickshaw_id: '', driver_id: selectedDriverId || '' });
+                setSearchQuery('');
+                setTypeFilter('all');
+              }}
+              className="px-3 py-1.5 bg-rose-50 border border-rose-200 hover:bg-rose-100 hover:border-rose-300 text-rose-700 rounded-lg text-sm font-medium transition-all shadow-sm"
+            >
+              Reset
             </button>
           </div>
         </div>
@@ -410,7 +458,7 @@ export default function Transactions({ selectedDriverId }: { selectedDriverId?: 
               </tr>
             </thead>
             <tbody className="divide-y divide-zinc-100">
-              {transactions.map(t => (
+              {filteredTransactions.map(t => (
                 <tr key={t.id} className="hover:bg-zinc-50/50 transition-colors group">
                   <td className="p-4 text-sm text-zinc-600 font-number">{t.date}</td>
                   <td className="p-4">

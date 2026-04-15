@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react';
-import { LayoutDashboard, Users, Car, Receipt, Settings, Menu, X, ChevronDown, LogOut } from 'lucide-react';
+import { LayoutDashboard, Users, Car, Receipt, Settings, Menu, X, ChevronDown, LogOut, FileText } from 'lucide-react';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import LoginPage from './components/LoginPage';
 import Dashboard from './components/Dashboard';
 import Rickshaws from './components/Rickshaws';
 import Drivers from './components/Drivers';
 import Transactions from './components/Transactions';
+import Reports from './components/Reports';
 import SettingsPage from './components/Settings';
 import { Driver } from './types';
 
@@ -46,6 +47,7 @@ function AppContent() {
     { id: 'rickshaws', label: 'Rickshaws', icon: Car },
     { id: 'drivers', label: 'Drivers', icon: Users },
     { id: 'transactions', label: 'Transactions', icon: Receipt },
+    { id: 'reports', label: 'Reports', icon: FileText },
     { id: 'settings', label: 'Settings', icon: Settings },
   ];
 
@@ -55,6 +57,7 @@ function AppContent() {
       case 'rickshaws': return <Rickshaws selectedDriverId={selectedDriverId} />;
       case 'drivers': return <Drivers onDriverAdded={fetchDrivers} defaultShowForm={showAddDriverForm} />;
       case 'transactions': return <Transactions selectedDriverId={selectedDriverId} />;
+      case 'reports': return <Reports selectedDriverId={selectedDriverId} />;
       case 'settings': return <SettingsPage />;
       default: return <Dashboard selectedDriverId={selectedDriverId} />;
     }
