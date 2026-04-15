@@ -160,8 +160,8 @@ export default function Rickshaws({ selectedDriverId }: { selectedDriverId?: str
     return activeAssignment ? activeAssignment.driver_name : 'Unassigned';
   };
 
-  const calculateRickshawNetIncome = (rickshawId: number) => {
-    const rickshawTransactions = transactions.filter(t => t.rickshaw_id === rickshawId);
+  const calculateRickshawNetIncome = (rickshawId: number, purchaseDate: string) => {
+    const rickshawTransactions = transactions.filter(t => t.rickshaw_id === rickshawId && new Date(t.date) >= new Date(purchaseDate));
     const income = rickshawTransactions.filter(t => t.type === 'income' && t.category !== 'rent_pending').reduce((sum, t) => sum + t.amount, 0);
     const expense = rickshawTransactions.filter(t => t.type === 'expense').reduce((sum, t) => sum + t.amount, 0);
     return income - expense;
@@ -306,18 +306,18 @@ export default function Rickshaws({ selectedDriverId }: { selectedDriverId?: str
                 <div className="flex justify-between text-[11px] mb-1.5">
                   <span className="font-medium text-zinc-500 uppercase tracking-wider">Net Income Progress</span>
                   <span className="text-emerald-600 font-semibold font-number">
-                    {Math.min(100, Math.max(0, (calculateRickshawNetIncome(r.id) / r.investment_cost) * 100)).toFixed(1)}%
+                    {Math.min(100, Math.max(0, (calculateRickshawNetIncome(r.id, r.purchase_date) / r.investment_cost) * 100)).toFixed(1)}%
                   </span>
                 </div>
                 <div className="w-full bg-zinc-100 rounded-full h-1.5 overflow-hidden">
                   <div 
                     className="bg-emerald-500 h-1.5 rounded-full transition-all duration-1000 ease-out" 
-                    style={{ width: `${Math.min(100, Math.max(0, (calculateRickshawNetIncome(r.id) / r.investment_cost) * 100))}%` }}
+                    style={{ width: `${Math.min(100, Math.max(0, (calculateRickshawNetIncome(r.id, r.purchase_date) / r.investment_cost) * 100))}%` }}
                   ></div>
                 </div>
                 <div className="flex justify-between text-[11px] mt-2 text-zinc-500 font-number">
-                  <span className="text-emerald-600 font-medium">{currency} {calculateRickshawNetIncome(r.id).toLocaleString()}</span>
-                  <span>{currency} {Math.max(0, r.investment_cost - calculateRickshawNetIncome(r.id)).toLocaleString()} left</span>
+                  <span className="text-emerald-600 font-medium">{currency} {calculateRickshawNetIncome(r.id, r.purchase_date).toLocaleString()}</span>
+                  <span>{currency} {Math.max(0, r.investment_cost - calculateRickshawNetIncome(r.id, r.purchase_date)).toLocaleString()} left</span>
                 </div>
               </div>
 
