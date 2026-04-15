@@ -61,14 +61,19 @@ function AppContent() {
   };
 
   return (
-    <div className="min-h-screen bg-zinc-50 flex flex-col md:flex-row font-sans">
+    <div className="min-h-screen bg-gradient-to-br from-zinc-50 via-white to-zinc-100 flex flex-col md:flex-row font-sans">
       {/* Mobile Header */}
-      <div className="md:hidden bg-zinc-950 text-white p-4 flex justify-between items-center border-b border-zinc-800">
+      <div className="md:hidden bg-gradient-to-r from-zinc-950 to-zinc-900 text-white p-4 flex justify-between items-center border-b border-zinc-800 shadow-lg">
         <h1 className="text-xl font-bold flex items-center gap-2 tracking-tight">
-          <Car className="w-6 h-6 text-emerald-400" />
+          <div className="p-1.5 bg-emerald-500/20 rounded-lg">
+            <Car className="w-5 h-5 text-emerald-400" />
+          </div>
           Rickshaw Manager
         </h1>
-        <button onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}>
+        <button 
+          onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+          className="p-2 hover:bg-zinc-800 rounded-lg transition-colors"
+        >
           {isMobileMenuOpen ? <X /> : <Menu />}
         </button>
       </div>
@@ -76,40 +81,42 @@ function AppContent() {
       {/* Mobile Backdrop */}
       {isMobileMenuOpen && (
         <div 
-          className="fixed inset-0 bg-black/50 z-40 md:hidden"
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 md:hidden transition-opacity"
           onClick={() => setIsMobileMenuOpen(false)}
         ></div>
       )}
 
       {/* Sidebar */}
       <div className={`
-        fixed md:static inset-y-0 left-0 z-50 w-64 bg-zinc-950 text-zinc-300 transform transition-transform duration-200 ease-in-out border-r border-zinc-800 flex flex-col
+        fixed md:static inset-y-0 left-0 z-50 w-64 bg-gradient-to-b from-zinc-950 to-zinc-900 text-zinc-300 transform transition-all duration-300 ease-in-out border-r border-zinc-800/50 flex flex-col shadow-2xl
         ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
       `}>
-        <div className="p-6 hidden md:block">
+        <div className="p-6 hidden md:block border-b border-zinc-800/50">
           <h1 className="text-2xl font-bold text-white flex items-center gap-3 tracking-tight">
-            <Car className="w-8 h-8 text-emerald-400" />
-            Rickshaw<br/>Manager
+            <div className="p-2 bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-xl shadow-lg shadow-emerald-500/20">
+              <Car className="w-6 h-6 text-white" />
+            </div>
+            Rickshaw Manager
           </h1>
         </div>
 
         <div className="px-4 mb-6">
-          <div className="bg-zinc-900/50 border border-zinc-800 rounded-2xl p-3 mb-6">
+          <div className="bg-gradient-to-br from-zinc-800/50 to-zinc-900/50 border border-zinc-700/50 rounded-2xl p-4 mb-6 backdrop-blur-sm">
             <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-full bg-emerald-500/10 flex items-center justify-center">
-                <Users className="w-4 h-4 text-emerald-500" />
+              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-emerald-500/20 to-emerald-600/20 flex items-center justify-center border border-emerald-500/30">
+                <Users className="w-5 h-5 text-emerald-400" />
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-xs font-medium text-white truncate">{user?.username}</p>
-                <p className="text-[10px] text-zinc-500 uppercase tracking-wider font-semibold">Super Admin</p>
+                <p className="text-sm font-semibold text-white truncate">{user?.username}</p>
+                <p className="text-[11px] text-zinc-400 uppercase tracking-wider font-medium">Super Admin</p>
               </div>
             </div>
           </div>
 
-          <label className="block text-[10px] font-semibold text-zinc-500 uppercase tracking-widest mb-3">Active Profile</label>
+          <label className="block text-[11px] font-semibold text-zinc-400 uppercase tracking-wider mb-3">Active Profile</label>
           <div className="relative">
             <select 
-              className="w-full appearance-none bg-zinc-900 border border-zinc-800 text-white py-2.5 pl-3 pr-8 rounded-xl focus:outline-none focus:ring-1 focus:ring-emerald-500 text-sm font-medium transition-shadow"
+              className="w-full appearance-none bg-zinc-800/50 border border-zinc-700/50 text-white py-3 pl-4 pr-10 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500 text-sm font-medium transition-all backdrop-blur-sm"
               value={selectedDriverId}
               onChange={(e) => {
                 if (e.target.value === 'add_new') {
@@ -129,11 +136,11 @@ function AppContent() {
               ))}
               <option value="add_new">+ Add New Driver</option>
             </select>
-            <ChevronDown className="absolute right-3 top-3 w-4 h-4 text-zinc-500 pointer-events-none" />
+            <ChevronDown className="absolute right-3 top-3.5 w-4 h-4 text-zinc-400 pointer-events-none" />
           </div>
         </div>
 
-        <nav className="px-4 space-y-1 flex-1">
+        <nav className="px-3 space-y-1 flex-1">
           {navItems.map((item) => {
             const Icon = item.icon;
             const isActive = activeTab === item.id;
@@ -145,33 +152,36 @@ function AppContent() {
                   setIsMobileMenuOpen(false);
                 }}
                 className={`
-                  w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200
+                  w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 group
                   ${isActive 
-                    ? 'bg-emerald-500/10 text-emerald-400 font-medium' 
-                    : 'text-zinc-400 hover:bg-zinc-900 hover:text-zinc-200'}
+                    ? 'bg-gradient-to-r from-emerald-500/20 to-emerald-600/10 text-emerald-400 font-medium border border-emerald-500/30 shadow-lg shadow-emerald-500/10' 
+                    : 'text-zinc-400 hover:bg-zinc-800/50 hover:text-zinc-200 border border-transparent'}
                 `}
               >
-                <Icon className={`w-5 h-5 ${isActive ? 'text-emerald-400' : 'text-zinc-500'}`} />
+                <Icon className={`w-5 h-5 ${isActive ? 'text-emerald-400' : 'text-zinc-500 group-hover:text-zinc-300 transition-colors'}`} />
                 <span className="text-sm">{item.label}</span>
+                {isActive && (
+                  <div className="ml-auto w-1.5 h-1.5 rounded-full bg-emerald-400 shadow-lg shadow-emerald-400/50"></div>
+                )}
               </button>
             );
           })}
         </nav>
 
-        <div className="p-4 mt-auto border-t border-zinc-900">
+        <div className="p-4 mt-auto border-t border-zinc-800/50">
           <button 
             onClick={logout}
-            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-zinc-500 hover:bg-rose-500/10 hover:text-rose-500 transition-all duration-200"
+            className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-zinc-400 hover:bg-rose-500/10 hover:text-rose-400 hover:border-rose-500/30 border border-transparent transition-all duration-200 group"
           >
-            <LogOut className="w-5 h-5" />
+            <LogOut className="w-5 h-5 group-hover:scale-110 transition-transform" />
             <span className="text-sm font-medium">Sign Out</span>
           </button>
         </div>
       </div>
 
       {/* Main Content */}
-      <main className="flex-1 p-4 md:p-8 lg:p-10 overflow-y-auto bg-zinc-50">
-        <div className="max-w-6xl mx-auto">
+      <main className="flex-1 p-4 md:p-8 lg:p-10 overflow-y-auto">
+        <div className="max-w-7xl mx-auto">
           {renderContent()}
         </div>
       </main>

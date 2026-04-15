@@ -167,14 +167,16 @@ export default function Rickshaws({ selectedDriverId }: { selectedDriverId?: str
 
   return (
     <div className="space-y-8">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <h2 className="text-2xl md:text-3xl font-bold text-zinc-900 tracking-tight">Rickshaws</h2>
-        <button 
-          onClick={() => setShowForm(!showForm)}
-          className="w-full sm:w-auto bg-zinc-900 hover:bg-zinc-800 text-white px-4 py-2.5 rounded-xl flex items-center justify-center gap-2 transition-all shadow-sm text-sm font-medium"
-        >
-          <Plus className="w-4 h-4" /> Add Rickshaw
-        </button>
+      <div className="bg-gradient-to-r from-purple-50 via-white to-indigo-50 p-6 md:p-8 rounded-2xl border border-zinc-200/60 shadow-sm">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+          <h2 className="text-2xl md:text-4xl font-bold text-zinc-900 tracking-tight">Rickshaws</h2>
+          <button 
+            onClick={() => setShowForm(!showForm)}
+            className="w-full sm:w-auto bg-gradient-to-r from-purple-500 to-indigo-500 hover:from-purple-600 hover:to-indigo-600 text-white px-4 py-2.5 rounded-xl flex items-center justify-center gap-2 transition-all shadow-lg shadow-purple-500/20 text-sm font-medium"
+          >
+            <Plus className="w-4 h-4" /> Add Rickshaw
+          </button>
+        </div>
       </div>
 
       {selectedDriverId && (

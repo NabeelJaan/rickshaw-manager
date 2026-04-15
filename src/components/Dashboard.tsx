@@ -155,56 +155,57 @@ export default function Dashboard({ selectedDriverId }: { selectedDriverId?: str
 
   return (
     <div className="space-y-8">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div className="flex flex-col gap-3">
-          <h2 className="text-3xl font-bold text-zinc-900 tracking-tight">
-            {selectedDriverId ? `${selectedDriverName}'s Overview` : 'Dashboard Overview'}
-          </h2>
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2">
-              <label className="text-sm text-zinc-600">Month:</label>
-              <select 
-                value={selectedMonth} 
-                onChange={(e) => setSelectedMonth(e.target.value)}
-                className="px-3 py-1.5 bg-zinc-50 border border-zinc-200 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
-              >
-                <option value="all">All Months</option>
-                {Array.from({ length: 12 }, (_, i) => {
-                  const date = new Date();
-                  date.setMonth(date.getMonth() - i);
-                  const monthStr = date.toISOString().slice(0, 7);
-                  const monthName = date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
-                  return <option key={monthStr} value={monthStr}>{monthName}</option>;
-                })}
-              </select>
-              {selectedMonth && selectedMonth !== 'all' && (
-                <button 
-                  onClick={() => setSelectedMonth('all')}
-                  className="text-xs text-zinc-500 hover:text-zinc-700"
+      <div className="bg-gradient-to-r from-emerald-50 via-white to-zinc-50 p-6 md:p-8 rounded-2xl border border-zinc-200/60 shadow-sm">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+          <div className="flex flex-col gap-3">
+            <h2 className="text-3xl md:text-4xl font-bold text-zinc-900 tracking-tight">
+              {selectedDriverId ? `${selectedDriverName}'s Overview` : 'Dashboard Overview'}
+            </h2>
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2">
+                <label className="text-sm font-medium text-zinc-600">Month:</label>
+                <select 
+                  value={selectedMonth} 
+                  onChange={(e) => setSelectedMonth(e.target.value)}
+                  className="px-4 py-2 bg-white border border-zinc-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 shadow-sm transition-all"
                 >
-                  Clear
-                </button>
-              )}
+                  <option value="all">All Months</option>
+                  {Array.from({ length: 12 }, (_, i) => {
+                    const date = new Date();
+                    date.setMonth(date.getMonth() - i);
+                    const monthStr = date.toISOString().slice(0, 7);
+                    const monthName = date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+                    return <option key={monthStr} value={monthStr}>{monthName}</option>;
+                  })}
+                </select>
+                {selectedMonth && selectedMonth !== 'all' && (
+                  <button 
+                    onClick={() => setSelectedMonth('all')}
+                    className="text-xs font-medium text-zinc-500 hover:text-zinc-700 hover:bg-zinc-100 px-2 py-1 rounded-lg transition-colors"
+                  >
+                    Clear
+                  </button>
+                )}
+              </div>
             </div>
           </div>
-        </div>
-        <div className="flex items-center gap-3">
-          {selectedDriverId && (
-            <button 
-              onClick={() => setIsExpenseModalOpen(true)}
-              className="bg-rose-500 hover:bg-rose-600 text-white px-4 py-2.5 rounded-xl flex items-center gap-2 transition-all shadow-sm text-sm font-medium"
-            >
-              <DollarSign className="w-4 h-4" /> Add Expense
-            </button>
-          )}
-          <div className="relative">
-            <button 
-              onClick={() => setShowTransactionDropdown(!showTransactionDropdown)}
-              className="bg-emerald-500 hover:bg-emerald-600 text-white px-5 py-2.5 rounded-xl flex items-center gap-2 transition-all shadow-sm text-sm font-medium"
-            >
-              <Plus className="w-4 h-4" /> Log Transaction
-              <ChevronDown className={`w-4 h-4 transition-transform ${showTransactionDropdown ? 'rotate-180' : ''}`} />
-            </button>
+          <div className="flex items-center gap-3">
+            {selectedDriverId && (
+              <button 
+                onClick={() => setIsExpenseModalOpen(true)}
+                className="bg-gradient-to-r from-rose-500 to-rose-600 hover:from-rose-600 hover:to-rose-700 text-white px-4 py-2.5 rounded-xl flex items-center gap-2 transition-all shadow-lg shadow-rose-500/20 text-sm font-medium"
+              >
+                <DollarSign className="w-4 h-4" /> Add Expense
+              </button>
+            )}
+            <div className="relative">
+              <button 
+                onClick={() => setShowTransactionDropdown(!showTransactionDropdown)}
+                className="bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white px-5 py-2.5 rounded-xl flex items-center gap-2 transition-all shadow-lg shadow-emerald-500/20 text-sm font-medium"
+              >
+                <Plus className="w-4 h-4" /> Log Transaction
+                <ChevronDown className={`w-4 h-4 transition-transform ${showTransactionDropdown ? 'rotate-180' : ''}`} />
+              </button>
             
             {showTransactionDropdown && (
               <div className="absolute top-full left-0 mt-2 w-48 bg-white rounded-xl shadow-lg border border-zinc-200/60 py-2 z-50">
@@ -243,6 +244,7 @@ export default function Dashboard({ selectedDriverId }: { selectedDriverId?: str
             )}
           </div>
         </div>
+      </div>
       </div>
       
       <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 md:gap-4">

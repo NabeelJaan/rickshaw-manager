@@ -150,62 +150,64 @@ export default function Transactions({ selectedDriverId }: { selectedDriverId?: 
 
   return (
     <div className="space-y-8">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div className="flex flex-col gap-3">
-          <h2 className="text-3xl font-bold text-zinc-900 tracking-tight">Transactions</h2>
-          <div className="flex flex-wrap items-center gap-2">
-            <label className="text-sm text-zinc-600">Quick Filters:</label>
+      <div className="bg-gradient-to-r from-blue-50 via-white to-emerald-50 p-6 md:p-8 rounded-2xl border border-zinc-200/60 shadow-sm">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+          <div className="flex flex-col gap-3">
+            <h2 className="text-3xl md:text-4xl font-bold text-zinc-900 tracking-tight">Transactions</h2>
+            <div className="flex flex-wrap items-center gap-2">
+              <label className="text-sm font-medium text-zinc-600">Quick Filters:</label>
+              <button 
+                onClick={() => setQuickFilter(1)}
+                className="px-3 py-1.5 bg-white border border-zinc-200 hover:border-zinc-300 hover:bg-zinc-50 text-zinc-700 rounded-lg text-sm font-medium transition-all shadow-sm"
+              >
+                1 Month
+              </button>
+              <button 
+                onClick={() => setQuickFilter(2)}
+                className="px-3 py-1.5 bg-white border border-zinc-200 hover:border-zinc-300 hover:bg-zinc-50 text-zinc-700 rounded-lg text-sm font-medium transition-all shadow-sm"
+              >
+                2 Months
+              </button>
+              <button 
+                onClick={() => setQuickFilter(6)}
+                className="px-3 py-1.5 bg-white border border-zinc-200 hover:border-zinc-300 hover:bg-zinc-50 text-zinc-700 rounded-lg text-sm font-medium transition-all shadow-sm"
+              >
+                6 Months
+              </button>
+              <button 
+                onClick={() => setQuickFilter(12)}
+                className="px-3 py-1.5 bg-white border border-zinc-200 hover:border-zinc-300 hover:bg-zinc-50 text-zinc-700 rounded-lg text-sm font-medium transition-all shadow-sm"
+              >
+                1 Year
+              </button>
+              <button 
+                onClick={() => setFilters({ start_date: '', end_date: '', rickshaw_id: '', driver_id: selectedDriverId || '' })}
+                className="px-3 py-1.5 bg-rose-50 border border-rose-200 hover:bg-rose-100 hover:border-rose-300 text-rose-700 rounded-lg text-sm font-medium transition-all shadow-sm"
+              >
+                Reset
+              </button>
+            </div>
+          </div>
+          <div className="flex items-center gap-3">
             <button 
-              onClick={() => setQuickFilter(1)}
-              className="px-3 py-1.5 bg-zinc-100 hover:bg-zinc-200 text-zinc-700 rounded-lg text-sm font-medium transition-colors"
+              onClick={() => setIsLogRentModalOpen(true)}
+              className="bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white px-4 py-2.5 rounded-xl flex items-center gap-2 transition-all shadow-lg shadow-emerald-500/20 text-sm font-medium"
             >
-              1 Month
+              <DollarSign className="w-4 h-4" /> Log Rent
             </button>
             <button 
-              onClick={() => setQuickFilter(2)}
-              className="px-3 py-1.5 bg-zinc-100 hover:bg-zinc-200 text-zinc-700 rounded-lg text-sm font-medium transition-colors"
+              onClick={openExpenseForm}
+              className="bg-gradient-to-r from-rose-500 to-rose-600 hover:from-rose-600 hover:to-rose-700 text-white px-4 py-2.5 rounded-xl flex items-center gap-2 transition-all shadow-lg shadow-rose-500/20 text-sm font-medium"
             >
-              2 Months
+              <TrendingDown className="w-4 h-4" /> Add Expense
             </button>
             <button 
-              onClick={() => setQuickFilter(6)}
-              className="px-3 py-1.5 bg-zinc-100 hover:bg-zinc-200 text-zinc-700 rounded-lg text-sm font-medium transition-colors"
+              onClick={() => setShowForm(!showForm)}
+              className="bg-gradient-to-r from-zinc-800 to-zinc-900 hover:from-zinc-900 hover:to-zinc-950 text-white px-4 py-2.5 rounded-xl flex items-center gap-2 transition-all shadow-lg shadow-zinc-500/20 text-sm font-medium"
             >
-              6 Months
-            </button>
-            <button 
-              onClick={() => setQuickFilter(12)}
-              className="px-3 py-1.5 bg-zinc-100 hover:bg-zinc-200 text-zinc-700 rounded-lg text-sm font-medium transition-colors"
-            >
-              1 Year
-            </button>
-            <button 
-              onClick={() => setFilters({ start_date: '', end_date: '', rickshaw_id: '', driver_id: selectedDriverId || '' })}
-              className="px-3 py-1.5 bg-rose-100 hover:bg-rose-200 text-rose-700 rounded-lg text-sm font-medium transition-colors"
-            >
-              Reset
+              <Plus className="w-4 h-4" /> Add Transaction
             </button>
           </div>
-        </div>
-        <div className="flex items-center gap-3">
-          <button 
-            onClick={() => setIsLogRentModalOpen(true)}
-            className="bg-emerald-500 hover:bg-emerald-600 text-white px-4 py-2.5 rounded-xl flex items-center gap-2 transition-all shadow-sm text-sm font-medium"
-          >
-            <DollarSign className="w-4 h-4" /> Log Rent
-          </button>
-          <button 
-            onClick={openExpenseForm}
-            className="bg-rose-500 hover:bg-rose-600 text-white px-4 py-2.5 rounded-xl flex items-center gap-2 transition-all shadow-sm text-sm font-medium"
-          >
-            <TrendingDown className="w-4 h-4" /> Add Expense
-          </button>
-          <button 
-            onClick={() => setShowForm(!showForm)}
-            className="bg-zinc-900 hover:bg-zinc-800 text-white px-4 py-2.5 rounded-xl flex items-center gap-2 transition-all shadow-sm text-sm font-medium"
-          >
-            <Plus className="w-4 h-4" /> Add Transaction
-          </button>
         </div>
       </div>
 

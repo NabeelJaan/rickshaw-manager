@@ -167,14 +167,16 @@ export default function Drivers({ onDriverAdded, defaultShowForm }: { onDriverAd
 
   return (
     <div className="space-y-8">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <h2 className="text-2xl md:text-3xl font-bold text-zinc-900 tracking-tight">Drivers Management</h2>
-        <button 
-          onClick={() => setShowForm(!showForm)}
-          className="w-full sm:w-auto bg-zinc-900 hover:bg-zinc-800 text-white px-4 py-2.5 rounded-xl flex items-center justify-center gap-2 transition-all shadow-sm text-sm font-medium"
-        >
-          <Plus className="w-4 h-4" /> Add Driver
-        </button>
+      <div className="bg-gradient-to-r from-amber-50 via-white to-orange-50 p-6 md:p-8 rounded-2xl border border-zinc-200/60 shadow-sm">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+          <h2 className="text-2xl md:text-4xl font-bold text-zinc-900 tracking-tight">Drivers Management</h2>
+          <button 
+            onClick={() => setShowForm(!showForm)}
+            className="w-full sm:w-auto bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white px-4 py-2.5 rounded-xl flex items-center justify-center gap-2 transition-all shadow-lg shadow-amber-500/20 text-sm font-medium"
+          >
+            <Plus className="w-4 h-4" /> Add Driver
+          </button>
+        </div>
       </div>
 
       {showForm && (
