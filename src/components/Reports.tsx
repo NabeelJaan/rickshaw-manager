@@ -90,7 +90,7 @@ export default function Reports({ selectedDriverId }: { selectedDriverId?: strin
   }, [reportPeriod, selectedReportDriver, selectedMonth, selectedYear]);
 
   const calculateStats = () => {
-    const income = transactions.filter(t => t.type === 'income').reduce((sum, t) => sum + t.amount, 0);
+    const income = transactions.filter(t => t.type === 'income' && t.category !== 'rent_pending').reduce((sum, t) => sum + t.amount, 0);
     const expense = transactions.filter(t => t.type === 'expense').reduce((sum, t) => sum + t.amount, 0);
     const pending = transactions.filter(t => t.category === 'rent_pending').reduce((sum, t) => sum + t.amount, 0);
     const profit = income - expense;
@@ -140,7 +140,7 @@ export default function Reports({ selectedDriverId }: { selectedDriverId?: strin
         
         driversWithData.forEach((driverName, index) => {
           const driverTransactions = transactions.filter(t => t.driver_name === driverName);
-          const driverIncome = driverTransactions.filter(t => t.type === 'income').reduce((sum, t) => sum + t.amount, 0);
+          const driverIncome = driverTransactions.filter(t => t.type === 'income' && t.category !== 'rent_pending').reduce((sum, t) => sum + t.amount, 0);
           const driverExpense = driverTransactions.filter(t => t.type === 'expense').reduce((sum, t) => sum + t.amount, 0);
           const driverProfit = driverIncome - driverExpense;
 
