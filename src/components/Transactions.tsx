@@ -27,7 +27,8 @@ export default function Transactions({ selectedDriverId }: { selectedDriverId?: 
     start_date: '',
     end_date: '',
     rickshaw_id: '',
-    driver_id: selectedDriverId || ''
+    driver_id: selectedDriverId || '',
+    month: new Date().toISOString().slice(0, 7) // Default to current month (YYYY-MM)
   });
 
   // Load currency from settings
@@ -125,7 +126,35 @@ export default function Transactions({ selectedDriverId }: { selectedDriverId?: 
   return (
     <div className="space-y-8">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <h2 className="text-3xl font-bold text-zinc-900 tracking-tight">Transactions</h2>
+        <div className="flex flex-col gap-3">
+          <h2 className="text-3xl font-bold text-zinc-900 tracking-tight">Transactions</h2>
+          <div className="flex items-center gap-2">
+            <label className="text-sm text-zinc-600">Month:</label>
+            <select 
+              value={filters.month || 'all'} 
+              onChange={(e) => setFilters({...filters, month: e.target.value})}
+              className="px-3 py-1.5 bg-zinc-50 border border-zinc-200 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+            >
+              <option value="">Current Month</option>
+              <option value="all">All Months</option>
+              {Array.from({ length: 12 }, (_, i) => {
+                const date = new Date();
+                date.setMonth(date.getMonth() - i);
+                const monthStr = date.toISOString().slice(0, 7);
+                const monthName = date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+                return <option key={monthStr} value={monthStr}>{monthName}</option>;
+              })}
+            </select>
+            {filters.month && filters.month !== 'all' && (
+              <button 
+                onClick={() => setFilters({...filters, month: ''})}
+                className="text-xs text-zinc-500 hover:text-zinc-700"
+              >
+                Clear
+              </button>
+            )}
+          </div>
+        </div>
         <div className="flex items-center gap-3">
           <button 
             onClick={() => setIsLogRentModalOpen(true)}
