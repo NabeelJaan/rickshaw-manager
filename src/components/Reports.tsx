@@ -145,7 +145,8 @@ export default function Reports({ selectedDriverId }: { selectedDriverId?: strin
           const driverProfit = driverIncome - driverExpense;
 
           // Add driver section
-          allRows.push([`=== ${driverName} ===`]);
+          allRows.push(['---']);
+          allRows.push(['Driver', driverName]);
           allRows.push(['Income', `${currency}${driverIncome.toLocaleString()}`]);
           allRows.push(['Expense', `${currency}${driverExpense.toLocaleString()}`]);
           allRows.push(['Profit', `${currency}${driverProfit.toLocaleString()}`]);
@@ -168,7 +169,8 @@ export default function Reports({ selectedDriverId }: { selectedDriverId?: strin
           // Add separator between drivers
           if (index < driversWithData.length - 1) {
             allRows.push([]); // Empty row
-            allRows.push(['']); // Empty row
+            allRows.push(['---']); // Separator row
+            allRows.push([]); // Empty row
           }
         });
 
