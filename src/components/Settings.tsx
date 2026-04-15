@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { Settings as SettingsIcon, Plus, Trash2, Edit, Save, Download, FileText, AlertTriangle, RefreshCw, Users, TrendingUp, TrendingDown } from 'lucide-react';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line } from 'recharts';
 import UserManagement from './UserManagement';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -27,7 +26,7 @@ const defaultSettings: AppSettings = {
 };
 
 export default function Settings() {
-  const [activeTab, setActiveTab] = useState<'categories' | 'general' | 'reports' | 'data' | 'users'>('general');
+  const [activeTab, setActiveTab] = useState<'categories' | 'general' | 'data' | 'users'>('general');
   const [showUserManagement, setShowUserManagement] = useState(false);
   const { user: currentUser } = useAuth();
   const [categories, setCategories] = useState<Category[]>([]);
@@ -37,39 +36,11 @@ export default function Settings() {
   const [tempSettings, setTempSettings] = useState<AppSettings>(defaultSettings);
   const [hasChanges, setHasChanges] = useState(false);
   const [isResetting, setIsResetting] = useState(false);
-  const [chartData, setChartData] = useState<any[]>([]);
-  const [loadingChartData, setLoadingChartData] = useState(false);
 
   useEffect(() => {
     fetchCategories();
     fetchSettings();
   }, []);
-
-  useEffect(() => {
-    if (activeTab === 'reports') {
-      fetchChartData();
-    }
-  }, [activeTab]);
-
-  const fetchChartData = async () => {
-    try {
-      setLoadingChartData(true);
-      const token = localStorage.getItem('auth_token');
-      const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
-      
-      const response = await fetch('/api/stats', { headers });
-      if (response.ok) {
-        const data = await response.json();
-        if (data.monthlyData && Array.isArray(data.monthlyData)) {
-          setChartData(data.monthlyData);
-        }
-      }
-    } catch (error) {
-      console.error('Failed to fetch chart data:', error);
-    } finally {
-      setLoadingChartData(false);
-    }
-  };
 
   const fetchCategories = async () => {
     try {
@@ -249,106 +220,6 @@ export default function Settings() {
     } catch (error) {
       console.error('Failed to delete category:', error);
       alert('Failed to delete category. Please try again.');
-    }
-  };
-
-  const generateReport = async (type: 'income' | 'expense' | 'summary') => {
-    try {
-      const token = localStorage.getItem('auth_token');
-      const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
-      
-      const response = await fetch(`/api/reports/${type}`, { headers });
-      if (!response.ok) {
-        alert('Failed to generate report');
-        return;
-      }
-      
-      const data = await response.json();
-      
-      if (!Array.isArray(data)) {
-        alert('Invalid data received');
-        return;
-      }
-      
-      if (data.length === 0) {
-        alert('No data available for this report');
-        return;
-      }
-
-      if (settings.reportFormat === 'excel') {
-        // Generate CSV
-        const headers_row = Object.keys(data[0]).join(',');
-        const csv_content = [
-          headers_row,
-          ...data.map(row => Object.values(row).map(val => 
-            typeof val === 'string' && (val.includes(',') || val.includes('"')) 
-              ? `"${val.replace(/"/g, '""')}"` 
-              : val
-          ).join(','))
-        ].join('\n');
-        
-        const blob = new Blob([csv_content], { type: 'text/csv' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `${type}-report-${new Date().toISOString().split('T')[0]}.csv`;
-        a.click();
-        URL.revokeObjectURL(url);
-      } else {
-        // Generate PDF using HTML
-        const html = `
-          <!DOCTYPE html>
-          <html>
-          <head>
-            <title>${type.charAt(0).toUpperCase() + type.slice(1)} Report</title>
-            <style>
-              body { font-family: Arial, sans-serif; padding: 20px; }
-              h1 { color: #333; }
-              table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-              th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
-              th { background-color: #f4f4f4; }
-              tr:nth-child(even) { background-color: #f9f9f9; }
-              .summary { margin-top: 20px; padding: 10px; background: #f0f0f0; }
-            </style>
-          </head>
-          <body>
-            <h1>${type.charAt(0).toUpperCase() + type.slice(1)} Report</h1>
-            <p>Generated: ${new Date().toLocaleString()}</p>
-            <table>
-              <thead>
-                <tr>
-                  ${Object.keys(data[0]).map(key => `<th>${key}</th>`).join('')}
-                </tr>
-              </thead>
-              <tbody>
-                ${data.map(row => `
-                  <tr>
-                    ${Object.values(row).map(val => `<td>${val !== null ? val : ''}</td>`).join('')}
-                  </tr>
-                `).join('')}
-              </tbody>
-            </table>
-            <div class="summary">
-              <p>Total Records: ${data.length}</p>
-            </div>
-          </body>
-          </html>
-        `;
-        
-        const blob = new Blob([html], { type: 'text/html' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `${type}-report-${new Date().toISOString().split('T')[0]}.html`;
-        a.click();
-        URL.revokeObjectURL(url);
-        
-        alert('Report generated as HTML. Open the file and print to PDF (Ctrl+P).');
-      }
-      
-    } catch (error) {
-      console.error('Report generation error:', error);
-      alert('Failed to generate report');
     }
   };
 
@@ -627,16 +498,6 @@ export default function Settings() {
           General
         </button>
         <button
-          onClick={() => setActiveTab('reports')}
-          className={`flex-1 min-w-[100px] px-4 py-2.5 text-sm font-medium rounded-xl transition-all ${
-            activeTab === 'reports'
-              ? 'bg-gradient-to-r from-violet-500 to-purple-600 text-white shadow-lg shadow-violet-500/20'
-              : 'text-zinc-600 hover:bg-zinc-100'
-          }`}
-        >
-          Reports
-        </button>
-        <button
           onClick={() => setActiveTab('data')}
           className={`flex-1 min-w-[100px] px-4 py-2.5 text-sm font-medium rounded-xl transition-all ${
             activeTab === 'data'
@@ -886,87 +747,6 @@ export default function Settings() {
               <label htmlFor="autoBackup" className="text-sm font-medium text-zinc-700">
                 Enable automatic data backup
               </label>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Reports Tab */}
-      {activeTab === 'reports' && (
-        <div className="space-y-6">
-          <div className="bg-white p-6 rounded-2xl shadow-sm border border-zinc-200/60">
-            <h3 className="text-lg font-semibold text-zinc-900 mb-6">Report Settings</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
-                <label className="block text-[13px] font-medium text-zinc-700 mb-1.5">Default Report Format</label>
-                <select
-                  className="w-full px-4 py-2.5 bg-zinc-50 border border-zinc-200 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all text-sm"
-                  value={settings.reportFormat}
-                  onChange={(e) => saveSettings({ ...settings, reportFormat: e.target.value as 'pdf' | 'excel' })}
-                >
-                  <option value="pdf">PDF</option>
-                  <option value="excel">Excel</option>
-                </select>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white p-6 rounded-2xl shadow-sm border border-zinc-200/60">
-            <h3 className="text-lg font-semibold text-zinc-900 mb-6">Generate Reports</h3>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <button
-                onClick={() => generateReport('income')}
-                className="p-4 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 rounded-xl transition-colors text-center"
-              >
-                <FileText className="w-8 h-8 text-emerald-600 mx-auto mb-2" />
-                <div className="text-sm font-medium text-emerald-700">Income Report</div>
-              </button>
-              <button
-                onClick={() => generateReport('expense')}
-                className="p-4 bg-rose-50 hover:bg-rose-100 border border-rose-200 rounded-xl transition-colors text-center"
-              >
-                <FileText className="w-8 h-8 text-rose-600 mx-auto mb-2" />
-                <div className="text-sm font-medium text-rose-700">Expense Report</div>
-              </button>
-              <button
-                onClick={() => generateReport('summary')}
-                className="p-4 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded-xl transition-colors text-center"
-              >
-                <FileText className="w-8 h-8 text-blue-600 mx-auto mb-2" />
-                <div className="text-sm font-medium text-blue-700">Summary Report</div>
-              </button>
-            </div>
-          </div>
-
-          <div className="bg-white p-6 rounded-2xl shadow-sm border border-zinc-200/60">
-            <h3 className="text-lg font-semibold text-zinc-900 mb-6">Monthly Income vs Expense</h3>
-            {loadingChartData ? (
-              <div className="h-64 flex items-center justify-center text-zinc-500">Loading chart...</div>
-            ) : chartData.length > 0 ? (
-              <ResponsiveContainer width="100%" height={300}>
-                <BarChart data={chartData}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="month" />
-                  <YAxis />
-                  <Tooltip />
-                  <Bar dataKey="income" fill="#10b981" name="Income" />
-                  <Bar dataKey="expense" fill="#f43f5e" name="Expense" />
-                </BarChart>
-              </ResponsiveContainer>
-            ) : (
-              <div className="h-64 flex items-center justify-center text-zinc-500">No data available</div>
-            )}
-          </div>
-
-          <div className="bg-white p-6 rounded-2xl shadow-sm border border-zinc-200/60">
-            <h3 className="text-lg font-semibold text-zinc-900 mb-6">Data Management</h3>
-            <div className="flex gap-4">
-              <button
-                onClick={exportData}
-                className="px-6 py-3 bg-zinc-900 text-white rounded-xl hover:bg-zinc-800 transition-colors flex items-center gap-2 text-sm font-medium"
-              >
-                <Download className="w-4 h-4" /> Export All Data
-              </button>
             </div>
           </div>
         </div>

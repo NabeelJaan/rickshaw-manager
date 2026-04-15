@@ -90,23 +90,82 @@ export default function Reports({ selectedDriverId }: { selectedDriverId?: strin
 
   const stats = calculateStats();
 
-  const exportReport = () => {
-    const reportData = {
-      driver: selectedReportDriver ? drivers.find(d => d.id === selectedReportDriver)?.name : 'All Drivers',
-      period: reportPeriod,
-      startDate: new Date(new Date().setMonth(new Date().getMonth() - (reportPeriod === '1month' ? 1 : reportPeriod === '2months' ? 2 : reportPeriod === '6months' ? 6 : reportPeriod === '1year' ? 12 : 300))).toISOString().split('T')[0],
-      endDate: new Date().toISOString().split('T')[0],
-      stats,
-      transactions
-    };
+  const exportReport = (format: 'json' | 'csv' | 'excel') => {
+    const driverName = selectedReportDriver ? drivers.find(d => d.id === selectedReportDriver)?.name : 'All Drivers';
+    const periodLabel = reportPeriod === '1month' ? '1 Month' : reportPeriod === '2months' ? '2 Months' : reportPeriod === '6months' ? '6 Months' : reportPeriod === '1year' ? '1 Year' : 'All Time';
+    const startDate = new Date(new Date().setMonth(new Date().getMonth() - (reportPeriod === '1month' ? 1 : reportPeriod === '2months' ? 2 : reportPeriod === '6months' ? 6 : reportPeriod === '1year' ? 12 : 300))).toISOString().split('T')[0];
+    const endDate = new Date().toISOString().split('T')[0];
 
-    const dataStr = JSON.stringify(reportData, null, 2);
-    const dataBlob = new Blob([dataStr], { type: 'application/json' });
-    const url = URL.createObjectURL(dataBlob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `report_${selectedReportDriver || 'all'}_${reportPeriod}_${new Date().toISOString().split('T')[0]}.json`;
-    link.click();
+    if (format === 'json') {
+      const reportData = {
+        driver: driverName,
+        period: periodLabel,
+        startDate,
+        endDate,
+        stats,
+        transactions
+      };
+
+      const dataStr = JSON.stringify(reportData, null, 2);
+      const dataBlob = new Blob([dataStr], { type: 'application/json' });
+      const url = URL.createObjectURL(dataBlob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `report_${selectedReportDriver || 'all'}_${reportPeriod}_${new Date().toISOString().split('T')[0]}.json`;
+      link.click();
+    } else if (format === 'csv' || format === 'excel') {
+      // Create CSV with proper formatting for Excel
+      const headers = ['Date', 'Type', 'Category', 'Amount', 'Driver', 'Rickshaw', 'Notes'];
+      
+      // Add summary section at the top
+      const summaryRows = [
+        ['Report Summary'],
+        ['Driver', driverName],
+        ['Period', periodLabel],
+        ['Start Date', startDate],
+        ['End Date', endDate],
+        ['Total Income', `${currency}${stats.income.toLocaleString()}`],
+        ['Total Expense', `${currency}${stats.expense.toLocaleString()}`],
+        ['Net Profit', `${currency}${stats.profit.toLocaleString()}`],
+        ['Pending Balance', `${currency}${stats.pending.toLocaleString()}`],
+        ['Total Transactions', transactions.length],
+        [], // Empty row
+        ['Transaction Details'],
+        headers
+      ];
+
+      // Add transaction rows
+      const transactionRows = transactions.map(t => [
+        new Date(t.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+        t.type,
+        t.category.replace('_', ' '),
+        `${t.type === 'income' ? '+' : '-'}${currency}${t.amount.toLocaleString()}`,
+        t.driver_name || '-',
+        t.rickshaw_number || '-',
+        t.notes || ''
+      ]);
+
+      // Combine all rows
+      const allRows = [...summaryRows, ...transactionRows];
+
+      // Convert to CSV format
+      const csvContent = allRows.map(row => 
+        row.map(cell => 
+          typeof cell === 'string' && (cell.includes(',') || cell.includes('"') || cell.includes('\n'))
+            ? `"${cell.replace(/"/g, '""')}"`
+            : cell
+        ).join(',')
+      ).join('\n');
+
+      // Add BOM for Excel to recognize UTF-8
+      const BOM = '\uFEFF';
+      const blob = new Blob([BOM + csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `report_${selectedReportDriver || 'all'}_${reportPeriod}_${new Date().toISOString().split('T')[0]}.csv`;
+      link.click();
+    }
   };
 
   return (
@@ -114,12 +173,20 @@ export default function Reports({ selectedDriverId }: { selectedDriverId?: strin
       <div className="bg-gradient-to-r from-cyan-50 via-white to-teal-50 p-6 md:p-8 rounded-2xl border border-zinc-200/60 shadow-sm">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <h2 className="text-2xl md:text-4xl font-bold text-zinc-900 tracking-tight">Reports</h2>
-          <button 
-            onClick={exportReport}
-            className="w-full sm:w-auto bg-gradient-to-r from-cyan-500 to-teal-500 hover:from-cyan-600 hover:to-teal-600 text-white px-4 py-2.5 rounded-xl flex items-center justify-center gap-2 transition-all shadow-lg shadow-cyan-500/20 text-sm font-medium"
-          >
-            <Download className="w-4 h-4" /> Export Report
-          </button>
+          <div className="flex items-center gap-3 w-full sm:w-auto">
+            <button 
+              onClick={() => exportReport('csv')}
+              className="flex-1 sm:flex-none bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white px-4 py-2.5 rounded-xl flex items-center justify-center gap-2 transition-all shadow-lg shadow-emerald-500/20 text-sm font-medium"
+            >
+              <Download className="w-4 h-4" /> Download Excel/CSV
+            </button>
+            <button 
+              onClick={() => exportReport('json')}
+              className="flex-1 sm:flex-none bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-600 hover:to-blue-600 text-white px-4 py-2.5 rounded-xl flex items-center justify-center gap-2 transition-all shadow-lg shadow-cyan-500/20 text-sm font-medium"
+            >
+              <Download className="w-4 h-4" /> Download JSON
+            </button>
+          </div>
         </div>
       </div>
 
