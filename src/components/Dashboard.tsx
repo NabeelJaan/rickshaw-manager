@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { TrendingUp, TrendingDown, DollarSign, Car, Plus, Edit, ChevronDown, Trash2, Users } from 'lucide-react';
-import { DashboardStats, Transaction, Rickshaw } from '../types';
+import { DashboardStats, Transaction } from '../types';
 import LogRentModal from './LogRentModal';
 import ExpenseModal from './ExpenseModal';
 import EditTransactionModal from './EditTransactionModal';
@@ -19,10 +19,7 @@ export default function Dashboard({ selectedDriverId }: { selectedDriverId?: str
   const [selectedDriverName, setSelectedDriverName] = useState('');
   const [currency, setCurrency] = useState('Rs.');
   const [showTransactionDropdown, setShowTransactionDropdown] = useState(false);
-  const [showRickshawDropdown, setShowRickshawDropdown] = useState(false);
   const [selectedMonth, setSelectedMonth] = useState<string>('all');
-  const [selectedRickshawIds, setSelectedRickshawIds] = useState<string[]>([]);
-  const [rickshaws, setRickshaws] = useState<Rickshaw[]>([]);
 
   // Load currency from settings
   useEffect(() => {
@@ -48,16 +45,6 @@ export default function Dashboard({ selectedDriverId }: { selectedDriverId?: str
     };
   }, []);
 
-  const fetchRickshaws = () => {
-    const token = localStorage.getItem('auth_token');
-    const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
-    fetch('/api/rickshaws', { headers }).then(res => res.json()).then(data => { if (Array.isArray(data)) setRickshaws(data); });
-  };
-
-  useEffect(() => {
-    fetchRickshaws();
-  }, []);
-
   const handleEditTransaction = (transaction: Transaction) => {
     setEditTransaction(transaction);
   };
@@ -79,7 +66,6 @@ export default function Dashboard({ selectedDriverId }: { selectedDriverId?: str
     const queryParts = [];
     if (selectedDriverId) queryParts.push(`driver_id=${selectedDriverId}`);
     if (selectedMonth) queryParts.push(`month=${selectedMonth}`);
-    selectedRickshawIds.forEach(id => queryParts.push(`rickshaw_id=${id}`));
     const query = queryParts.length > 0 ? `?${queryParts.join('&')}` : '';
     const token = localStorage.getItem('auth_token');
     const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
@@ -135,7 +121,7 @@ export default function Dashboard({ selectedDriverId }: { selectedDriverId?: str
 
   useEffect(() => {
     fetchData();
-  }, [selectedMonth, selectedRickshawIds]);
+  }, [selectedMonth]);
 
   if (loading) return <div className="p-8 text-center text-zinc-500">Loading...</div>;
 
@@ -200,59 +186,6 @@ export default function Dashboard({ selectedDriverId }: { selectedDriverId?: str
                 </button>
               )}
             </div>
-            {!selectedDriverId && (
-              <div className="flex items-center gap-2">
-                <label className="text-sm text-zinc-600">Rickshaws:</label>
-                <div className="relative">
-                  <button 
-                    onClick={() => setShowRickshawDropdown(!showRickshawDropdown)}
-                    className="px-3 py-1.5 bg-zinc-50 border border-zinc-200 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 flex items-center gap-2"
-                  >
-                    {selectedRickshawIds.length > 0 
-                      ? `${selectedRickshawIds.length} selected` 
-                      : 'Select Rickshaws'}
-                    <ChevronDown className="w-4 h-4" />
-                  </button>
-                  {showRickshawDropdown && (
-                    <>
-                      <div 
-                        className="fixed inset-0 bg-black/20 z-10 md:hidden"
-                        onClick={() => setShowRickshawDropdown(false)}
-                      ></div>
-                      <div className="absolute top-full left-0 mt-2 bg-white border border-zinc-200 rounded-lg shadow-lg z-20 p-2 w-64 max-h-64 overflow-y-auto md:w-64 md:max-h-64 sm:w-80 sm:max-h-80">
-                        <div className="space-y-2">
-                          {rickshaws.map(rickshaw => (
-                            <label key={rickshaw.id} className="flex items-center gap-2 p-2 hover:bg-zinc-50 rounded cursor-pointer">
-                              <input
-                                type="checkbox"
-                                checked={selectedRickshawIds.includes(rickshaw.id.toString())}
-                                onChange={(e) => {
-                                  if (e.target.checked) {
-                                    setSelectedRickshawIds([...selectedRickshawIds, rickshaw.id.toString()]);
-                                  } else {
-                                    setSelectedRickshawIds(selectedRickshawIds.filter(id => id !== rickshaw.id.toString()));
-                                  }
-                                }}
-                                className="w-4 h-4 rounded border-zinc-300 text-emerald-500 focus:ring-emerald-500"
-                              />
-                              <span className="text-sm text-zinc-700">{rickshaw.number || `Rickshaw ${rickshaw.id}`}</span>
-                            </label>
-                          ))}
-                        </div>
-                        {selectedRickshawIds.length > 0 && (
-                          <button
-                            onClick={() => setSelectedRickshawIds([])}
-                            className="w-full mt-2 px-3 py-1.5 bg-zinc-100 hover:bg-zinc-200 rounded-lg text-sm text-zinc-700"
-                          >
-                            Clear All
-                          </button>
-                        )}
-                      </div>
-                    </>
-                  )}
-                </div>
-              </div>
-            )}
           </div>
         </div>
         <div className="flex items-center gap-3">
