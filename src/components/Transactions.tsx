@@ -30,8 +30,7 @@ export default function Transactions({ selectedDriverId }: { selectedDriverId?: 
     start_date: '',
     end_date: '',
     rickshaw_id: '',
-    driver_id: selectedDriverId || '',
-    month: new Date().toISOString().slice(0, 7) // Default to current month (YYYY-MM)
+    driver_id: selectedDriverId || ''
   });
 
   // Load currency from settings
@@ -144,7 +143,8 @@ export default function Transactions({ selectedDriverId }: { selectedDriverId?: 
       ...filters,
       start_date: startDate.toISOString().split('T')[0],
       end_date: endDate.toISOString().split('T')[0],
-      month: ''
+      rickshaw_id: '',
+      driver_id: selectedDriverId || ''
     });
   };
 
@@ -178,6 +178,12 @@ export default function Transactions({ selectedDriverId }: { selectedDriverId?: 
               className="px-3 py-1.5 bg-zinc-100 hover:bg-zinc-200 text-zinc-700 rounded-lg text-sm font-medium transition-colors"
             >
               1 Year
+            </button>
+            <button 
+              onClick={() => setFilters({ start_date: '', end_date: '', rickshaw_id: '', driver_id: selectedDriverId || '' })}
+              className="px-3 py-1.5 bg-rose-100 hover:bg-rose-200 text-rose-700 rounded-lg text-sm font-medium transition-colors"
+            >
+              Reset
             </button>
           </div>
         </div>
@@ -250,23 +256,6 @@ export default function Transactions({ selectedDriverId }: { selectedDriverId?: 
               </div>
             </div>
           </div>
-        </div>
-      )}
-
-      {/* Charts Section */}
-      {stats && stats.monthlyData && stats.monthlyData.length > 0 && (
-        <div className="bg-white p-6 rounded-2xl shadow-sm border border-zinc-200/60">
-          <h3 className="text-lg font-semibold text-zinc-900 mb-4">Monthly Income vs Expense</h3>
-          <ResponsiveContainer width="100%" height={300}>
-            <BarChart data={stats.monthlyData}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="month" />
-              <YAxis />
-              <Tooltip />
-              <Bar dataKey="income" fill="#10b981" name="Income" />
-              <Bar dataKey="expense" fill="#f43f5e" name="Expense" />
-            </BarChart>
-          </ResponsiveContainer>
         </div>
       )}
 
