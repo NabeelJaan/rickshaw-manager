@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Receipt, Trash2, Filter, DollarSign, Edit, TrendingDown } from 'lucide-react';
+import { Plus, Receipt, Trash2, Filter, DollarSign, Edit, TrendingDown, TrendingUp, Calendar } from 'lucide-react';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell } from 'recharts';
 import { Transaction, Rickshaw, Driver } from '../types';
 import LogRentModal from './LogRentModal';
 import EditTransactionModal from './EditTransactionModal';
@@ -12,6 +13,8 @@ export default function Transactions({ selectedDriverId }: { selectedDriverId?: 
   const [isLogRentModalOpen, setIsLogRentModalOpen] = useState(false);
   const [editTransaction, setEditTransaction] = useState<Transaction | null>(null);
   const [currency, setCurrency] = useState('Rs.');
+  const [stats, setStats] = useState<any>(null);
+  const [loading, setLoading] = useState(false);
   
   const [formData, setFormData] = useState({
     date: new Date().toISOString().split('T')[0],
@@ -61,12 +64,21 @@ export default function Transactions({ selectedDriverId }: { selectedDriverId?: 
   }, [selectedDriverId]);
 
   const fetchData = () => {
+    setLoading(true);
     const token = localStorage.getItem('auth_token');
     const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
     const query = new URLSearchParams(filters as any).toString();
-    fetch(`/api/transactions?${query}`, { headers })
-      .then(res => res.json())
-      .then(data => { if (Array.isArray(data)) setTransactions(data); });
+    
+    Promise.all([
+      fetch(`/api/transactions?${query}`, { headers }).then(res => res.json()),
+      fetch(`/api/stats?${query}`, { headers }).then(res => res.json())
+    ]).then(([txData, statsData]) => {
+      if (Array.isArray(txData)) setTransactions(txData);
+      setStats(statsData || {});
+      setLoading(false);
+    }).catch(() => {
+      setLoading(false);
+    });
   };
 
   useEffect(() => {
@@ -123,36 +135,50 @@ export default function Transactions({ selectedDriverId }: { selectedDriverId?: 
     }
   };
 
+  const setQuickFilter = (months: number) => {
+    const endDate = new Date();
+    const startDate = new Date();
+    startDate.setMonth(startDate.getMonth() - months);
+    
+    setFilters({
+      ...filters,
+      start_date: startDate.toISOString().split('T')[0],
+      end_date: endDate.toISOString().split('T')[0],
+      month: ''
+    });
+  };
+
   return (
     <div className="space-y-8">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div className="flex flex-col gap-3">
           <h2 className="text-3xl font-bold text-zinc-900 tracking-tight">Transactions</h2>
-          <div className="flex items-center gap-2">
-            <label className="text-sm text-zinc-600">Month:</label>
-            <select 
-              value={filters.month || 'all'} 
-              onChange={(e) => setFilters({...filters, month: e.target.value})}
-              className="px-3 py-1.5 bg-zinc-50 border border-zinc-200 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+          <div className="flex flex-wrap items-center gap-2">
+            <label className="text-sm text-zinc-600">Quick Filters:</label>
+            <button 
+              onClick={() => setQuickFilter(1)}
+              className="px-3 py-1.5 bg-zinc-100 hover:bg-zinc-200 text-zinc-700 rounded-lg text-sm font-medium transition-colors"
             >
-              <option value="">Current Month</option>
-              <option value="all">All Months</option>
-              {Array.from({ length: 12 }, (_, i) => {
-                const date = new Date();
-                date.setMonth(date.getMonth() - i);
-                const monthStr = date.toISOString().slice(0, 7);
-                const monthName = date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
-                return <option key={monthStr} value={monthStr}>{monthName}</option>;
-              })}
-            </select>
-            {filters.month && filters.month !== 'all' && (
-              <button 
-                onClick={() => setFilters({...filters, month: ''})}
-                className="text-xs text-zinc-500 hover:text-zinc-700"
-              >
-                Clear
-              </button>
-            )}
+              1 Month
+            </button>
+            <button 
+              onClick={() => setQuickFilter(2)}
+              className="px-3 py-1.5 bg-zinc-100 hover:bg-zinc-200 text-zinc-700 rounded-lg text-sm font-medium transition-colors"
+            >
+              2 Months
+            </button>
+            <button 
+              onClick={() => setQuickFilter(6)}
+              className="px-3 py-1.5 bg-zinc-100 hover:bg-zinc-200 text-zinc-700 rounded-lg text-sm font-medium transition-colors"
+            >
+              6 Months
+            </button>
+            <button 
+              onClick={() => setQuickFilter(12)}
+              className="px-3 py-1.5 bg-zinc-100 hover:bg-zinc-200 text-zinc-700 rounded-lg text-sm font-medium transition-colors"
+            >
+              1 Year
+            </button>
           </div>
         </div>
         <div className="flex items-center gap-3">
@@ -176,6 +202,73 @@ export default function Transactions({ selectedDriverId }: { selectedDriverId?: 
           </button>
         </div>
       </div>
+
+      {/* Stat Cards */}
+      {stats && (
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="bg-white p-4 rounded-2xl shadow-sm border border-zinc-200/60">
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-xl bg-emerald-500/10">
+                <TrendingUp className="w-5 h-5 text-emerald-500" />
+              </div>
+              <div>
+                <p className="text-xs font-medium text-zinc-500">Total Income</p>
+                <h3 className="text-lg font-bold text-zinc-900">{currency} {(stats.totalIncome || 0).toLocaleString()}</h3>
+              </div>
+            </div>
+          </div>
+          <div className="bg-white p-4 rounded-2xl shadow-sm border border-zinc-200/60">
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-xl bg-rose-500/10">
+                <TrendingDown className="w-5 h-5 text-rose-500" />
+              </div>
+              <div>
+                <p className="text-xs font-medium text-zinc-500">Total Expense</p>
+                <h3 className="text-lg font-bold text-zinc-900">{currency} {(stats.totalExpense || 0).toLocaleString()}</h3>
+              </div>
+            </div>
+          </div>
+          <div className="bg-white p-4 rounded-2xl shadow-sm border border-zinc-200/60">
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-xl bg-blue-500/10">
+                <DollarSign className="w-5 h-5 text-blue-500" />
+              </div>
+              <div>
+                <p className="text-xs font-medium text-zinc-500">Net Profit</p>
+                <h3 className="text-lg font-bold text-zinc-900">{currency} {(stats.profit || 0).toLocaleString()}</h3>
+              </div>
+            </div>
+          </div>
+          <div className="bg-white p-4 rounded-2xl shadow-sm border border-zinc-200/60">
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-xl bg-amber-500/10">
+                <Receipt className="w-5 h-5 text-amber-500" />
+              </div>
+              <div>
+                <p className="text-xs font-medium text-zinc-500">Transactions</p>
+                <h3 className="text-lg font-bold text-zinc-900">{transactions.length}</h3>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Charts Section */}
+      {stats && stats.monthlyData && stats.monthlyData.length > 0 && (
+        <div className="bg-white p-6 rounded-2xl shadow-sm border border-zinc-200/60">
+          <h3 className="text-lg font-semibold text-zinc-900 mb-4">Monthly Income vs Expense</h3>
+          <ResponsiveContainer width="100%" height={300}>
+            <BarChart data={stats.monthlyData}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="month" />
+              <YAxis />
+              <Tooltip />
+              <Bar dataKey="income" fill="#10b981" name="Income" />
+              <Bar dataKey="expense" fill="#f43f5e" name="Expense" />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      )}
 
       {showForm && (
         <form onSubmit={handleSubmit} className="bg-white p-6 rounded-2xl shadow-sm border border-zinc-200/60 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
