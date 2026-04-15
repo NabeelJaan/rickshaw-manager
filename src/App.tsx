@@ -73,6 +73,14 @@ function AppContent() {
         </button>
       </div>
 
+      {/* Mobile Backdrop */}
+      {isMobileMenuOpen && (
+        <div 
+          className="fixed inset-0 bg-black/50 z-40 md:hidden"
+          onClick={() => setIsMobileMenuOpen(false)}
+        ></div>
+      )}
+
       {/* Sidebar */}
       <div className={`
         fixed md:static inset-y-0 left-0 z-50 w-64 bg-zinc-950 text-zinc-300 transform transition-transform duration-200 ease-in-out border-r border-zinc-800 flex flex-col
@@ -112,6 +120,7 @@ function AppContent() {
                   setSelectedDriverId(e.target.value);
                   setShowAddDriverForm(false);
                 }
+                setIsMobileMenuOpen(false); // Close mobile menu on selection
               }}
             >
               <option value="">All Drivers</option>

@@ -20,7 +20,7 @@ export default function Dashboard({ selectedDriverId }: { selectedDriverId?: str
   const [currency, setCurrency] = useState('Rs.');
   const [showTransactionDropdown, setShowTransactionDropdown] = useState(false);
   const [showRickshawDropdown, setShowRickshawDropdown] = useState(false);
-  const [selectedMonth, setSelectedMonth] = useState<string>('');
+  const [selectedMonth, setSelectedMonth] = useState<string>('all');
   const [selectedRickshawIds, setSelectedRickshawIds] = useState<string[]>([]);
   const [rickshaws, setRickshaws] = useState<Rickshaw[]>([]);
 
@@ -182,7 +182,6 @@ export default function Dashboard({ selectedDriverId }: { selectedDriverId?: str
                 onChange={(e) => setSelectedMonth(e.target.value)}
                 className="px-3 py-1.5 bg-zinc-50 border border-zinc-200 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
               >
-                <option value="">Current Month</option>
                 <option value="all">All Months</option>
                 {Array.from({ length: 12 }, (_, i) => {
                   const date = new Date();
@@ -192,9 +191,9 @@ export default function Dashboard({ selectedDriverId }: { selectedDriverId?: str
                   return <option key={monthStr} value={monthStr}>{monthName}</option>;
                 })}
               </select>
-              {selectedMonth && (
+              {selectedMonth && selectedMonth !== 'all' && (
                 <button 
-                  onClick={() => setSelectedMonth('')}
+                  onClick={() => setSelectedMonth('all')}
                   className="text-xs text-zinc-500 hover:text-zinc-700"
                 >
                   Clear
