@@ -125,6 +125,10 @@ export default function Dashboard({ selectedDriverId }: { selectedDriverId?: str
 
   if (loading) return <div className="p-8 text-center text-zinc-500">Loading...</div>;
 
+  const remainingInvestment = Math.max(0, (stats.totalInvestment || 0) - (stats.allTimeProfit || 0));
+  const isFullyRecovered = remainingInvestment === 0 && (stats.totalInvestment || 0) > 0;
+  const totalProfit = (stats.allTimeProfit || 0) - (stats.totalInvestment || 0);
+
   const statCards = [
     { title: 'Total Revenue', value: stats.totalIncome || 0, icon: TrendingUp, color: 'text-emerald-500', bg: 'bg-emerald-500/10', prefix: currency + ' ' },
     { title: 'Total Expense', value: stats.totalExpense || 0, icon: TrendingDown, color: 'text-rose-500', bg: 'bg-rose-500/10', prefix: currency + ' ' },
@@ -132,7 +136,15 @@ export default function Dashboard({ selectedDriverId }: { selectedDriverId?: str
     { title: 'Total Profit (Incl. Pending)', value: stats.profitIncludingPending || 0, icon: DollarSign, color: 'text-cyan-500', bg: 'bg-cyan-500/10', prefix: currency + ' ' },
     { title: 'Pending Balance', value: stats.pendingBalance || 0, icon: TrendingDown, color: 'text-amber-500', bg: 'bg-amber-500/10', prefix: currency + ' ' },
     { title: 'Total Investment', value: stats.totalInvestment || 0, icon: Car, color: 'text-purple-500', bg: 'bg-purple-500/10', prefix: currency + ' ' },
-    { title: 'Remaining Investment', value: Math.max(0, (stats.totalInvestment || 0) - (stats.allTimeProfit || 0)), icon: TrendingDown, color: 'text-orange-500', bg: 'bg-orange-500/10', prefix: currency + ' ' },
+    { 
+      title: isFullyRecovered ? 'Investment Recovered!' : 'Remaining Investment', 
+      value: isFullyRecovered ? totalProfit : remainingInvestment, 
+      icon: isFullyRecovered ? TrendingUp : TrendingDown, 
+      color: isFullyRecovered ? 'text-emerald-500' : 'text-orange-500', 
+      bg: isFullyRecovered ? 'bg-emerald-500/10' : 'bg-orange-500/10', 
+      prefix: isFullyRecovered ? '+' + currency + ' ' : currency + ' ',
+      subtitle: isFullyRecovered ? 'All investments recovered - Now in profit!' : undefined
+    },
     { title: 'All-Time Income', value: stats.allTimeIncome || 0, icon: TrendingUp, color: 'text-teal-500', bg: 'bg-teal-500/10', prefix: currency + ' ' },
     { title: 'All-Time Expense', value: stats.allTimeExpense || 0, icon: TrendingDown, color: 'text-red-500', bg: 'bg-red-500/10', prefix: currency + ' ' },
     { title: 'Active Rickshaws', value: stats.activeRickshaws || 0, icon: Car, color: 'text-indigo-500', bg: 'bg-indigo-500/10', prefix: '', hideOnDriver: true },
@@ -257,9 +269,12 @@ export default function Dashboard({ selectedDriverId }: { selectedDriverId?: str
             </div>
             <div>
               <p className="text-[11px] md:text-[13px] font-medium text-zinc-500 mb-0.5 md:mb-1">{card.title}</p>
-              <h3 className="text-lg md:text-2xl font-bold text-zinc-900 font-number tracking-tight break-words">
+              <h3 className={`text-lg md:text-2xl font-bold font-number tracking-tight break-words ${card.color}`}>
                 {card.prefix}{card.value.toLocaleString()}
               </h3>
+              {card.subtitle && (
+                <p className="text-[10px] md:text-xs text-emerald-600 mt-1 font-medium">{card.subtitle}</p>
+              )}
             </div>
           </div>
         ))}
