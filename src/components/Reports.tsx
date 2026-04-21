@@ -265,14 +265,14 @@ export default function Reports({ selectedDriverId }: { selectedDriverId?: strin
       </div>
 
       {/* Report Filters */}
-      <div className="bg-white p-6 rounded-2xl shadow-sm border border-zinc-200/60">
-        <div className="flex flex-col md:flex-row gap-4 items-end">
-          <div className="flex-1">
-            <label className="block text-sm font-medium text-zinc-700 mb-2 flex items-center gap-2">
-              <Users className="w-4 h-4" /> Driver
+      <div className="bg-white p-4 md:p-6 rounded-2xl shadow-sm border border-zinc-200/60">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 md:gap-4">
+          <div>
+            <label className="block text-xs md:text-sm font-medium text-zinc-700 mb-1.5 md:mb-2 flex items-center gap-1.5 md:gap-2">
+              <Users className="w-3.5 h-3.5 md:w-4 md:h-4" /> Driver
             </label>
             <select 
-              className="w-full px-4 py-2.5 bg-zinc-50 border border-zinc-200 rounded-xl focus:ring-2 focus:ring-cyan-500/20 focus:border-cyan-500 transition-all text-sm"
+              className="w-full px-3 md:px-4 py-2 md:py-2.5 bg-zinc-50 border border-zinc-200 rounded-xl focus:ring-2 focus:ring-cyan-500/20 focus:border-cyan-500 transition-all text-xs md:text-sm"
               value={selectedReportDriver}
               onChange={(e) => setSelectedReportDriver(e.target.value)}
             >
@@ -282,12 +282,12 @@ export default function Reports({ selectedDriverId }: { selectedDriverId?: strin
               ))}
             </select>
           </div>
-          <div className="flex-1">
-            <label className="block text-sm font-medium text-zinc-700 mb-2 flex items-center gap-2">
-              <Calendar className="w-4 h-4" /> Filter Type
+          <div>
+            <label className="block text-xs md:text-sm font-medium text-zinc-700 mb-1.5 md:mb-2 flex items-center gap-1.5 md:gap-2">
+              <Calendar className="w-3.5 h-3.5 md:w-4 md:h-4" /> Filter Type
             </label>
             <select 
-              className="w-full px-4 py-2.5 bg-zinc-50 border border-zinc-200 rounded-xl focus:ring-2 focus:ring-cyan-500/20 focus:border-cyan-500 transition-all text-sm"
+              className="w-full px-3 md:px-4 py-2 md:py-2.5 bg-zinc-50 border border-zinc-200 rounded-xl focus:ring-2 focus:ring-cyan-500/20 focus:border-cyan-500 transition-all text-xs md:text-sm"
               value={selectedMonth ? 'month' : 'period'}
               onChange={(e) => {
                 if (e.target.value === 'month') {
@@ -302,12 +302,12 @@ export default function Reports({ selectedDriverId }: { selectedDriverId?: strin
             </select>
           </div>
           {!selectedMonth ? (
-            <div className="flex-1">
-              <label className="block text-sm font-medium text-zinc-700 mb-2 flex items-center gap-2">
-                <Calendar className="w-4 h-4" /> Report Period
+            <div className="col-span-2 sm:col-span-1 lg:col-span-1">
+              <label className="block text-xs md:text-sm font-medium text-zinc-700 mb-1.5 md:mb-2 flex items-center gap-1.5 md:gap-2">
+                <Calendar className="w-3.5 h-3.5 md:w-4 md:h-4" /> Report Period
               </label>
               <select 
-                className="w-full px-4 py-2.5 bg-zinc-50 border border-zinc-200 rounded-xl focus:ring-2 focus:ring-cyan-500/20 focus:border-cyan-500 transition-all text-sm"
+                className="w-full px-3 md:px-4 py-2 md:py-2.5 bg-zinc-50 border border-zinc-200 rounded-xl focus:ring-2 focus:ring-cyan-500/20 focus:border-cyan-500 transition-all text-xs md:text-sm"
                 value={reportPeriod}
                 onChange={(e) => setReportPeriod(e.target.value)}
               >
@@ -320,12 +320,12 @@ export default function Reports({ selectedDriverId }: { selectedDriverId?: strin
             </div>
           ) : (
             <>
-              <div className="flex-1">
-                <label className="block text-sm font-medium text-zinc-700 mb-2 flex items-center gap-2">
-                  <Calendar className="w-4 h-4" /> Month
+              <div>
+                <label className="block text-xs md:text-sm font-medium text-zinc-700 mb-1.5 md:mb-2 flex items-center gap-1.5 md:gap-2">
+                  <Calendar className="w-3.5 h-3.5 md:w-4 md:h-4" /> Month
                 </label>
                 <select 
-                  className="w-full px-4 py-2.5 bg-zinc-50 border border-zinc-200 rounded-xl focus:ring-2 focus:ring-cyan-500/20 focus:border-cyan-500 transition-all text-sm"
+                  className="w-full px-3 md:px-4 py-2 md:py-2.5 bg-zinc-50 border border-zinc-200 rounded-xl focus:ring-2 focus:ring-cyan-500/20 focus:border-cyan-500 transition-all text-xs md:text-sm"
                   value={selectedMonth}
                   onChange={(e) => setSelectedMonth(e.target.value)}
                 >
@@ -343,12 +343,12 @@ export default function Reports({ selectedDriverId }: { selectedDriverId?: strin
                   <option value="12">December</option>
                 </select>
               </div>
-              <div className="flex-1">
-                <label className="block text-sm font-medium text-zinc-700 mb-2 flex items-center gap-2">
-                  <Calendar className="w-4 h-4" /> Year
+              <div>
+                <label className="block text-xs md:text-sm font-medium text-zinc-700 mb-1.5 md:mb-2 flex items-center gap-1.5 md:gap-2">
+                  <Calendar className="w-3.5 h-3.5 md:w-4 md:h-4" /> Year
                 </label>
                 <select 
-                  className="w-full px-4 py-2.5 bg-zinc-50 border border-zinc-200 rounded-xl focus:ring-2 focus:ring-cyan-500/20 focus:border-cyan-500 transition-all text-sm"
+                  className="w-full px-3 md:px-4 py-2 md:py-2.5 bg-zinc-50 border border-zinc-200 rounded-xl focus:ring-2 focus:ring-cyan-500/20 focus:border-cyan-500 transition-all text-xs md:text-sm"
                   value={selectedYear}
                   onChange={(e) => setSelectedYear(e.target.value)}
                 >
@@ -359,13 +359,18 @@ export default function Reports({ selectedDriverId }: { selectedDriverId?: strin
               </div>
             </>
           )}
-          <button 
-            onClick={generateReport}
-            disabled={loading}
-            className="w-full md:w-auto px-6 py-2.5 bg-zinc-900 hover:bg-zinc-800 text-white rounded-xl flex items-center justify-center gap-2 transition-all text-sm font-medium disabled:opacity-50"
-          >
-            <Filter className="w-4 h-4" /> {loading ? 'Loading...' : 'Generate Report'}
-          </button>
+          <div className="col-span-2 sm:col-span-1 lg:col-span-1">
+            <label className="block text-xs md:text-sm font-medium text-zinc-700 mb-1.5 md:mb-2">
+              &nbsp;
+            </label>
+            <button 
+              onClick={generateReport}
+              disabled={loading}
+              className="w-full px-4 md:px-6 py-2 md:py-2.5 bg-zinc-900 hover:bg-zinc-800 text-white rounded-xl flex items-center justify-center gap-2 transition-all text-xs md:text-sm font-medium disabled:opacity-50"
+            >
+              <Filter className="w-3.5 h-3.5 md:w-4 md:h-4" /> {loading ? 'Loading...' : 'Generate'}
+            </button>
+          </div>
         </div>
       </div>
 
