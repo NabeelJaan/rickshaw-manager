@@ -160,19 +160,19 @@ function AppContent() {
       <main className="flex-1 p-4 md:p-8 lg:p-10 overflow-y-auto">
         <div className="max-w-7xl mx-auto">
           {/* Driver Tabs */}
-          <div className="mb-6">
-            <div className="flex items-center gap-2 mb-3">
-              <Users className="w-4 h-4 text-zinc-500" />
-              <span className="text-sm font-medium text-zinc-600">Select Driver:</span>
+          <div className="mb-4 md:mb-6">
+            <div className="flex items-center gap-1.5 md:gap-2 mb-2 md:mb-3">
+              <Users className="w-3.5 h-3.5 md:w-4 md:h-4 text-zinc-500" />
+              <span className="text-xs md:text-sm font-medium text-zinc-600">Select Driver:</span>
             </div>
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap gap-1.5 md:gap-2">
               <button
                 onClick={() => {
                   setSelectedDriverId('');
                   setShowAddDriverForm(false);
                   setIsMobileMenuOpen(false);
                 }}
-                className={`px-4 py-2 rounded-xl text-sm font-medium transition-all ${
+                className={`px-3 md:px-4 py-1.5 md:py-2 rounded-lg md:rounded-xl text-xs md:text-sm font-medium transition-all ${
                   selectedDriverId === '' 
                     ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/20' 
                     : 'bg-white text-zinc-600 hover:bg-zinc-50 border border-zinc-200'
@@ -188,7 +188,7 @@ function AppContent() {
                     setShowAddDriverForm(false);
                     setIsMobileMenuOpen(false);
                   }}
-                  className={`px-4 py-2 rounded-xl text-sm font-medium transition-all ${
+                  className={`px-3 md:px-4 py-1.5 md:py-2 rounded-lg md:rounded-xl text-xs md:text-sm font-medium transition-all ${
                     selectedDriverId === d.id.toString() 
                       ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/20' 
                       : 'bg-white text-zinc-600 hover:bg-zinc-50 border border-zinc-200'
@@ -204,9 +204,9 @@ function AppContent() {
                   setSelectedDriverId('');
                   setIsMobileMenuOpen(false);
                 }}
-                className="px-4 py-2 rounded-xl text-sm font-medium bg-zinc-100 text-zinc-600 hover:bg-zinc-200 border border-dashed border-zinc-300 transition-all flex items-center gap-1.5"
+                className="px-3 md:px-4 py-1.5 md:py-2 rounded-lg md:rounded-xl text-xs md:text-sm font-medium bg-zinc-100 text-zinc-600 hover:bg-zinc-200 border border-dashed border-zinc-300 transition-all flex items-center gap-1 md:gap-1.5"
               >
-                <Users className="w-3.5 h-3.5" /> Add Driver
+                <Users className="w-3 h-3 md:w-3.5 md:h-3.5" /> Add Driver
               </button>
             </div>
           </div>

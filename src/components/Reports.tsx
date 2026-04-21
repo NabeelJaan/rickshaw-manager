@@ -244,21 +244,21 @@ export default function Reports({ selectedDriverId }: { selectedDriverId?: strin
 
   return (
     <div className="space-y-8">
-      <div className="bg-gradient-to-r from-cyan-50 via-white to-teal-50 p-6 md:p-8 rounded-2xl border border-zinc-200/60 shadow-sm">
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-          <h2 className="text-2xl md:text-4xl font-bold text-zinc-900 tracking-tight">Reports</h2>
-          <div className="flex items-center gap-3 w-full sm:w-auto">
+      <div className="bg-gradient-to-r from-cyan-50 via-white to-teal-50 p-4 md:p-6 lg:p-8 rounded-2xl border border-zinc-200/60 shadow-sm">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 md:gap-4">
+          <h2 className="text-xl md:text-2xl lg:text-4xl font-bold text-zinc-900 tracking-tight">Reports</h2>
+          <div className="flex items-center gap-2 md:gap-3 w-full sm:w-auto">
             <button 
               onClick={() => exportReport('csv')}
-              className="flex-1 sm:flex-none bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white px-4 py-2.5 rounded-xl flex items-center justify-center gap-2 transition-all shadow-lg shadow-emerald-500/20 text-sm font-medium"
+              className="flex-1 sm:flex-none bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white px-3 md:px-4 py-2 md:py-2.5 rounded-lg md:rounded-xl flex items-center justify-center gap-1.5 md:gap-2 transition-all shadow-lg shadow-emerald-500/20 text-xs md:text-sm font-medium"
             >
-              <Download className="w-4 h-4" /> Download Excel/CSV
+              <Download className="w-3.5 h-3.5 md:w-4 md:h-4" /> <span className="hidden sm:inline">Download</span> Excel/CSV
             </button>
             <button 
               onClick={() => exportReport('json')}
-              className="flex-1 sm:flex-none bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-600 hover:to-blue-600 text-white px-4 py-2.5 rounded-xl flex items-center justify-center gap-2 transition-all shadow-lg shadow-cyan-500/20 text-sm font-medium"
+              className="flex-1 sm:flex-none bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-600 hover:to-blue-600 text-white px-3 md:px-4 py-2 md:py-2.5 rounded-lg md:rounded-xl flex items-center justify-center gap-1.5 md:gap-2 transition-all shadow-lg shadow-cyan-500/20 text-xs md:text-sm font-medium"
             >
-              <Download className="w-4 h-4" /> Download JSON
+              <Download className="w-3.5 h-3.5 md:w-4 md:h-4" /> <span className="hidden sm:inline">Download</span> JSON
             </button>
           </div>
         </div>
