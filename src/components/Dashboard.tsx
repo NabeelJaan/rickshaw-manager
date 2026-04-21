@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import ReactApexChart from 'react-apexcharts';
-import { TrendingUp, TrendingDown, DollarSign, Car, Plus, Edit, ChevronDown, Trash2, Users } from 'lucide-react';
-import { DashboardStats, Transaction } from '../types';
+import { TrendingUp, TrendingDown, DollarSign, Car, Plus, Edit, ChevronDown, Trash2, Users, ArrowUpRight, ArrowDownRight, Minus } from 'lucide-react';
+import { DashboardStats, Transaction, Driver } from '../types';
 import LogRentModal from './LogRentModal';
 import ExpenseModal from './ExpenseModal';
 import EditTransactionModal from './EditTransactionModal';
@@ -20,6 +20,7 @@ export default function Dashboard({ selectedDriverId }: { selectedDriverId?: str
   const [currency, setCurrency] = useState('Rs.');
   const [showTransactionDropdown, setShowTransactionDropdown] = useState(false);
   const [selectedMonth, setSelectedMonth] = useState<string>('all');
+  const [driverPerformance, setDriverPerformance] = useState<{driver: Driver, stats: {income: number, expense: number, profit: number, lastMonthIncome: number, lastMonthExpense: number, growth: number}}[]>([]);
 
   // Load currency from settings
   useEffect(() => {
@@ -58,6 +59,53 @@ export default function Dashboard({ selectedDriverId }: { selectedDriverId?: str
         headers
       });
       fetchData();
+    }
+  };
+
+  const fetchDriverPerformance = async () => {
+    const token = localStorage.getItem('auth_token');
+    const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+    
+    try {
+      const driversRes = await fetch('/api/drivers', { headers });
+      const drivers: Driver[] = await driversRes.json();
+      
+      const performanceData = await Promise.all(
+        drivers.map(async (driver) => {
+          // Current month stats
+          const currentMonth = new Date().toISOString().slice(0, 7);
+          const lastMonth = new Date(new Date().setMonth(new Date().getMonth() - 1)).toISOString().slice(0, 7);
+          
+          const currentRes = await fetch(`/api/transactions?driver_id=${driver.id}&month=${currentMonth}`, { headers });
+          const currentTx: Transaction[] = await currentRes.json();
+          
+          const lastRes = await fetch(`/api/transactions?driver_id=${driver.id}&month=${lastMonth}`, { headers });
+          const lastTx: Transaction[] = await lastRes.json();
+          
+          const currentIncome = currentTx.filter(t => t.type === 'income' && t.category !== 'rent_pending').reduce((sum, t) => sum + t.amount, 0);
+          const currentExpense = currentTx.filter(t => t.type === 'expense').reduce((sum, t) => sum + t.amount, 0);
+          const lastIncome = lastTx.filter(t => t.type === 'income' && t.category !== 'rent_pending').reduce((sum, t) => sum + t.amount, 0);
+          const lastExpense = lastTx.filter(t => t.type === 'expense').reduce((sum, t) => sum + t.amount, 0);
+          
+          const growth = lastIncome > 0 ? ((currentIncome - lastIncome) / lastIncome) * 100 : currentIncome > 0 ? 100 : 0;
+          
+          return {
+            driver,
+            stats: {
+              income: currentIncome,
+              expense: currentExpense,
+              profit: currentIncome - currentExpense,
+              lastMonthIncome: lastIncome,
+              lastMonthExpense: lastExpense,
+              growth
+            }
+          };
+        })
+      );
+      
+      setDriverPerformance(performanceData);
+    } catch (error) {
+      console.error('Error fetching driver performance:', error);
     }
   };
 
@@ -102,6 +150,9 @@ export default function Dashboard({ selectedDriverId }: { selectedDriverId?: str
 
   useEffect(() => {
     fetchData();
+    if (!selectedDriverId) {
+      fetchDriverPerformance();
+    }
   }, [selectedDriverId]);
 
   useEffect(() => {
@@ -279,6 +330,92 @@ export default function Dashboard({ selectedDriverId }: { selectedDriverId?: str
           </div>
         ))}
       </div>
+
+      {/* Driver Performance Tracker */}
+      {!selectedDriverId && driverPerformance.length > 0 && (
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <h3 className="text-base md:text-lg font-semibold text-zinc-900 flex items-center gap-2">
+              <TrendingUp className="w-4 h-4 md:w-5 md:h-5 text-emerald-500" />
+              Driver Performance Tracker
+            </h3>
+            <span className="text-xs text-zinc-500">Current Month</span>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 md:gap-4">
+            {driverPerformance.map(({ driver, stats }) => (
+              <div key={driver.id} className="bg-white rounded-xl md:rounded-2xl shadow-sm border border-zinc-200/60 p-3 md:p-4 transition-all duration-300 hover:shadow-lg hover:border-zinc-300/60">
+                <div className="flex items-start justify-between mb-3">
+                  <div className="flex items-center gap-2 md:gap-3">
+                    <div className="w-8 h-8 md:w-10 md:h-10 rounded-full bg-gradient-to-br from-emerald-500/20 to-blue-500/20 flex items-center justify-center border border-emerald-500/30">
+                      <Users className="w-4 h-4 md:w-5 md:h-5 text-emerald-600" />
+                    </div>
+                    <div>
+                      <h4 className="text-sm md:text-base font-semibold text-zinc-900">{driver.name}</h4>
+                      <p className="text-[10px] md:text-xs text-zinc-500">{driver.assigned_rickshaw || 'Unassigned'}</p>
+                    </div>
+                  </div>
+                  <div className={`flex items-center gap-0.5 md:gap-1 px-1.5 md:px-2 py-0.5 md:py-1 rounded-full text-[10px] md:text-xs font-medium ${
+                    stats.growth > 0 
+                      ? 'bg-emerald-100 text-emerald-700' 
+                      : stats.growth < 0 
+                      ? 'bg-rose-100 text-rose-700'
+                      : 'bg-zinc-100 text-zinc-600'
+                  }`}>
+                    {stats.growth > 0 ? (
+                      <ArrowUpRight className="w-3 h-3" />
+                    ) : stats.growth < 0 ? (
+                      <ArrowDownRight className="w-3 h-3" />
+                    ) : (
+                      <Minus className="w-3 h-3" />
+                    )}
+                    {Math.abs(stats.growth).toFixed(0)}%
+                  </div>
+                </div>
+                
+                <div className="space-y-2">
+                  <div className="flex justify-between items-center">
+                    <span className="text-[10px] md:text-xs text-zinc-500">Income</span>
+                    <span className="text-xs md:text-sm font-semibold text-emerald-600 font-number">{currency} {stats.income.toLocaleString()}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-[10px] md:text-xs text-zinc-500">Expense</span>
+                    <span className="text-xs md:text-sm font-semibold text-rose-600 font-number">{currency} {stats.expense.toLocaleString()}</span>
+                  </div>
+                  <div className="pt-2 border-t border-zinc-100">
+                    <div className="flex justify-between items-center">
+                      <span className="text-[10px] md:text-xs font-medium text-zinc-600">Profit</span>
+                      <span className={`text-xs md:text-sm font-bold font-number ${stats.profit >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
+                        {stats.profit >= 0 ? '+' : ''}{currency} {stats.profit.toLocaleString()}
+                      </span>
+                    </div>
+                  </div>
+                  
+                  {/* Mini Progress Bar */}
+                  <div className="pt-2">
+                    <div className="flex justify-between text-[9px] md:text-[10px] text-zinc-400 mb-1">
+                      <span>vs Last Month</span>
+                      <span>{currency} {stats.lastMonthIncome.toLocaleString()}</span>
+                    </div>
+                    <div className="h-1 bg-zinc-100 rounded-full overflow-hidden">
+                      <div 
+                        className={`h-1 rounded-full transition-all duration-500 ${
+                          stats.growth >= 0 ? 'bg-emerald-500' : 'bg-rose-500'
+                        }`}
+                        style={{ 
+                          width: `${Math.min(100, Math.max(5, stats.lastMonthIncome > 0 
+                            ? (stats.income / stats.lastMonthIncome) * 50 
+                            : stats.income > 0 ? 75 : 5
+                          ))}%` 
+                        }}
+                      ></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {selectedDriverId && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
