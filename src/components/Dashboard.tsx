@@ -332,87 +332,140 @@ export default function Dashboard({ selectedDriverId }: { selectedDriverId?: str
       </div>
 
       {/* Driver Performance Tracker */}
-      {!selectedDriverId && driverPerformance.length > 0 && (
-        <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <h3 className="text-base md:text-lg font-semibold text-zinc-900 flex items-center gap-2">
-              <TrendingUp className="w-4 h-4 md:w-5 md:h-5 text-emerald-500" />
-              Driver Performance Tracker
-            </h3>
-            <span className="text-xs text-zinc-500">Current Month</span>
+      {driverPerformance.length > 0 && (
+        <div className="bg-gradient-to-br from-zinc-50 via-white to-emerald-50/30 rounded-2xl md:rounded-3xl shadow-sm border border-zinc-200/60 p-4 md:p-6">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 md:gap-4 mb-4 md:mb-6">
+            <div className="flex items-center gap-2 md:gap-3">
+              <div className="p-2 md:p-2.5 bg-gradient-to-br from-emerald-500 to-teal-500 rounded-xl shadow-lg shadow-emerald-500/20">
+                <TrendingUp className="w-4 h-4 md:w-5 md:h-5 text-white" />
+              </div>
+              <div>
+                <h3 className="text-base md:text-xl font-bold text-zinc-900">Driver Performance Tracker</h3>
+                <p className="text-[10px] md:text-xs text-zinc-500">Monitor growth and progress in real-time</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="px-2.5 md:px-3 py-1 md:py-1.5 bg-emerald-100 text-emerald-700 rounded-full text-[10px] md:text-xs font-semibold">
+                {new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+              </span>
+            </div>
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 md:gap-4">
-            {driverPerformance.map(({ driver, stats }) => (
-              <div key={driver.id} className="bg-white rounded-xl md:rounded-2xl shadow-sm border border-zinc-200/60 p-3 md:p-4 transition-all duration-300 hover:shadow-lg hover:border-zinc-300/60">
-                <div className="flex items-start justify-between mb-3">
-                  <div className="flex items-center gap-2 md:gap-3">
-                    <div className="w-8 h-8 md:w-10 md:h-10 rounded-full bg-gradient-to-br from-emerald-500/20 to-blue-500/20 flex items-center justify-center border border-emerald-500/30">
-                      <Users className="w-4 h-4 md:w-5 md:h-5 text-emerald-600" />
-                    </div>
-                    <div>
-                      <h4 className="text-sm md:text-base font-semibold text-zinc-900">{driver.name}</h4>
-                      <p className="text-[10px] md:text-xs text-zinc-500">{driver.assigned_rickshaw || 'Unassigned'}</p>
-                    </div>
-                  </div>
-                  <div className={`flex items-center gap-0.5 md:gap-1 px-1.5 md:px-2 py-0.5 md:py-1 rounded-full text-[10px] md:text-xs font-medium ${
-                    stats.growth > 0 
-                      ? 'bg-emerald-100 text-emerald-700' 
-                      : stats.growth < 0 
-                      ? 'bg-rose-100 text-rose-700'
-                      : 'bg-zinc-100 text-zinc-600'
-                  }`}>
-                    {stats.growth > 0 ? (
-                      <ArrowUpRight className="w-3 h-3" />
-                    ) : stats.growth < 0 ? (
-                      <ArrowDownRight className="w-3 h-3" />
-                    ) : (
-                      <Minus className="w-3 h-3" />
-                    )}
-                    {Math.abs(stats.growth).toFixed(0)}%
-                  </div>
-                </div>
+          
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 md:gap-5">
+            {driverPerformance
+              .filter(({ driver }) => !selectedDriverId || driver.id.toString() === selectedDriverId)
+              .map(({ driver, stats }) => {
+                const profitMargin = stats.income > 0 ? ((stats.profit / stats.income) * 100).toFixed(0) : 0;
                 
-                <div className="space-y-2">
-                  <div className="flex justify-between items-center">
-                    <span className="text-[10px] md:text-xs text-zinc-500">Income</span>
-                    <span className="text-xs md:text-sm font-semibold text-emerald-600 font-number">{currency} {stats.income.toLocaleString()}</span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-[10px] md:text-xs text-zinc-500">Expense</span>
-                    <span className="text-xs md:text-sm font-semibold text-rose-600 font-number">{currency} {stats.expense.toLocaleString()}</span>
-                  </div>
-                  <div className="pt-2 border-t border-zinc-100">
-                    <div className="flex justify-between items-center">
-                      <span className="text-[10px] md:text-xs font-medium text-zinc-600">Profit</span>
-                      <span className={`text-xs md:text-sm font-bold font-number ${stats.profit >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
-                        {stats.profit >= 0 ? '+' : ''}{currency} {stats.profit.toLocaleString()}
-                      </span>
+                return (
+                <div key={driver.id} className="group relative bg-white rounded-xl md:rounded-2xl shadow-sm border border-zinc-200/60 overflow-hidden transition-all duration-300 hover:shadow-xl hover:border-emerald-200 hover:-translate-y-1">
+                  {/* Gradient Header */}
+                  <div className={`h-16 md:h-20 bg-gradient-to-r ${
+                    stats.growth > 10 
+                      ? 'from-emerald-500 via-emerald-400 to-teal-400' 
+                      : stats.growth > 0 
+                      ? 'from-blue-500 via-blue-400 to-cyan-400'
+                      : stats.growth < 0 
+                      ? 'from-rose-500 via-rose-400 to-orange-400'
+                      : 'from-zinc-400 via-zinc-300 to-zinc-400'
+                  }`}>
+                    <div className="absolute top-2 md:top-3 right-2 md:right-3">
+                      <div className={`flex items-center gap-0.5 md:gap-1 px-2 md:px-2.5 py-0.5 md:py-1 rounded-full text-[10px] md:text-xs font-bold backdrop-blur-sm ${
+                        stats.growth > 0 
+                          ? 'bg-white/90 text-emerald-600' 
+                          : stats.growth < 0 
+                          ? 'bg-white/90 text-rose-600'
+                          : 'bg-white/90 text-zinc-600'
+                      }`}>
+                        {stats.growth > 0 ? (
+                          <ArrowUpRight className="w-2.5 h-2.5 md:w-3 md:h-3" />
+                        ) : stats.growth < 0 ? (
+                          <ArrowDownRight className="w-2.5 h-2.5 md:w-3 md:h-3" />
+                        ) : (
+                          <Minus className="w-2.5 h-2.5 md:w-3 md:h-3" />
+                        )}
+                        {Math.abs(stats.growth).toFixed(0)}%
+                      </div>
                     </div>
                   </div>
                   
-                  {/* Mini Progress Bar */}
-                  <div className="pt-2">
-                    <div className="flex justify-between text-[9px] md:text-[10px] text-zinc-400 mb-1">
-                      <span>vs Last Month</span>
-                      <span>{currency} {stats.lastMonthIncome.toLocaleString()}</span>
+                  {/* Driver Info */}
+                  <div className="relative px-3 md:px-4 -mt-8 md:-mt-10">
+                    <div className="flex items-end gap-2 md:gap-3">
+                      <div className="w-12 h-12 md:w-14 md:h-14 rounded-xl md:rounded-2xl bg-white shadow-lg border-2 border-white flex items-center justify-center">
+                        <span className="text-lg md:text-xl font-bold text-zinc-700">{driver.name.charAt(0)}</span>
+                      </div>
+                      <div className="pb-1 md:pb-2">
+                        <h4 className="text-sm md:text-base font-bold text-zinc-900 leading-tight">{driver.name}</h4>
+                        <p className="text-[10px] md:text-xs text-zinc-500">{driver.assigned_rickshaw || 'No rickshaw assigned'}</p>
+                      </div>
                     </div>
-                    <div className="h-1 bg-zinc-100 rounded-full overflow-hidden">
-                      <div 
-                        className={`h-1 rounded-full transition-all duration-500 ${
-                          stats.growth >= 0 ? 'bg-emerald-500' : 'bg-rose-500'
-                        }`}
-                        style={{ 
-                          width: `${Math.min(100, Math.max(5, stats.lastMonthIncome > 0 
-                            ? (stats.income / stats.lastMonthIncome) * 50 
-                            : stats.income > 0 ? 75 : 5
-                          ))}%` 
-                        }}
-                      ></div>
+                  </div>
+                  
+                  {/* Stats */}
+                  <div className="p-3 md:p-4 pt-2 md:pt-3 space-y-2 md:space-y-3">
+                    {/* Income/Expense Row */}
+                    <div className="grid grid-cols-2 gap-2 md:gap-3">
+                      <div className="bg-emerald-50 rounded-lg md:rounded-xl p-2 md:p-2.5 text-center">
+                        <p className="text-[9px] md:text-[10px] text-emerald-600 font-medium uppercase tracking-wider">Income</p>
+                        <p className="text-xs md:text-sm font-bold text-emerald-700 font-number mt-0.5">{currency}{stats.income.toLocaleString()}</p>
+                      </div>
+                      <div className="bg-rose-50 rounded-lg md:rounded-xl p-2 md:p-2.5 text-center">
+                        <p className="text-[9px] md:text-[10px] text-rose-600 font-medium uppercase tracking-wider">Expense</p>
+                        <p className="text-xs md:text-sm font-bold text-rose-700 font-number mt-0.5">{currency}{stats.expense.toLocaleString()}</p>
+                      </div>
+                    </div>
+                    
+                    {/* Profit */}
+                    <div className={`rounded-lg md:rounded-xl p-2 md:p-3 text-center ${
+                      stats.profit >= 0 ? 'bg-gradient-to-r from-emerald-50 to-teal-50' : 'bg-gradient-to-r from-rose-50 to-orange-50'
+                    }`}>
+                      <div className="flex items-center justify-center gap-1 md:gap-1.5">
+                        {stats.profit >= 0 ? (
+                          <TrendingUp className="w-3 h-3 md:w-3.5 md:h-3.5 text-emerald-500" />
+                        ) : (
+                          <TrendingDown className="w-3 h-3 md:w-3.5 md:h-3.5 text-rose-500" />
+                        )}
+                        <span className={`text-xs md:text-sm font-bold font-number ${stats.profit >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
+                          {stats.profit >= 0 ? '+' : ''}{currency}{stats.profit.toLocaleString()}
+                        </span>
+                        <span className={`text-[9px] md:text-[10px] font-medium ${stats.profit >= 0 ? 'text-emerald-500' : 'text-rose-500'}`}>
+                          ({profitMargin}% margin)
+                        </span>
+                      </div>
+                    </div>
+                    
+                    {/* Comparison Bar */}
+                    <div className="pt-1 md:pt-2 border-t border-zinc-100">
+                      <div className="flex justify-between items-center text-[9px] md:text-[10px] text-zinc-500 mb-1.5">
+                        <span>vs Last Month</span>
+                        <span className="font-medium font-number">{currency}{stats.lastMonthIncome.toLocaleString()}</span>
+                      </div>
+                      <div className="h-1.5 md:h-2 bg-zinc-100 rounded-full overflow-hidden relative">
+                        <div 
+                          className={`absolute inset-y-0 left-0 rounded-full transition-all duration-700 ${
+                            stats.growth >= 0 
+                              ? 'bg-gradient-to-r from-emerald-400 to-emerald-500' 
+                              : 'bg-gradient-to-r from-rose-400 to-rose-500'
+                          }`}
+                          style={{ 
+                            width: `${Math.min(100, Math.max(8, stats.lastMonthIncome > 0 
+                              ? Math.min(100, (stats.income / Math.max(stats.income, stats.lastMonthIncome)) * 100)
+                              : stats.income > 0 ? 60 : 8
+                            ))}%` 
+                          }}
+                        ></div>
+                        {stats.lastMonthIncome > 0 && (
+                          <div 
+                            className="absolute inset-y-0 w-0.5 bg-zinc-300"
+                            style={{ left: `${Math.min(100, (stats.lastMonthIncome / Math.max(stats.income, stats.lastMonthIncome, 1)) * 100)}%` }}
+                          ></div>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              )})}
           </div>
         </div>
       )}
