@@ -168,28 +168,28 @@ export default function Transactions({ selectedDriverId }: { selectedDriverId?: 
 
   return (
     <div className="space-y-8">
-      <div className="bg-gradient-to-r from-blue-50 via-white to-emerald-50 p-6 md:p-8 rounded-2xl border border-zinc-200/60 shadow-sm">
-        <div className="flex flex-col gap-4">
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-            <h2 className="text-3xl md:text-4xl font-bold text-zinc-900 tracking-tight">Transactions</h2>
-            <div className="flex items-center gap-3">
+      <div className="bg-gradient-to-r from-blue-50 via-white to-emerald-50 p-4 md:p-6 lg:p-8 rounded-2xl border border-zinc-200/60 shadow-sm">
+        <div className="flex flex-col gap-3 md:gap-4">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 md:gap-4">
+            <h2 className="text-xl md:text-3xl lg:text-4xl font-bold text-zinc-900 tracking-tight">Transactions</h2>
+            <div className="flex flex-wrap items-center gap-2 md:gap-3 w-full sm:w-auto">
               <button 
                 onClick={() => setIsLogRentModalOpen(true)}
-                className="bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white px-4 py-2.5 rounded-xl flex items-center gap-2 transition-all shadow-lg shadow-emerald-500/20 text-sm font-medium"
+                className="flex-1 sm:flex-none bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white px-3 md:px-4 py-2 md:py-2.5 rounded-lg md:rounded-xl flex items-center justify-center gap-1.5 md:gap-2 transition-all shadow-lg shadow-emerald-500/20 text-xs md:text-sm font-medium"
               >
-                <DollarSign className="w-4 h-4" /> Log Rent
+                <DollarSign className="w-3.5 h-3.5 md:w-4 md:h-4" /> <span className="hidden sm:inline">Log</span> Rent
               </button>
               <button 
                 onClick={openExpenseForm}
-                className="bg-gradient-to-r from-rose-500 to-rose-600 hover:from-rose-600 hover:to-rose-700 text-white px-4 py-2.5 rounded-xl flex items-center gap-2 transition-all shadow-lg shadow-rose-500/20 text-sm font-medium"
+                className="flex-1 sm:flex-none bg-gradient-to-r from-rose-500 to-rose-600 hover:from-rose-600 hover:to-rose-700 text-white px-3 md:px-4 py-2 md:py-2.5 rounded-lg md:rounded-xl flex items-center justify-center gap-1.5 md:gap-2 transition-all shadow-lg shadow-rose-500/20 text-xs md:text-sm font-medium"
               >
-                <TrendingDown className="w-4 h-4" /> Add Expense
+                <TrendingDown className="w-3.5 h-3.5 md:w-4 md:h-4" /> <span className="hidden sm:inline">Add</span> Expense
               </button>
               <button 
                 onClick={() => setShowForm(!showForm)}
-                className="bg-gradient-to-r from-zinc-800 to-zinc-900 hover:from-zinc-900 hover:to-zinc-950 text-white px-4 py-2.5 rounded-xl flex items-center gap-2 transition-all shadow-lg shadow-zinc-500/20 text-sm font-medium"
+                className="flex-1 sm:flex-none bg-gradient-to-r from-zinc-800 to-zinc-900 hover:from-zinc-900 hover:to-zinc-950 text-white px-3 md:px-4 py-2 md:py-2.5 rounded-lg md:rounded-xl flex items-center justify-center gap-1.5 md:gap-2 transition-all shadow-lg shadow-zinc-500/20 text-xs md:text-sm font-medium"
               >
-                <Plus className="w-4 h-4" /> Add Transaction
+                <Plus className="w-3.5 h-3.5 md:w-4 md:h-4" /> <span className="hidden sm:inline">Add</span> Transaction
               </button>
             </div>
           </div>
