@@ -337,7 +337,7 @@ export default function Rickshaws({ selectedDriverId }: { selectedDriverId?: str
                             <span className="text-rose-500">- {currency} {rickshawStats.expense.toLocaleString()}</span>
                           </div>
                           <div className="flex justify-between text-[11px] font-number mt-1 pt-1 border-t border-emerald-200/60">
-                            <span className="text-zinc-600 font-medium">Net Income</span>
+                            <span className="text-zinc-600 font-medium">Gross Profit</span>
                             <span className="text-zinc-700 font-semibold">{currency} {netIncome.toLocaleString()}</span>
                           </div>
                           <div className="flex justify-between text-[11px] font-number mt-1">
@@ -345,7 +345,7 @@ export default function Rickshaws({ selectedDriverId }: { selectedDriverId?: str
                             <span className="text-zinc-500">- {currency} {r.investment_cost.toLocaleString()}</span>
                           </div>
                           <div className="flex justify-between text-[11px] font-number mt-1 pt-1 border-t border-emerald-200/60">
-                            <span className="text-emerald-700 font-semibold">Profit</span>
+                            <span className="text-emerald-700 font-semibold">Net Profit</span>
                             <span className="text-emerald-600 font-bold">+{currency} {profit.toLocaleString()}</span>
                           </div>
                           <div className="text-[10px] text-center mt-2 text-emerald-600 font-medium bg-emerald-100/50 rounded py-1">
