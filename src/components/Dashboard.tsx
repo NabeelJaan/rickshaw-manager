@@ -351,24 +351,25 @@ export default function Dashboard({ selectedDriverId }: { selectedDriverId?: str
             </div>
           </div>
           
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 md:gap-5">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-5">
             {driverPerformance
               .filter(({ driver }) => !selectedDriverId || driver.id.toString() === selectedDriverId)
               .map(({ driver, stats }) => {
                 const profitMargin = stats.income > 0 ? ((stats.profit / stats.income) * 100).toFixed(0) : 0;
                 
                 return (
-                <div key={driver.id} className="group relative bg-white rounded-xl md:rounded-2xl shadow-sm border border-zinc-200/60 overflow-hidden transition-all duration-300 hover:shadow-xl hover:border-emerald-200 hover:-translate-y-1">
-                  {/* Gradient Header */}
-                  <div className={`h-16 md:h-20 bg-gradient-to-r ${
+                <div key={driver.id} className="group bg-white rounded-xl md:rounded-2xl shadow-sm border border-zinc-200/60 overflow-hidden transition-all duration-300 hover:shadow-xl hover:border-emerald-200 hover:-translate-y-1">
+                  {/* Gradient Header with Driver Info */}
+                  <div className={`relative p-3 md:p-4 ${
                     stats.growth > 10 
-                      ? 'from-emerald-500 via-emerald-400 to-teal-400' 
+                      ? 'bg-gradient-to-r from-emerald-500 via-emerald-400 to-teal-400' 
                       : stats.growth > 0 
-                      ? 'from-blue-500 via-blue-400 to-cyan-400'
+                      ? 'bg-gradient-to-r from-blue-500 via-blue-400 to-cyan-400'
                       : stats.growth < 0 
-                      ? 'from-rose-500 via-rose-400 to-orange-400'
-                      : 'from-zinc-400 via-zinc-300 to-zinc-400'
+                      ? 'bg-gradient-to-r from-rose-500 via-rose-400 to-orange-400'
+                      : 'bg-gradient-to-r from-zinc-400 via-zinc-300 to-zinc-400'
                   }`}>
+                    {/* Growth Badge */}
                     <div className="absolute top-2 md:top-3 right-2 md:right-3">
                       <div className={`flex items-center gap-0.5 md:gap-1 px-2 md:px-2.5 py-0.5 md:py-1 rounded-full text-[10px] md:text-xs font-bold backdrop-blur-sm ${
                         stats.growth > 0 
@@ -387,23 +388,21 @@ export default function Dashboard({ selectedDriverId }: { selectedDriverId?: str
                         {Math.abs(stats.growth).toFixed(0)}%
                       </div>
                     </div>
-                  </div>
-                  
-                  {/* Driver Info */}
-                  <div className="relative px-3 md:px-4 -mt-8 md:-mt-10">
-                    <div className="flex items-end gap-2 md:gap-3">
-                      <div className="w-12 h-12 md:w-14 md:h-14 rounded-xl md:rounded-2xl bg-white shadow-lg border-2 border-white flex items-center justify-center">
-                        <span className="text-lg md:text-xl font-bold text-zinc-700">{driver.name.charAt(0)}</span>
+                    
+                    {/* Driver Avatar & Name */}
+                    <div className="flex items-center gap-2 md:gap-3 pt-4 md:pt-5">
+                      <div className="w-10 h-10 md:w-12 md:h-12 rounded-xl md:rounded-2xl bg-white/20 backdrop-blur-sm border-2 border-white/30 flex items-center justify-center">
+                        <span className="text-base md:text-lg font-bold text-white">{driver.name.charAt(0)}</span>
                       </div>
-                      <div className="pb-1 md:pb-2">
-                        <h4 className="text-sm md:text-base font-bold text-zinc-900 leading-tight">{driver.name}</h4>
-                        <p className="text-[10px] md:text-xs text-zinc-500">{driver.assigned_rickshaw || 'No rickshaw assigned'}</p>
+                      <div className="flex-1 min-w-0">
+                        <h4 className="text-sm md:text-base font-bold text-white truncate">{driver.name}</h4>
+                        <p className="text-[10px] md:text-xs text-white/80 truncate">{driver.assigned_rickshaw || 'No rickshaw'}</p>
                       </div>
                     </div>
                   </div>
                   
-                  {/* Stats */}
-                  <div className="p-3 md:p-4 pt-2 md:pt-3 space-y-2 md:space-y-3">
+                  {/* Stats Section */}
+                  <div className="p-3 md:p-4 space-y-3">
                     {/* Income/Expense Row */}
                     <div className="grid grid-cols-2 gap-2 md:gap-3">
                       <div className="bg-emerald-50 rounded-lg md:rounded-xl p-2 md:p-2.5 text-center">
@@ -417,7 +416,7 @@ export default function Dashboard({ selectedDriverId }: { selectedDriverId?: str
                     </div>
                     
                     {/* Profit */}
-                    <div className={`rounded-lg md:rounded-xl p-2 md:p-3 text-center ${
+                    <div className={`rounded-lg md:rounded-xl p-2.5 md:p-3 text-center ${
                       stats.profit >= 0 ? 'bg-gradient-to-r from-emerald-50 to-teal-50' : 'bg-gradient-to-r from-rose-50 to-orange-50'
                     }`}>
                       <div className="flex items-center justify-center gap-1 md:gap-1.5">
@@ -436,12 +435,12 @@ export default function Dashboard({ selectedDriverId }: { selectedDriverId?: str
                     </div>
                     
                     {/* Comparison Bar */}
-                    <div className="pt-1 md:pt-2 border-t border-zinc-100">
+                    <div className="pt-2 md:pt-3 border-t border-zinc-100">
                       <div className="flex justify-between items-center text-[9px] md:text-[10px] text-zinc-500 mb-1.5">
                         <span>vs Last Month</span>
                         <span className="font-medium font-number">{currency}{stats.lastMonthIncome.toLocaleString()}</span>
                       </div>
-                      <div className="h-1.5 md:h-2 bg-zinc-100 rounded-full overflow-hidden relative">
+                      <div className="h-2 md:h-2.5 bg-zinc-100 rounded-full overflow-hidden relative">
                         <div 
                           className={`absolute inset-y-0 left-0 rounded-full transition-all duration-700 ${
                             stats.growth >= 0 
@@ -457,7 +456,7 @@ export default function Dashboard({ selectedDriverId }: { selectedDriverId?: str
                         ></div>
                         {stats.lastMonthIncome > 0 && (
                           <div 
-                            className="absolute inset-y-0 w-0.5 bg-zinc-300"
+                            className="absolute inset-y-0 w-0.5 bg-zinc-400"
                             style={{ left: `${Math.min(100, (stats.lastMonthIncome / Math.max(stats.income, stats.lastMonthIncome, 1)) * 100)}%` }}
                           ></div>
                         )}
