@@ -278,6 +278,7 @@ export default function Dashboard({ selectedDriverId }: { selectedDriverId?: str
               </button>
             </div>
           )}
+          </div>
         </div>
       </div>
       
@@ -349,7 +350,7 @@ export default function Dashboard({ selectedDriverId }: { selectedDriverId?: str
               ))}
           </div>
         </div>
-      )
+      )}
 
       {selectedDriverId && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
