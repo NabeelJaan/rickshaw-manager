@@ -213,22 +213,22 @@ export default function Dashboard({ selectedDriverId }: { selectedDriverId?: str
   ).slice(0, 1);
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+    <div className="max-w-7xl mx-auto px-6 md:px-10 py-10 md:py-16 space-y-12 md:space-y-20">
+      {/* Hero Header */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-6 pb-10 border-b border-zinc-200/60">
         <div>
-          <h2 className="text-2xl md:text-3xl font-bold text-zinc-900">
-            {selectedDriverId ? `${selectedDriverName}'s Dashboard` : 'Dashboard'}
-          </h2>
-          <p className="text-sm text-zinc-500 mt-1">
+          <h1 className="text-[34px] md:text-[48px] font-semibold text-zinc-900 tracking-tight leading-none">
+            {selectedDriverId ? selectedDriverName : 'Overview'}
+          </h1>
+          <p className="text-[15px] text-zinc-500 mt-3 font-normal">
             {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-3">
           <select 
             value={selectedMonth} 
             onChange={(e) => setSelectedMonth(e.target.value)}
-            className="px-3 py-2 bg-white border border-zinc-200 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+            className="h-10 px-5 bg-zinc-100/80 border-0 rounded-full text-[14px] text-zinc-700 font-medium hover:bg-zinc-200/80 transition-colors cursor-pointer focus:ring-2 focus:ring-zinc-300 outline-none"
           >
             <option value="all">All Time</option>
             {Array.from({ length: 12 }, (_, i) => {
@@ -242,61 +242,68 @@ export default function Dashboard({ selectedDriverId }: { selectedDriverId?: str
           {selectedDriverId && (
             <button 
               onClick={() => setIsExpenseModalOpen(true)}
-              className="bg-rose-500 hover:bg-rose-600 text-white px-3 py-2 rounded-lg text-sm font-medium flex items-center gap-1.5"
+              className="h-10 px-5 bg-zinc-900 hover:bg-zinc-800 text-white rounded-full text-[14px] font-medium transition-colors flex items-center gap-2"
             >
-              <DollarSign className="w-4 h-4" /> Expense
+              <TrendingDown className="w-4 h-4" /> Expense
             </button>
           )}
           <div className="relative">
             <button 
               onClick={() => setShowTransactionDropdown(!showTransactionDropdown)}
-              className="bg-emerald-500 hover:bg-emerald-600 text-white px-3 py-2 rounded-lg text-sm font-medium flex items-center gap-1.5"
+              className="h-10 px-5 bg-zinc-900 hover:bg-zinc-800 text-white rounded-full text-[14px] font-medium transition-colors flex items-center gap-2"
             >
               <Plus className="w-4 h-4" /> Add
               <ChevronDown className={`w-4 h-4 transition-transform ${showTransactionDropdown ? 'rotate-180' : ''}`} />
             </button>
           
-          {showTransactionDropdown && (
-            <div className="absolute top-full right-0 mt-2 w-40 bg-white rounded-lg shadow-lg border border-zinc-200 py-1 z-50">
-              <button 
-                onClick={() => { setIsLogRentModalOpen(true); setShowTransactionDropdown(false); }}
-                className="w-full text-left px-3 py-2 text-sm text-zinc-700 hover:bg-zinc-50 flex items-center gap-2"
-              >
-                <TrendingUp className="w-4 h-4 text-emerald-500" /> Income
-              </button>
-              <button 
-                onClick={() => { setIsExpenseModalOpen(true); setShowTransactionDropdown(false); }}
-                className="w-full text-left px-3 py-2 text-sm text-zinc-700 hover:bg-zinc-50 flex items-center gap-2"
-              >
-                <TrendingDown className="w-4 h-4 text-rose-500" /> Expense
-              </button>
-              <button 
-                onClick={() => { setIsPendingBalanceModalOpen(true); setShowTransactionDropdown(false); }}
-                className="w-full text-left px-3 py-2 text-sm text-zinc-700 hover:bg-zinc-50 flex items-center gap-2"
-              >
-                <DollarSign className="w-4 h-4 text-amber-500" /> Pending
-              </button>
-            </div>
-          )}
+            {showTransactionDropdown && (
+              <div className="absolute top-full right-0 mt-3 w-56 bg-white rounded-2xl shadow-2xl shadow-zinc-200/30 border border-zinc-100 p-2 z-50">
+                <button 
+                  onClick={() => { setIsLogRentModalOpen(true); setShowTransactionDropdown(false); }}
+                  className="w-full text-left px-4 py-3 rounded-xl text-[14px] text-zinc-700 hover:bg-zinc-50 transition-colors flex items-center gap-4"
+                >
+                  <div className="w-9 h-9 rounded-full bg-emerald-50 flex items-center justify-center">
+                    <TrendingUp className="w-4 h-4 text-emerald-600" />
+                  </div>
+                  Add Income
+                </button>
+                <button 
+                  onClick={() => { setIsExpenseModalOpen(true); setShowTransactionDropdown(false); }}
+                  className="w-full text-left px-4 py-3 rounded-xl text-[14px] text-zinc-700 hover:bg-zinc-50 transition-colors flex items-center gap-4"
+                >
+                  <div className="w-9 h-9 rounded-full bg-rose-50 flex items-center justify-center">
+                    <TrendingDown className="w-4 h-4 text-rose-600" />
+                  </div>
+                  Add Expense
+                </button>
+                <button 
+                  onClick={() => { setIsPendingBalanceModalOpen(true); setShowTransactionDropdown(false); }}
+                  className="w-full text-left px-4 py-3 rounded-xl text-[14px] text-zinc-700 hover:bg-zinc-50 transition-colors flex items-center gap-4"
+                >
+                  <div className="w-9 h-9 rounded-full bg-amber-50 flex items-center justify-center">
+                    <DollarSign className="w-4 h-4 text-amber-600" />
+                  </div>
+                  Add Pending
+                </button>
+              </div>
+            )}
           </div>
         </div>
       </div>
       
       {/* Stats Grid */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
         {filteredStatCards.map((card, i) => (
-          <div key={i} className="bg-white p-4 rounded-xl border border-zinc-200 flex flex-col gap-2">
-            <div className="flex items-center gap-2">
-              <div className={`p-2 rounded-lg ${card.bg}`}>
-                <card.icon className={`w-4 h-4 ${card.color}`} />
-              </div>
-              <span className="text-xs text-zinc-500">{card.title}</span>
+          <div key={i} className="group bg-zinc-50/50 hover:bg-zinc-50 p-6 md:p-8 rounded-[24px] border border-zinc-200/40 flex flex-col gap-3 transition-colors duration-300">
+            <card.icon className={`w-5 h-5 ${card.color} opacity-80`} strokeWidth={2} />
+            <div>
+              <p className="text-[13px] text-zinc-500 font-normal mb-1">{card.title}</p>
+              <h3 className={`text-[24px] md:text-[28px] font-semibold tracking-tight font-number ${card.color}`}>
+                {card.prefix}{typeof card.value === 'string' ? card.value : card.value.toLocaleString()}
+              </h3>
             </div>
-            <h3 className={`text-lg md:text-xl font-bold font-number ${card.color}`}>
-              {card.prefix}{typeof card.value === 'string' ? card.value : card.value.toLocaleString()}
-            </h3>
             {card.subtitle && (
-              <p className="text-[10px] text-emerald-600 font-medium">{card.subtitle}</p>
+              <p className="text-[12px] text-emerald-600 font-medium mt-1">{card.subtitle}</p>
             )}
           </div>
         ))}
