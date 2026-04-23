@@ -181,25 +181,21 @@ export default function Dashboard({ selectedDriverId }: { selectedDriverId?: str
   const totalProfit = (stats.allTimeProfit || 0) - (stats.totalInvestment || 0);
 
   const statCards = [
-    { title: 'Total Revenue', value: stats.totalIncome || 0, icon: TrendingUp, color: 'text-emerald-500', bg: 'bg-emerald-500/10', prefix: currency + ' ' },
-    { title: 'Total Expense', value: stats.totalExpense || 0, icon: TrendingDown, color: 'text-rose-500', bg: 'bg-rose-500/10', prefix: currency + ' ' },
-    { title: 'Net Profit (Excl. Pending)', value: stats.profit || 0, icon: DollarSign, color: 'text-blue-500', bg: 'bg-blue-500/10', prefix: currency + ' ' },
-    { title: 'Total Profit (Incl. Pending)', value: stats.profitIncludingPending || 0, icon: DollarSign, color: 'text-cyan-500', bg: 'bg-cyan-500/10', prefix: currency + ' ' },
-    { title: 'Pending Balance', value: stats.pendingBalance || 0, icon: TrendingDown, color: 'text-amber-500', bg: 'bg-amber-500/10', prefix: currency + ' ' },
-    { title: 'Total Investment', value: stats.totalInvestment || 0, icon: Car, color: 'text-purple-500', bg: 'bg-purple-500/10', prefix: currency + ' ' },
+    { title: 'Revenue', value: stats.totalIncome || 0, icon: TrendingUp, color: 'text-emerald-500', bg: 'bg-emerald-50', prefix: currency + ' ' },
+    { title: 'Expense', value: stats.totalExpense || 0, icon: TrendingDown, color: 'text-rose-500', bg: 'bg-rose-50', prefix: currency + ' ' },
+    { title: 'Net Profit', value: stats.profit || 0, icon: DollarSign, color: 'text-blue-500', bg: 'bg-blue-50', prefix: currency + ' ' },
+    { title: 'Pending', value: stats.pendingBalance || 0, icon: TrendingDown, color: 'text-amber-500', bg: 'bg-amber-50', prefix: currency + ' ' },
+    { title: 'Investment', value: stats.totalInvestment || 0, icon: Car, color: 'text-purple-500', bg: 'bg-purple-50', prefix: currency + ' ' },
     { 
-      title: isFullyRecovered ? 'Investment Recovered!' : 'Remaining Investment', 
+      title: isFullyRecovered ? 'Net Profit' : 'Remaining', 
       value: isFullyRecovered ? totalProfit : remainingInvestment, 
       icon: isFullyRecovered ? TrendingUp : TrendingDown, 
       color: isFullyRecovered ? 'text-emerald-500' : 'text-orange-500', 
-      bg: isFullyRecovered ? 'bg-emerald-500/10' : 'bg-orange-500/10', 
+      bg: isFullyRecovered ? 'bg-emerald-50' : 'bg-orange-50', 
       prefix: isFullyRecovered ? '+' + currency + ' ' : currency + ' ',
-      subtitle: isFullyRecovered ? 'All investments recovered - Now in profit!' : undefined
+      subtitle: isFullyRecovered ? 'Investment recovered!' : undefined
     },
-    { title: 'All-Time Income', value: stats.allTimeIncome || 0, icon: TrendingUp, color: 'text-teal-500', bg: 'bg-teal-500/10', prefix: currency + ' ' },
-    { title: 'All-Time Expense', value: stats.allTimeExpense || 0, icon: TrendingDown, color: 'text-red-500', bg: 'bg-red-500/10', prefix: currency + ' ' },
-    { title: 'Active Rickshaws', value: stats.activeRickshaws || 0, icon: Car, color: 'text-indigo-500', bg: 'bg-indigo-500/10', prefix: '', hideOnDriver: true },
-    { title: 'Total Rickshaws', value: stats.totalRickshaws || 0, icon: Car, color: 'text-zinc-500', bg: 'bg-zinc-500/10', prefix: '', hideOnDriver: true },
+    { title: 'Rickshaws', value: `${stats.activeRickshaws || 0}/${stats.totalRickshaws || 0}`, icon: Car, color: 'text-zinc-500', bg: 'bg-zinc-50', prefix: '', hideOnDriver: true },
   ];
 
   const filteredStatCards = selectedDriverId 
@@ -217,257 +213,143 @@ export default function Dashboard({ selectedDriverId }: { selectedDriverId?: str
   ).slice(0, 1);
 
   return (
-    <div className="space-y-8">
-      <div className="bg-gradient-to-r from-emerald-50 via-white to-zinc-50 p-6 md:p-8 rounded-2xl border border-zinc-200/60 shadow-sm">
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-          <div className="flex flex-col gap-3">
-            <h2 className="text-3xl md:text-4xl font-bold text-zinc-900 tracking-tight">
-              {selectedDriverId ? `${selectedDriverName}'s Overview` : 'Dashboard Overview'}
-            </h2>
-            <div className="flex items-center gap-4">
-              <div className="flex items-center gap-2">
-                <label className="text-sm font-medium text-zinc-600">Month:</label>
-                <select 
-                  value={selectedMonth} 
-                  onChange={(e) => setSelectedMonth(e.target.value)}
-                  className="px-4 py-2 bg-white border border-zinc-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 shadow-sm transition-all"
-                >
-                  <option value="all">All Months</option>
-                  {Array.from({ length: 12 }, (_, i) => {
-                    const date = new Date();
-                    date.setMonth(date.getMonth() - i);
-                    const monthStr = date.toISOString().slice(0, 7);
-                    const monthName = date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
-                    return <option key={monthStr} value={monthStr}>{monthName}</option>;
-                  })}
-                </select>
-                {selectedMonth && selectedMonth !== 'all' && (
-                  <button 
-                    onClick={() => setSelectedMonth('all')}
-                    className="text-xs font-medium text-zinc-500 hover:text-zinc-700 hover:bg-zinc-100 px-2 py-1 rounded-lg transition-colors"
-                  >
-                    Clear
-                  </button>
-                )}
-              </div>
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div>
+          <h2 className="text-2xl md:text-3xl font-bold text-zinc-900">
+            {selectedDriverId ? `${selectedDriverName}'s Dashboard` : 'Dashboard'}
+          </h2>
+          <p className="text-sm text-zinc-500 mt-1">
+            {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          <select 
+            value={selectedMonth} 
+            onChange={(e) => setSelectedMonth(e.target.value)}
+            className="px-3 py-2 bg-white border border-zinc-200 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+          >
+            <option value="all">All Time</option>
+            {Array.from({ length: 12 }, (_, i) => {
+              const date = new Date();
+              date.setMonth(date.getMonth() - i);
+              const monthStr = date.toISOString().slice(0, 7);
+              const monthName = date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+              return <option key={monthStr} value={monthStr}>{monthName}</option>;
+            })}
+          </select>
+          {selectedDriverId && (
+            <button 
+              onClick={() => setIsExpenseModalOpen(true)}
+              className="bg-rose-500 hover:bg-rose-600 text-white px-3 py-2 rounded-lg text-sm font-medium flex items-center gap-1.5"
+            >
+              <DollarSign className="w-4 h-4" /> Expense
+            </button>
+          )}
+          <div className="relative">
+            <button 
+              onClick={() => setShowTransactionDropdown(!showTransactionDropdown)}
+              className="bg-emerald-500 hover:bg-emerald-600 text-white px-3 py-2 rounded-lg text-sm font-medium flex items-center gap-1.5"
+            >
+              <Plus className="w-4 h-4" /> Add
+              <ChevronDown className={`w-4 h-4 transition-transform ${showTransactionDropdown ? 'rotate-180' : ''}`} />
+            </button>
+          
+          {showTransactionDropdown && (
+            <div className="absolute top-full right-0 mt-2 w-40 bg-white rounded-lg shadow-lg border border-zinc-200 py-1 z-50">
+              <button 
+                onClick={() => { setIsLogRentModalOpen(true); setShowTransactionDropdown(false); }}
+                className="w-full text-left px-3 py-2 text-sm text-zinc-700 hover:bg-zinc-50 flex items-center gap-2"
+              >
+                <TrendingUp className="w-4 h-4 text-emerald-500" /> Income
+              </button>
+              <button 
+                onClick={() => { setIsExpenseModalOpen(true); setShowTransactionDropdown(false); }}
+                className="w-full text-left px-3 py-2 text-sm text-zinc-700 hover:bg-zinc-50 flex items-center gap-2"
+              >
+                <TrendingDown className="w-4 h-4 text-rose-500" /> Expense
+              </button>
+              <button 
+                onClick={() => { setIsPendingBalanceModalOpen(true); setShowTransactionDropdown(false); }}
+                className="w-full text-left px-3 py-2 text-sm text-zinc-700 hover:bg-zinc-50 flex items-center gap-2"
+              >
+                <DollarSign className="w-4 h-4 text-amber-500" /> Pending
+              </button>
             </div>
-          </div>
-          <div className="flex items-center gap-2 md:gap-3">
-            {selectedDriverId && (
-              <button 
-                onClick={() => setIsExpenseModalOpen(true)}
-                className="bg-gradient-to-r from-rose-500 to-rose-600 hover:from-rose-600 hover:to-rose-700 text-white px-3 md:px-4 py-2 md:py-2.5 rounded-lg md:rounded-xl flex items-center gap-1.5 md:gap-2 transition-all shadow-lg shadow-rose-500/20 text-xs md:text-sm font-medium"
-              >
-                <DollarSign className="w-3.5 h-3.5 md:w-4 md:h-4" /> <span className="hidden sm:inline">Add</span> Expense
-              </button>
-            )}
-            <div className="relative">
-              <button 
-                onClick={() => setShowTransactionDropdown(!showTransactionDropdown)}
-                className="bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white px-3 md:px-5 py-2 md:py-2.5 rounded-lg md:rounded-xl flex items-center gap-1.5 md:gap-2 transition-all shadow-lg shadow-emerald-500/20 text-xs md:text-sm font-medium"
-              >
-                <Plus className="w-3.5 h-3.5 md:w-4 md:h-4" /> <span className="hidden sm:inline">Log</span> Transaction
-                <ChevronDown className={`w-3.5 h-3.5 md:w-4 md:h-4 transition-transform ${showTransactionDropdown ? 'rotate-180' : ''}`} />
-              </button>
-            
-            {showTransactionDropdown && (
-              <div className="absolute top-full right-0 md:left-0 mt-2 w-44 md:w-48 bg-white rounded-lg md:rounded-xl shadow-lg border border-zinc-200/60 py-1.5 md:py-2 z-50">
-                <button 
-                  onClick={() => {
-                    setIsLogRentModalOpen(true);
-                    setShowTransactionDropdown(false);
-                  }}
-                  className="w-full text-left px-3 md:px-4 py-2 md:py-2.5 text-xs md:text-sm text-zinc-700 hover:bg-zinc-50 transition-colors flex items-center gap-1.5 md:gap-2"
-                >
-                  <TrendingUp className="w-3.5 h-3.5 md:w-4 md:h-4 text-emerald-500" />
-                  Add Income
-                </button>
-                <button 
-                  onClick={() => {
-                    setIsLogRentModalOpen(false);
-                    setIsExpenseModalOpen(true);
-                    setShowTransactionDropdown(false);
-                  }}
-                  className="w-full text-left px-3 md:px-4 py-2 md:py-2.5 text-xs md:text-sm text-zinc-700 hover:bg-zinc-50 transition-colors flex items-center gap-1.5 md:gap-2"
-                >
-                  <TrendingDown className="w-3.5 h-3.5 md:w-4 md:h-4 text-rose-500" />
-                  Add Expense
-                </button>
-                <button 
-                  onClick={() => {
-                    setIsPendingBalanceModalOpen(true);
-                    setShowTransactionDropdown(false);
-                  }}
-                  className="w-full text-left px-3 md:px-4 py-2 md:py-2.5 text-xs md:text-sm text-zinc-700 hover:bg-zinc-50 transition-colors flex items-center gap-1.5 md:gap-2"
-                >
-                  <DollarSign className="w-3.5 h-3.5 md:w-4 md:h-4 text-amber-500" />
-                  Add Pending
-                </button>
-              </div>
-            )}
-          </div>
+          )}
         </div>
       </div>
-      </div>
       
-      <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 md:gap-4">
+      {/* Stats Grid */}
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
         {filteredStatCards.map((card, i) => (
-          <div key={i} className={`bg-white p-4 md:p-5 rounded-2xl shadow-sm border border-zinc-200/60 flex flex-col gap-3 md:gap-4 transition-all duration-300 hover:shadow-lg hover:border-zinc-300/60 group`}>
-            <div className="flex justify-between items-start">
-              <div className={`p-2.5 rounded-xl ${card.bg} group-hover:scale-110 transition-transform duration-300`}>
-                <card.icon className={`w-4 h-4 md:w-5 md:h-5 ${card.color}`} />
+          <div key={i} className="bg-white p-4 rounded-xl border border-zinc-200 flex flex-col gap-2">
+            <div className="flex items-center gap-2">
+              <div className={`p-2 rounded-lg ${card.bg}`}>
+                <card.icon className={`w-4 h-4 ${card.color}`} />
               </div>
+              <span className="text-xs text-zinc-500">{card.title}</span>
             </div>
-            <div>
-              <p className="text-[11px] md:text-[13px] font-medium text-zinc-500 mb-0.5 md:mb-1">{card.title}</p>
-              <h3 className={`text-lg md:text-2xl font-bold font-number tracking-tight break-words ${card.color}`}>
-                {card.prefix}{card.value.toLocaleString()}
-              </h3>
-              {card.subtitle && (
-                <p className="text-[10px] md:text-xs text-emerald-600 mt-1 font-medium">{card.subtitle}</p>
-              )}
-            </div>
+            <h3 className={`text-lg md:text-xl font-bold font-number ${card.color}`}>
+              {card.prefix}{typeof card.value === 'string' ? card.value : card.value.toLocaleString()}
+            </h3>
+            {card.subtitle && (
+              <p className="text-[10px] text-emerald-600 font-medium">{card.subtitle}</p>
+            )}
           </div>
         ))}
       </div>
 
-      {/* Driver Performance Tracker */}
+      {/* Driver Performance */}
       {driverPerformance.length > 0 && (
-        <div className="bg-gradient-to-br from-zinc-50 via-white to-emerald-50/30 rounded-2xl md:rounded-3xl shadow-sm border border-zinc-200/60 p-4 md:p-6">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 md:gap-4 mb-4 md:mb-6">
-            <div className="flex items-center gap-2 md:gap-3">
-              <div className="p-2 md:p-2.5 bg-gradient-to-br from-emerald-500 to-teal-500 rounded-xl shadow-lg shadow-emerald-500/20">
-                <TrendingUp className="w-4 h-4 md:w-5 md:h-5 text-white" />
-              </div>
-              <div>
-                <h3 className="text-base md:text-xl font-bold text-zinc-900">Driver Performance Tracker</h3>
-                <p className="text-[10px] md:text-xs text-zinc-500">Monitor growth and progress in real-time</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="px-2.5 md:px-3 py-1 md:py-1.5 bg-emerald-100 text-emerald-700 rounded-full text-[10px] md:text-xs font-semibold">
-                {new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
-              </span>
-            </div>
-          </div>
-          
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-5">
+        <div className="space-y-3">
+          <h3 className="text-sm font-semibold text-zinc-500 uppercase tracking-wider">Driver Performance</h3>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
             {driverPerformance
               .filter(({ driver }) => !selectedDriverId || driver.id.toString() === selectedDriverId)
-              .map(({ driver, stats }) => {
-                const profitMargin = stats.income > 0 ? ((stats.profit / stats.income) * 100).toFixed(0) : 0;
-                
-                return (
-                <div key={driver.id} className="group bg-white rounded-xl md:rounded-2xl shadow-sm border border-zinc-200/60 overflow-hidden transition-all duration-300 hover:shadow-xl hover:border-emerald-200 hover:-translate-y-1">
-                  {/* Gradient Header with Driver Info */}
-                  <div className={`relative p-3 md:p-4 ${
-                    stats.growth > 10 
-                      ? 'bg-gradient-to-r from-emerald-500 via-emerald-400 to-teal-400' 
-                      : stats.growth > 0 
-                      ? 'bg-gradient-to-r from-blue-500 via-blue-400 to-cyan-400'
-                      : stats.growth < 0 
-                      ? 'bg-gradient-to-r from-rose-500 via-rose-400 to-orange-400'
-                      : 'bg-gradient-to-r from-zinc-400 via-zinc-300 to-zinc-400'
-                  }`}>
-                    {/* Growth Badge */}
-                    <div className="absolute top-2 md:top-3 right-2 md:right-3">
-                      <div className={`flex items-center gap-0.5 md:gap-1 px-2 md:px-2.5 py-0.5 md:py-1 rounded-full text-[10px] md:text-xs font-bold backdrop-blur-sm ${
-                        stats.growth > 0 
-                          ? 'bg-white/90 text-emerald-600' 
-                          : stats.growth < 0 
-                          ? 'bg-white/90 text-rose-600'
-                          : 'bg-white/90 text-zinc-600'
+              .map(({ driver, stats }) => (
+                <div key={driver.id} className="bg-white rounded-xl border border-zinc-200 p-4">
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-2">
+                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-white font-bold text-sm ${
+                        stats.growth > 10 ? 'bg-emerald-500' : stats.growth > 0 ? 'bg-blue-500' : stats.growth < 0 ? 'bg-rose-500' : 'bg-zinc-400'
                       }`}>
-                        {stats.growth > 0 ? (
-                          <ArrowUpRight className="w-2.5 h-2.5 md:w-3 md:h-3" />
-                        ) : stats.growth < 0 ? (
-                          <ArrowDownRight className="w-2.5 h-2.5 md:w-3 md:h-3" />
-                        ) : (
-                          <Minus className="w-2.5 h-2.5 md:w-3 md:h-3" />
-                        )}
-                        {Math.abs(stats.growth).toFixed(0)}%
+                        {driver.name.charAt(0)}
+                      </div>
+                      <div>
+                        <p className="text-sm font-semibold text-zinc-900">{driver.name}</p>
+                        <p className="text-[10px] text-zinc-500">{driver.assigned_rickshaw || 'Unassigned'}</p>
                       </div>
                     </div>
-                    
-                    {/* Driver Avatar & Name */}
-                    <div className="flex items-center gap-2 md:gap-3 pt-4 md:pt-5">
-                      <div className="w-10 h-10 md:w-12 md:h-12 rounded-xl md:rounded-2xl bg-white/20 backdrop-blur-sm border-2 border-white/30 flex items-center justify-center">
-                        <span className="text-base md:text-lg font-bold text-white">{driver.name.charAt(0)}</span>
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <h4 className="text-sm md:text-base font-bold text-white truncate">{driver.name}</h4>
-                        <p className="text-[10px] md:text-xs text-white/80 truncate">{driver.assigned_rickshaw || 'No rickshaw'}</p>
-                      </div>
+                    <div className={`flex items-center gap-0.5 text-xs font-medium ${
+                      stats.growth > 0 ? 'text-emerald-600' : stats.growth < 0 ? 'text-rose-600' : 'text-zinc-500'
+                    }`}>
+                      {stats.growth > 0 ? <ArrowUpRight className="w-3 h-3" /> : stats.growth < 0 ? <ArrowDownRight className="w-3 h-3" /> : <Minus className="w-3 h-3" />}
+                      {Math.abs(stats.growth).toFixed(0)}%
                     </div>
                   </div>
-                  
-                  {/* Stats Section */}
-                  <div className="p-3 md:p-4 space-y-3">
-                    {/* Income/Expense Row */}
-                    <div className="grid grid-cols-2 gap-2 md:gap-3">
-                      <div className="bg-emerald-50 rounded-lg md:rounded-xl p-2 md:p-2.5 text-center">
-                        <p className="text-[9px] md:text-[10px] text-emerald-600 font-medium uppercase tracking-wider">Income</p>
-                        <p className="text-xs md:text-sm font-bold text-emerald-700 font-number mt-0.5">{currency}{stats.income.toLocaleString()}</p>
-                      </div>
-                      <div className="bg-rose-50 rounded-lg md:rounded-xl p-2 md:p-2.5 text-center">
-                        <p className="text-[9px] md:text-[10px] text-rose-600 font-medium uppercase tracking-wider">Expense</p>
-                        <p className="text-xs md:text-sm font-bold text-rose-700 font-number mt-0.5">{currency}{stats.expense.toLocaleString()}</p>
-                      </div>
+                  <div className="space-y-2">
+                    <div className="flex justify-between text-xs">
+                      <span className="text-zinc-500">Income</span>
+                      <span className="font-semibold text-emerald-600">{currency}{stats.income.toLocaleString()}</span>
                     </div>
-                    
-                    {/* Profit */}
-                    <div className={`rounded-lg md:rounded-xl p-2.5 md:p-3 text-center ${
-                      stats.profit >= 0 ? 'bg-gradient-to-r from-emerald-50 to-teal-50' : 'bg-gradient-to-r from-rose-50 to-orange-50'
-                    }`}>
-                      <div className="flex items-center justify-center gap-1 md:gap-1.5">
-                        {stats.profit >= 0 ? (
-                          <TrendingUp className="w-3 h-3 md:w-3.5 md:h-3.5 text-emerald-500" />
-                        ) : (
-                          <TrendingDown className="w-3 h-3 md:w-3.5 md:h-3.5 text-rose-500" />
-                        )}
-                        <span className={`text-xs md:text-sm font-bold font-number ${stats.profit >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
-                          {stats.profit >= 0 ? '+' : ''}{currency}{stats.profit.toLocaleString()}
-                        </span>
-                        <span className={`text-[9px] md:text-[10px] font-medium ${stats.profit >= 0 ? 'text-emerald-500' : 'text-rose-500'}`}>
-                          ({profitMargin}% margin)
-                        </span>
-                      </div>
+                    <div className="flex justify-between text-xs">
+                      <span className="text-zinc-500">Expense</span>
+                      <span className="font-semibold text-rose-600">{currency}{stats.expense.toLocaleString()}</span>
                     </div>
-                    
-                    {/* Comparison Bar */}
-                    <div className="pt-2 md:pt-3 border-t border-zinc-100">
-                      <div className="flex justify-between items-center text-[9px] md:text-[10px] text-zinc-500 mb-1.5">
-                        <span>vs Last Month</span>
-                        <span className="font-medium font-number">{currency}{stats.lastMonthIncome.toLocaleString()}</span>
-                      </div>
-                      <div className="h-2 md:h-2.5 bg-zinc-100 rounded-full overflow-hidden relative">
-                        <div 
-                          className={`absolute inset-y-0 left-0 rounded-full transition-all duration-700 ${
-                            stats.growth >= 0 
-                              ? 'bg-gradient-to-r from-emerald-400 to-emerald-500' 
-                              : 'bg-gradient-to-r from-rose-400 to-rose-500'
-                          }`}
-                          style={{ 
-                            width: `${Math.min(100, Math.max(8, stats.lastMonthIncome > 0 
-                              ? Math.min(100, (stats.income / Math.max(stats.income, stats.lastMonthIncome)) * 100)
-                              : stats.income > 0 ? 60 : 8
-                            ))}%` 
-                          }}
-                        ></div>
-                        {stats.lastMonthIncome > 0 && (
-                          <div 
-                            className="absolute inset-y-0 w-0.5 bg-zinc-400"
-                            style={{ left: `${Math.min(100, (stats.lastMonthIncome / Math.max(stats.income, stats.lastMonthIncome, 1)) * 100)}%` }}
-                          ></div>
-                        )}
-                      </div>
+                    <div className="pt-2 border-t border-zinc-100 flex justify-between text-xs">
+                      <span className="font-medium text-zinc-600">Profit</span>
+                      <span className={`font-bold ${stats.profit >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
+                        {stats.profit >= 0 ? '+' : ''}{currency}{stats.profit.toLocaleString()}
+                      </span>
                     </div>
                   </div>
                 </div>
-              )})}
+              ))}
           </div>
         </div>
-      )}
+      )
 
       {selectedDriverId && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
