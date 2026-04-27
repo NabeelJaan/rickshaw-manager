@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { FileText, Calendar, Download, TrendingUp, TrendingDown, DollarSign, Car, Users, Filter } from 'lucide-react';
+import { FileText, Calendar, Download, TrendingUp, TrendingDown, DollarSign, Car, Users, Filter, AlertCircle } from 'lucide-react';
 import { Driver, Transaction } from '../types';
 
 export default function Reports({ selectedDriverId }: { selectedDriverId?: string }) {
@@ -92,7 +92,10 @@ export default function Reports({ selectedDriverId }: { selectedDriverId?: strin
   const calculateStats = () => {
     const income = transactions.filter(t => t.type === 'income' && t.category !== 'rent_pending').reduce((sum, t) => sum + t.amount, 0);
     const expense = transactions.filter(t => t.type === 'expense').reduce((sum, t) => sum + t.amount, 0);
-    const pending = transactions.filter(t => t.category === 'rent_pending').reduce((sum, t) => sum + t.amount, 0);
+    // Pending uses driver's pending_balance (cumulative, only increases when entries added)
+    const pending = selectedReportDriver
+      ? (drivers.find(d => String(d.id) === String(selectedReportDriver))?.pending_balance || 0)
+      : drivers.reduce((sum, d) => sum + (d.pending_balance || 0), 0);
     const profit = income - expense;
 
     return { income, expense, pending, profit };
@@ -243,36 +246,36 @@ export default function Reports({ selectedDriverId }: { selectedDriverId?: strin
   };
 
   return (
-    <div className="space-y-8">
-      <div className="bg-gradient-to-r from-cyan-50 via-white to-teal-50 p-4 md:p-6 lg:p-8 rounded-2xl border border-zinc-200/60 shadow-sm">
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 md:gap-4">
-          <h2 className="text-xl md:text-2xl lg:text-4xl font-bold text-zinc-900 tracking-tight">Reports</h2>
-          <div className="flex items-center gap-2 md:gap-3 w-full sm:w-auto">
+    <div className="space-y-4 md:space-y-6">
+      <div className="bg-gradient-to-br from-zinc-900 via-zinc-800 to-zinc-900 p-4 md:p-5 rounded-2xl shadow-sm">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 md:gap-3">
+          <h2 className="text-lg md:text-xl font-semibold text-white tracking-tight">Reports</h2>
+          <div className="flex items-center gap-1.5 md:gap-2 w-full sm:w-auto">
             <button 
               onClick={() => exportReport('csv')}
-              className="flex-1 sm:flex-none bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white px-3 md:px-4 py-2 md:py-2.5 rounded-lg md:rounded-xl flex items-center justify-center gap-1.5 md:gap-2 transition-all shadow-lg shadow-emerald-500/20 text-xs md:text-sm font-medium"
+              className="flex-1 sm:flex-none bg-white/10 hover:bg-white/20 backdrop-blur text-white px-2.5 md:px-3.5 py-1.5 md:py-2 rounded-lg flex items-center justify-center gap-1 md:gap-1.5 transition-all text-[11px] md:text-xs font-medium border border-white/10"
             >
-              <Download className="w-3.5 h-3.5 md:w-4 md:h-4" /> <span className="hidden sm:inline">Download</span> Excel/CSV
+              <Download className="w-3 h-3 md:w-3.5 md:h-3.5" /> Excel/CSV
             </button>
             <button 
               onClick={() => exportReport('json')}
-              className="flex-1 sm:flex-none bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-600 hover:to-blue-600 text-white px-3 md:px-4 py-2 md:py-2.5 rounded-lg md:rounded-xl flex items-center justify-center gap-1.5 md:gap-2 transition-all shadow-lg shadow-cyan-500/20 text-xs md:text-sm font-medium"
+              className="flex-1 sm:flex-none bg-white/10 hover:bg-white/20 backdrop-blur text-white px-2.5 md:px-3.5 py-1.5 md:py-2 rounded-lg flex items-center justify-center gap-1 md:gap-1.5 transition-all text-[11px] md:text-xs font-medium border border-white/10"
             >
-              <Download className="w-3.5 h-3.5 md:w-4 md:h-4" /> <span className="hidden sm:inline">Download</span> JSON
+              <Download className="w-3 h-3 md:w-3.5 md:h-3.5" /> JSON
             </button>
           </div>
         </div>
       </div>
 
       {/* Report Filters */}
-      <div className="bg-white p-4 md:p-6 rounded-2xl shadow-sm border border-zinc-200/60">
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 md:gap-4">
+      <div className="bg-white/80 backdrop-blur-sm p-3 md:p-5 rounded-2xl shadow-sm border border-zinc-200/60">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2.5 md:gap-3">
           <div>
-            <label className="block text-xs md:text-sm font-medium text-zinc-700 mb-1.5 md:mb-2 flex items-center gap-1.5 md:gap-2">
-              <Users className="w-3.5 h-3.5 md:w-4 md:h-4" /> Driver
+            <label className="block text-[11px] md:text-xs font-medium text-zinc-500 mb-1 md:mb-1.5 flex items-center gap-1">
+              <Users className="w-3 h-3 md:w-3.5 md:h-3.5" /> Driver
             </label>
             <select 
-              className="w-full px-3 md:px-4 py-2 md:py-2.5 bg-zinc-50 border border-zinc-200 rounded-xl focus:ring-2 focus:ring-cyan-500/20 focus:border-cyan-500 transition-all text-xs md:text-sm"
+              className="w-full px-2.5 md:px-3 py-1.5 md:py-2 bg-zinc-50/80 border border-zinc-200/80 rounded-lg focus:ring-2 focus:ring-zinc-900/10 focus:border-zinc-400 transition-all text-[11px] md:text-xs"
               value={selectedReportDriver}
               onChange={(e) => setSelectedReportDriver(e.target.value)}
             >
@@ -283,11 +286,11 @@ export default function Reports({ selectedDriverId }: { selectedDriverId?: strin
             </select>
           </div>
           <div>
-            <label className="block text-xs md:text-sm font-medium text-zinc-700 mb-1.5 md:mb-2 flex items-center gap-1.5 md:gap-2">
-              <Calendar className="w-3.5 h-3.5 md:w-4 md:h-4" /> Filter Type
+            <label className="block text-[11px] md:text-xs font-medium text-zinc-500 mb-1 md:mb-1.5 flex items-center gap-1">
+              <Calendar className="w-3 h-3 md:w-3.5 md:h-3.5" /> Filter Type
             </label>
-            <select 
-              className="w-full px-3 md:px-4 py-2 md:py-2.5 bg-zinc-50 border border-zinc-200 rounded-xl focus:ring-2 focus:ring-cyan-500/20 focus:border-cyan-500 transition-all text-xs md:text-sm"
+            <select
+              className="w-full px-2.5 md:px-3 py-1.5 md:py-2 bg-zinc-50/80 border border-zinc-200/80 rounded-lg focus:ring-2 focus:ring-zinc-900/10 focus:border-zinc-400 transition-all text-[11px] md:text-xs"
               value={selectedMonth ? 'month' : 'period'}
               onChange={(e) => {
                 if (e.target.value === 'month') {
@@ -303,11 +306,11 @@ export default function Reports({ selectedDriverId }: { selectedDriverId?: strin
           </div>
           {!selectedMonth ? (
             <div className="col-span-2 sm:col-span-1 lg:col-span-1">
-              <label className="block text-xs md:text-sm font-medium text-zinc-700 mb-1.5 md:mb-2 flex items-center gap-1.5 md:gap-2">
-                <Calendar className="w-3.5 h-3.5 md:w-4 md:h-4" /> Report Period
+              <label className="block text-[11px] md:text-xs font-medium text-zinc-500 mb-1 md:mb-1.5 flex items-center gap-1">
+                <Calendar className="w-3 h-3 md:w-3.5 md:h-3.5" /> Period
               </label>
               <select 
-                className="w-full px-3 md:px-4 py-2 md:py-2.5 bg-zinc-50 border border-zinc-200 rounded-xl focus:ring-2 focus:ring-cyan-500/20 focus:border-cyan-500 transition-all text-xs md:text-sm"
+                className="w-full px-2.5 md:px-3 py-1.5 md:py-2 bg-zinc-50/80 border border-zinc-200/80 rounded-lg focus:ring-2 focus:ring-zinc-900/10 focus:border-zinc-400 transition-all text-[11px] md:text-xs"
                 value={reportPeriod}
                 onChange={(e) => setReportPeriod(e.target.value)}
               >
@@ -321,11 +324,11 @@ export default function Reports({ selectedDriverId }: { selectedDriverId?: strin
           ) : (
             <>
               <div>
-                <label className="block text-xs md:text-sm font-medium text-zinc-700 mb-1.5 md:mb-2 flex items-center gap-1.5 md:gap-2">
-                  <Calendar className="w-3.5 h-3.5 md:w-4 md:h-4" /> Month
+                <label className="block text-[11px] md:text-xs font-medium text-zinc-500 mb-1 md:mb-1.5 flex items-center gap-1">
+                  <Calendar className="w-3 h-3 md:w-3.5 md:h-3.5" /> Month
                 </label>
                 <select 
-                  className="w-full px-3 md:px-4 py-2 md:py-2.5 bg-zinc-50 border border-zinc-200 rounded-xl focus:ring-2 focus:ring-cyan-500/20 focus:border-cyan-500 transition-all text-xs md:text-sm"
+                  className="w-full px-2.5 md:px-3 py-1.5 md:py-2 bg-zinc-50/80 border border-zinc-200/80 rounded-lg focus:ring-2 focus:ring-zinc-900/10 focus:border-zinc-400 transition-all text-[11px] md:text-xs"
                   value={selectedMonth}
                   onChange={(e) => setSelectedMonth(e.target.value)}
                 >
@@ -344,11 +347,11 @@ export default function Reports({ selectedDriverId }: { selectedDriverId?: strin
                 </select>
               </div>
               <div>
-                <label className="block text-xs md:text-sm font-medium text-zinc-700 mb-1.5 md:mb-2 flex items-center gap-1.5 md:gap-2">
-                  <Calendar className="w-3.5 h-3.5 md:w-4 md:h-4" /> Year
+                <label className="block text-[11px] md:text-xs font-medium text-zinc-500 mb-1 md:mb-1.5 flex items-center gap-1">
+                  <Calendar className="w-3 h-3 md:w-3.5 md:h-3.5" /> Year
                 </label>
                 <select 
-                  className="w-full px-3 md:px-4 py-2 md:py-2.5 bg-zinc-50 border border-zinc-200 rounded-xl focus:ring-2 focus:ring-cyan-500/20 focus:border-cyan-500 transition-all text-xs md:text-sm"
+                  className="w-full px-2.5 md:px-3 py-1.5 md:py-2 bg-zinc-50/80 border border-zinc-200/80 rounded-lg focus:ring-2 focus:ring-zinc-900/10 focus:border-zinc-400 transition-all text-[11px] md:text-xs"
                   value={selectedYear}
                   onChange={(e) => setSelectedYear(e.target.value)}
                 >
@@ -360,134 +363,148 @@ export default function Reports({ selectedDriverId }: { selectedDriverId?: strin
             </>
           )}
           <div className="col-span-2 sm:col-span-1 lg:col-span-1">
-            <label className="block text-xs md:text-sm font-medium text-zinc-700 mb-1.5 md:mb-2">
+            <label className="block text-[11px] md:text-xs font-medium text-zinc-500 mb-1 md:mb-1.5">
               &nbsp;
             </label>
             <button 
               onClick={generateReport}
               disabled={loading}
-              className="w-full px-4 md:px-6 py-2 md:py-2.5 bg-zinc-900 hover:bg-zinc-800 text-white rounded-xl flex items-center justify-center gap-2 transition-all text-xs md:text-sm font-medium disabled:opacity-50"
+              className="w-full px-3 md:px-4 py-1.5 md:py-2 bg-zinc-900 hover:bg-zinc-800 text-white rounded-lg flex items-center justify-center gap-1.5 transition-all text-[11px] md:text-xs font-medium disabled:opacity-50"
             >
-              <Filter className="w-3.5 h-3.5 md:w-4 md:h-4" /> {loading ? 'Loading...' : 'Generate'}
+              <Filter className="w-3 h-3 md:w-3.5 md:h-3.5" /> {loading ? 'Loading...' : 'Generate'}
             </button>
           </div>
         </div>
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-white p-5 rounded-2xl shadow-sm border border-zinc-200/60 flex flex-col gap-3 transition-all duration-300 hover:shadow-lg group">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
+        <div className="bg-white p-3.5 md:p-5 rounded-2xl shadow-sm border border-zinc-200/60 flex flex-col gap-2 md:gap-3 transition-all duration-300 hover:shadow-lg group">
           <div className="flex justify-between items-start">
-            <div className="p-2.5 rounded-xl bg-emerald-500/10 group-hover:scale-110 transition-transform duration-300">
-              <TrendingUp className="w-5 h-5 text-emerald-500" />
+            <div className="p-2 md:p-2.5 rounded-xl bg-emerald-500/10 group-hover:scale-110 transition-transform duration-300">
+              <TrendingUp className="w-4 h-4 md:w-5 md:h-5 text-emerald-500" />
             </div>
           </div>
           <div>
-            <p className="text-xs font-medium text-zinc-500 mb-1">Total Income</p>
-            <h3 className="text-xl font-bold text-zinc-900 font-number tracking-tight">
+            <p className="text-[11px] md:text-xs font-medium text-zinc-500 mb-0.5 md:mb-1">Total Income</p>
+            <h3 className="text-base md:text-xl font-bold text-zinc-900 font-number tracking-tight">
               {currency}{stats.income.toLocaleString()}
             </h3>
           </div>
         </div>
 
-        <div className="bg-white p-5 rounded-2xl shadow-sm border border-zinc-200/60 flex flex-col gap-3 transition-all duration-300 hover:shadow-lg group">
+        <div className="bg-white p-3.5 md:p-5 rounded-2xl shadow-sm border border-zinc-200/60 flex flex-col gap-2 md:gap-3 transition-all duration-300 hover:shadow-lg group">
           <div className="flex justify-between items-start">
-            <div className="p-2.5 rounded-xl bg-rose-500/10 group-hover:scale-110 transition-transform duration-300">
-              <TrendingDown className="w-5 h-5 text-rose-500" />
+            <div className="p-2 md:p-2.5 rounded-xl bg-rose-500/10 group-hover:scale-110 transition-transform duration-300">
+              <TrendingDown className="w-4 h-4 md:w-5 md:h-5 text-rose-500" />
             </div>
           </div>
           <div>
-            <p className="text-xs font-medium text-zinc-500 mb-1">Total Expense</p>
-            <h3 className="text-xl font-bold text-zinc-900 font-number tracking-tight">
+            <p className="text-[11px] md:text-xs font-medium text-zinc-500 mb-0.5 md:mb-1">Total Expense</p>
+            <h3 className="text-base md:text-xl font-bold text-zinc-900 font-number tracking-tight">
               {currency}{stats.expense.toLocaleString()}
             </h3>
           </div>
         </div>
 
-        <div className="bg-white p-5 rounded-2xl shadow-sm border border-zinc-200/60 flex flex-col gap-3 transition-all duration-300 hover:shadow-lg group">
+        <div className="bg-white p-3.5 md:p-5 rounded-2xl shadow-sm border border-zinc-200/60 flex flex-col gap-2 md:gap-3 transition-all duration-300 hover:shadow-lg group">
           <div className="flex justify-between items-start">
-            <div className="p-2.5 rounded-xl bg-blue-500/10 group-hover:scale-110 transition-transform duration-300">
-              <DollarSign className="w-5 h-5 text-blue-500" />
+            <div className="p-2 md:p-2.5 rounded-xl bg-blue-500/10 group-hover:scale-110 transition-transform duration-300">
+              <DollarSign className="w-4 h-4 md:w-5 md:h-5 text-blue-500" />
             </div>
           </div>
           <div>
-            <p className="text-xs font-medium text-zinc-500 mb-1">Net Profit</p>
-            <h3 className={`text-xl font-bold font-number tracking-tight ${stats.profit >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
+            <p className="text-[11px] md:text-xs font-medium text-zinc-500 mb-0.5 md:mb-1">Net Profit</p>
+            <h3 className={`text-base md:text-xl font-bold font-number tracking-tight ${stats.profit >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
               {stats.profit >= 0 ? '+' : ''}{currency}{stats.profit.toLocaleString()}
             </h3>
           </div>
         </div>
 
-        <div className="bg-white p-5 rounded-2xl shadow-sm border border-zinc-200/60 flex flex-col gap-3 transition-all duration-300 hover:shadow-lg group">
+        <div className="bg-gradient-to-br from-amber-50 to-yellow-50 p-3.5 md:p-5 rounded-2xl shadow-sm border border-amber-200/60 flex flex-col gap-2 md:gap-3 transition-all duration-300 hover:shadow-lg group">
           <div className="flex justify-between items-start">
-            <div className="p-2.5 rounded-xl bg-amber-500/10 group-hover:scale-110 transition-transform duration-300">
-              <FileText className="w-5 h-5 text-amber-500" />
+            <div className="p-2 md:p-2.5 rounded-xl bg-amber-500/15 group-hover:scale-110 transition-transform duration-300">
+              <AlertCircle className="w-4 h-4 md:w-5 md:h-5 text-amber-600" />
             </div>
           </div>
           <div>
-            <p className="text-xs font-medium text-zinc-500 mb-1">Transactions</p>
-            <h3 className="text-xl font-bold text-zinc-900 font-number tracking-tight">
-              {transactions.length}
+            <p className="text-[11px] md:text-xs font-medium text-amber-600 mb-0.5 md:mb-1">Pending Amount</p>
+            <h3 className="text-base md:text-xl font-bold text-amber-700 font-number tracking-tight">
+              {currency}{stats.pending.toLocaleString()}
             </h3>
           </div>
         </div>
       </div>
 
       {/* Transactions Table */}
-      <div className="bg-white rounded-2xl shadow-sm border border-zinc-200/60 overflow-hidden">
-        <div className="p-4 md:p-6 border-b border-zinc-100">
-          <h3 className="text-base font-semibold text-zinc-900 flex items-center gap-2">
-            <FileText className="w-4 h-4 text-zinc-500" />
+      <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-sm border border-zinc-200/60 overflow-hidden">
+        <div className="p-3 md:p-5 border-b border-zinc-100">
+          <h3 className="text-sm md:text-base font-semibold text-zinc-900 flex items-center gap-1.5 md:gap-2">
+            <FileText className="w-3.5 h-3.5 md:w-4 md:h-4 text-zinc-500" />
             Transaction Details
           </h3>
         </div>
         
         <div className="overflow-x-auto">
           <table className="w-full">
-            <thead className="bg-zinc-50 border-b border-zinc-100">
+            <thead className="bg-zinc-50/80 border-b border-zinc-100">
               <tr>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-zinc-600 uppercase tracking-wider">Date</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-zinc-600 uppercase tracking-wider">Type</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-zinc-600 uppercase tracking-wider">Category</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-zinc-600 uppercase tracking-wider">Amount</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-zinc-600 uppercase tracking-wider">Driver</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-zinc-600 uppercase tracking-wider">Rickshaw</th>
+                <th className="px-3 md:px-4 py-2 md:py-3 text-left text-[10px] md:text-xs font-semibold text-zinc-500 uppercase tracking-wider">Date</th>
+                <th className="px-3 md:px-4 py-2 md:py-3 text-left text-[10px] md:text-xs font-semibold text-zinc-500 uppercase tracking-wider">Type</th>
+                <th className="px-3 md:px-4 py-2 md:py-3 text-left text-[10px] md:text-xs font-semibold text-zinc-500 uppercase tracking-wider">Category</th>
+                <th className="px-3 md:px-4 py-2 md:py-3 text-left text-[10px] md:text-xs font-semibold text-zinc-500 uppercase tracking-wider">Amount</th>
+                <th className="px-3 md:px-4 py-2 md:py-3 text-left text-[10px] md:text-xs font-semibold text-zinc-500 uppercase tracking-wider">Driver</th>
+                <th className="px-3 md:px-4 py-2 md:py-3 text-left text-[10px] md:text-xs font-semibold text-zinc-500 uppercase tracking-wider">Rickshaw</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-zinc-100">
               {loading ? (
                 <tr>
-                  <td colSpan={6} className="px-4 py-8 text-center text-sm text-zinc-500">
+                  <td colSpan={6} className="px-3 md:px-4 py-6 md:py-8 text-center text-xs md:text-sm text-zinc-500">
                     Loading report data...
                   </td>
                 </tr>
               ) : transactions.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-4 py-8 text-center text-sm text-zinc-500">
+                  <td colSpan={6} className="px-3 md:px-4 py-6 md:py-8 text-center text-xs md:text-sm text-zinc-500">
                     No transactions found for the selected period
                   </td>
                 </tr>
               ) : (
                 transactions.map(t => (
-                  <tr key={t.id} className="hover:bg-zinc-50/50 transition-colors">
-                    <td className="px-4 py-3 text-sm text-zinc-900">
+                  <tr key={t.id} className={`transition-colors ${
+                    t.category === 'rent_pending' 
+                      ? 'bg-amber-50/60 hover:bg-amber-100/60' 
+                      : 'hover:bg-zinc-50/50'
+                  }`}>
+                    <td className="px-3 md:px-4 py-2 md:py-3 text-[11px] md:text-sm text-zinc-900">
                       {new Date(t.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
                     </td>
-                    <td className="px-4 py-3">
-                      <span className={`inline-flex items-center px-2 py-1 rounded-md text-xs font-medium ${
-                        t.type === 'income' ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'
+                    <td className="px-3 md:px-4 py-2 md:py-3">
+                      <span className={`inline-flex items-center px-1.5 md:px-2 py-0.5 md:py-1 rounded-md text-[10px] md:text-xs font-medium ${
+                        t.category === 'rent_pending' 
+                          ? 'bg-amber-100 text-amber-700' 
+                          : t.type === 'income' 
+                            ? 'bg-emerald-100 text-emerald-700' 
+                            : 'bg-rose-100 text-rose-700'
                       }`}>
-                        {t.type}
+                        {t.category === 'rent_pending' ? 'pending' : t.type}
                       </span>
                     </td>
-                    <td className="px-4 py-3 text-sm text-zinc-900 capitalize">{t.category.replace('_', ' ')}</td>
-                    <td className={`px-4 py-3 text-sm font-medium font-number ${
-                      t.type === 'income' ? 'text-emerald-600' : 'text-rose-600'
+                    <td className={`px-3 md:px-4 py-2 md:py-3 text-[11px] md:text-sm capitalize ${
+                      t.category === 'rent_pending' ? 'text-amber-700 font-medium' : 'text-zinc-900'
+                    }`}>{t.category.replace('_', ' ')}</td>
+                    <td className={`px-3 md:px-4 py-2 md:py-3 text-[11px] md:text-sm font-medium font-number ${
+                      t.category === 'rent_pending' 
+                        ? 'text-amber-600' 
+                        : t.type === 'income' 
+                          ? 'text-emerald-600' 
+                          : 'text-rose-600'
                     }`}>
-                      {t.type === 'income' ? '+' : '-'}{currency}{t.amount.toLocaleString()}
+                      {t.category === 'rent_pending' ? '+' : t.type === 'income' ? '+' : '-'}{currency}{t.amount.toLocaleString()}
                     </td>
-                    <td className="px-4 py-3 text-sm text-zinc-600">{t.driver_name || '-'}</td>
-                    <td className="px-4 py-3 text-sm text-zinc-600">{t.rickshaw_number || '-'}</td>
+                    <td className="px-3 md:px-4 py-2 md:py-3 text-[11px] md:text-sm text-zinc-600">{t.driver_name || '-'}</td>
+                    <td className="px-3 md:px-4 py-2 md:py-3 text-[11px] md:text-sm text-zinc-600">{t.rickshaw_number || '-'}</td>
                   </tr>
                 ))
               )}

@@ -214,21 +214,21 @@ export default function Dashboard({ selectedDriverId }: { selectedDriverId?: str
 
   return (
     <div className="max-w-7xl mx-auto px-6 md:px-10 py-10 md:py-16 space-y-12 md:space-y-20">
-      {/* Hero Header */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-6 pb-10 border-b border-zinc-200/60">
+      {/* Header */}
+      <div className="flex flex-col gap-4 sm:flex-row sm:justify-between sm:items-end">
         <div>
-          <h1 className="text-[34px] md:text-[48px] font-semibold text-zinc-900 tracking-tight leading-none">
+          <h1 className="text-[32px] md:text-[40px] font-semibold text-zinc-900 tracking-tight leading-tight">
             {selectedDriverId ? selectedDriverName : 'Overview'}
           </h1>
-          <p className="text-[15px] text-zinc-500 mt-3 font-normal">
+          <p className="text-[14px] text-zinc-500 mt-1">
             {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
           </p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2">
           <select 
             value={selectedMonth} 
             onChange={(e) => setSelectedMonth(e.target.value)}
-            className="h-10 px-5 bg-zinc-100/80 border-0 rounded-full text-[14px] text-zinc-700 font-medium hover:bg-zinc-200/80 transition-colors cursor-pointer focus:ring-2 focus:ring-zinc-300 outline-none"
+            className="h-11 px-4 bg-zinc-100 border-0 rounded-xl text-[14px] text-zinc-700 font-medium hover:bg-zinc-200 transition-colors cursor-pointer focus:ring-2 focus:ring-zinc-300 outline-none"
           >
             <option value="all">All Time</option>
             {Array.from({ length: 12 }, (_, i) => {
@@ -242,45 +242,44 @@ export default function Dashboard({ selectedDriverId }: { selectedDriverId?: str
           {selectedDriverId && (
             <button 
               onClick={() => setIsExpenseModalOpen(true)}
-              className="h-10 px-5 bg-zinc-900 hover:bg-zinc-800 text-white rounded-full text-[14px] font-medium transition-colors flex items-center gap-2"
+              className="h-11 px-4 bg-zinc-900 hover:bg-zinc-800 text-white rounded-xl text-[14px] font-medium transition-colors flex items-center gap-2"
             >
-              <TrendingDown className="w-4 h-4" /> Expense
+              <TrendingDown className="w-4 h-4" /> <span className="hidden sm:inline">Expense</span>
             </button>
           )}
           <div className="relative">
             <button 
               onClick={() => setShowTransactionDropdown(!showTransactionDropdown)}
-              className="h-10 px-5 bg-zinc-900 hover:bg-zinc-800 text-white rounded-full text-[14px] font-medium transition-colors flex items-center gap-2"
+              className="h-11 px-4 bg-zinc-900 hover:bg-zinc-800 text-white rounded-xl text-[14px] font-medium transition-colors flex items-center gap-2"
             >
-              <Plus className="w-4 h-4" /> Add
+              <Plus className="w-4 h-4" /> <span className="hidden sm:inline">Add</span>
               <ChevronDown className={`w-4 h-4 transition-transform ${showTransactionDropdown ? 'rotate-180' : ''}`} />
             </button>
-          
             {showTransactionDropdown && (
-              <div className="absolute top-full right-0 mt-3 w-56 bg-white rounded-2xl shadow-2xl shadow-zinc-200/30 border border-zinc-100 p-2 z-50">
+              <div className="absolute top-full right-0 mt-2 w-52 bg-white rounded-2xl shadow-xl border border-zinc-100 p-2 z-50">
                 <button 
                   onClick={() => { setIsLogRentModalOpen(true); setShowTransactionDropdown(false); }}
-                  className="w-full text-left px-4 py-3 rounded-xl text-[14px] text-zinc-700 hover:bg-zinc-50 transition-colors flex items-center gap-4"
+                  className="w-full text-left px-4 py-3 rounded-xl text-[14px] text-zinc-700 hover:bg-zinc-50 transition-colors flex items-center gap-3"
                 >
-                  <div className="w-9 h-9 rounded-full bg-emerald-50 flex items-center justify-center">
+                  <div className="w-8 h-8 rounded-full bg-emerald-50 flex items-center justify-center">
                     <TrendingUp className="w-4 h-4 text-emerald-600" />
                   </div>
                   Add Income
                 </button>
                 <button 
                   onClick={() => { setIsExpenseModalOpen(true); setShowTransactionDropdown(false); }}
-                  className="w-full text-left px-4 py-3 rounded-xl text-[14px] text-zinc-700 hover:bg-zinc-50 transition-colors flex items-center gap-4"
+                  className="w-full text-left px-4 py-3 rounded-xl text-[14px] text-zinc-700 hover:bg-zinc-50 transition-colors flex items-center gap-3"
                 >
-                  <div className="w-9 h-9 rounded-full bg-rose-50 flex items-center justify-center">
+                  <div className="w-8 h-8 rounded-full bg-rose-50 flex items-center justify-center">
                     <TrendingDown className="w-4 h-4 text-rose-600" />
                   </div>
                   Add Expense
                 </button>
                 <button 
                   onClick={() => { setIsPendingBalanceModalOpen(true); setShowTransactionDropdown(false); }}
-                  className="w-full text-left px-4 py-3 rounded-xl text-[14px] text-zinc-700 hover:bg-zinc-50 transition-colors flex items-center gap-4"
+                  className="w-full text-left px-4 py-3 rounded-xl text-[14px] text-zinc-700 hover:bg-zinc-50 transition-colors flex items-center gap-3"
                 >
-                  <div className="w-9 h-9 rounded-full bg-amber-50 flex items-center justify-center">
+                  <div className="w-8 h-8 rounded-full bg-amber-50 flex items-center justify-center">
                     <DollarSign className="w-4 h-4 text-amber-600" />
                   </div>
                   Add Pending
@@ -292,18 +291,20 @@ export default function Dashboard({ selectedDriverId }: { selectedDriverId?: str
       </div>
       
       {/* Stats Grid */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
         {filteredStatCards.map((card, i) => (
-          <div key={i} className="group bg-zinc-50/50 hover:bg-zinc-50 p-6 md:p-8 rounded-[24px] border border-zinc-200/40 flex flex-col gap-3 transition-colors duration-300">
-            <card.icon className={`w-5 h-5 ${card.color} opacity-80`} strokeWidth={2} />
+          <div key={i} className="bg-white p-5 md:p-6 rounded-2xl border border-zinc-200/60 shadow-[0_2px_8px_rgba(0,0,0,0.04)] flex flex-col gap-3">
+            <div className={`w-10 h-10 rounded-xl ${card.bg} flex items-center justify-center`}>
+              <card.icon className={`w-5 h-5 ${card.color}`} strokeWidth={2} />
+            </div>
             <div>
-              <p className="text-[13px] text-zinc-500 font-normal mb-1">{card.title}</p>
-              <h3 className={`text-[24px] md:text-[28px] font-semibold tracking-tight font-number ${card.color}`}>
+              <p className="text-[13px] text-zinc-500 font-medium">{card.title}</p>
+              <h3 className={`text-[22px] md:text-[26px] font-semibold tracking-tight font-number mt-1 ${card.color}`}>
                 {card.prefix}{typeof card.value === 'string' ? card.value : card.value.toLocaleString()}
               </h3>
             </div>
             {card.subtitle && (
-              <p className="text-[12px] text-emerald-600 font-medium mt-1">{card.subtitle}</p>
+              <p className="text-[12px] text-emerald-600 font-medium">{card.subtitle}</p>
             )}
           </div>
         ))}
@@ -311,44 +312,45 @@ export default function Dashboard({ selectedDriverId }: { selectedDriverId?: str
 
       {/* Driver Performance */}
       {driverPerformance.length > 0 && (
-        <div className="space-y-3">
-          <h3 className="text-sm font-semibold text-zinc-500 uppercase tracking-wider">Driver Performance</h3>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+        <div className="space-y-4">
+          <div className="flex items-center gap-2">
+            <Users className="w-4 h-4 text-zinc-400" />
+            <h3 className="text-[15px] font-semibold text-zinc-700">Driver Performance</h3>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 md:gap-4">
             {driverPerformance
               .filter(({ driver }) => !selectedDriverId || driver.id.toString() === selectedDriverId)
               .map(({ driver, stats }) => (
-                <div key={driver.id} className="bg-white rounded-xl border border-zinc-200 p-4">
-                  <div className="flex items-center justify-between mb-3">
-                    <div className="flex items-center gap-2">
-                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-white font-bold text-sm ${
-                        stats.growth > 10 ? 'bg-emerald-500' : stats.growth > 0 ? 'bg-blue-500' : stats.growth < 0 ? 'bg-rose-500' : 'bg-zinc-400'
-                      }`}>
-                        {driver.name.charAt(0)}
-                      </div>
-                      <div>
-                        <p className="text-sm font-semibold text-zinc-900">{driver.name}</p>
-                        <p className="text-[10px] text-zinc-500">{driver.assigned_rickshaw || 'Unassigned'}</p>
-                      </div>
+                <div key={driver.id} className="bg-white p-5 rounded-2xl border border-zinc-200/60 shadow-[0_2px_8px_rgba(0,0,0,0.04)]">
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-white font-semibold text-[15px] ${
+                      stats.growth > 10 ? 'bg-emerald-500' : stats.growth > 0 ? 'bg-blue-500' : stats.growth < 0 ? 'bg-rose-500' : 'bg-zinc-400'
+                    }`}>
+                      {driver.name.charAt(0)}
                     </div>
-                    <div className={`flex items-center gap-0.5 text-xs font-medium ${
+                    <div className="flex-1 min-w-0">
+                      <p className="text-[14px] font-semibold text-zinc-900 truncate">{driver.name}</p>
+                      <p className="text-[12px] text-zinc-500 truncate">{driver.assigned_rickshaw || 'Unassigned'}</p>
+                    </div>
+                    <div className={`flex items-center gap-0.5 text-[13px] font-semibold ${
                       stats.growth > 0 ? 'text-emerald-600' : stats.growth < 0 ? 'text-rose-600' : 'text-zinc-500'
                     }`}>
-                      {stats.growth > 0 ? <ArrowUpRight className="w-3 h-3" /> : stats.growth < 0 ? <ArrowDownRight className="w-3 h-3" /> : <Minus className="w-3 h-3" />}
+                      {stats.growth > 0 ? <ArrowUpRight className="w-3.5 h-3.5" /> : stats.growth < 0 ? <ArrowDownRight className="w-3.5 h-3.5" /> : <Minus className="w-3.5 h-3.5" />}
                       {Math.abs(stats.growth).toFixed(0)}%
                     </div>
                   </div>
-                  <div className="space-y-2">
-                    <div className="flex justify-between text-xs">
+                  <div className="space-y-2.5">
+                    <div className="flex justify-between items-center text-[13px]">
                       <span className="text-zinc-500">Income</span>
                       <span className="font-semibold text-emerald-600">{currency}{stats.income.toLocaleString()}</span>
                     </div>
-                    <div className="flex justify-between text-xs">
+                    <div className="flex justify-between items-center text-[13px]">
                       <span className="text-zinc-500">Expense</span>
                       <span className="font-semibold text-rose-600">{currency}{stats.expense.toLocaleString()}</span>
                     </div>
-                    <div className="pt-2 border-t border-zinc-100 flex justify-between text-xs">
-                      <span className="font-medium text-zinc-600">Profit</span>
-                      <span className={`font-bold ${stats.profit >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
+                    <div className="pt-2.5 border-t border-zinc-100 flex justify-between items-center">
+                      <span className="text-[13px] font-medium text-zinc-700">Profit</span>
+                      <span className={`text-[15px] font-bold ${stats.profit >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
                         {stats.profit >= 0 ? '+' : ''}{currency}{stats.profit.toLocaleString()}
                       </span>
                     </div>
@@ -360,181 +362,158 @@ export default function Dashboard({ selectedDriverId }: { selectedDriverId?: str
       )}
 
       {selectedDriverId && (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="bg-white rounded-2xl shadow-sm border border-zinc-200/60 overflow-hidden">
-            <div className="p-4 md:p-5 border-b border-zinc-100 flex justify-between items-center">
-              <h3 className="text-base font-semibold text-zinc-900 flex items-center gap-2">
-                <Users className="w-4 h-4 text-amber-500" />
-                Monthly Leave
-              </h3>
-              <span className="text-sm font-medium text-zinc-600">{leaveRecords.length} leaves</span>
-            </div>
-            <div className="p-4 md:p-5">
-              {leaveRecords.length === 0 ? (
-                <p className="text-sm text-zinc-500 text-center py-4">No leave records this month</p>
-              ) : (
-                <div className="space-y-2">
-                  {leaveRecords.map(t => (
-                    <div key={t.id} className="flex justify-center p-2 bg-zinc-50 rounded-lg">
-                      <p className="text-sm font-medium text-zinc-900">
-                        {new Date(t.date).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
-                      </p>
-                    </div>
-                  ))}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="bg-white p-5 md:p-6 rounded-2xl border border-zinc-200/60 shadow-[0_2px_8px_rgba(0,0,0,0.04)]">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-lg bg-amber-50 flex items-center justify-center">
+                  <Users className="w-4 h-4 text-amber-600" />
                 </div>
-              )}
+                <h3 className="text-[15px] font-semibold text-zinc-900">Monthly Leave</h3>
+              </div>
+              <span className="text-[13px] font-medium text-zinc-500">{leaveRecords.length} days</span>
             </div>
+            {leaveRecords.length === 0 ? (
+              <p className="text-[13px] text-zinc-400 text-center py-6">No leave records this month</p>
+            ) : (
+              <div className="space-y-2">
+                {leaveRecords.map(t => (
+                  <div key={t.id} className="flex items-center gap-3 p-3 bg-zinc-50 rounded-xl">
+                    <div className="w-2 h-2 rounded-full bg-amber-400"></div>
+                    <p className="text-[13px] font-medium text-zinc-700">
+                      {new Date(t.date).toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
-          <div className="bg-white rounded-2xl shadow-sm border border-zinc-200/60 overflow-hidden">
-            <div className="p-4 md:p-5 border-b border-zinc-100">
-              <h3 className="text-base font-semibold text-zinc-900 flex items-center gap-2">
-                <Car className="w-4 h-4 text-blue-500" />
-                Last Engine Oil Change
-              </h3>
+          <div className="bg-white p-5 md:p-6 rounded-2xl border border-zinc-200/60 shadow-[0_2px_8px_rgba(0,0,0,0.04)]">
+            <div className="flex items-center gap-2 mb-4">
+              <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center">
+                <Car className="w-4 h-4 text-blue-600" />
+              </div>
+              <h3 className="text-[15px] font-semibold text-zinc-900">Last Oil Change</h3>
             </div>
-            <div className="p-4 md:p-5">
-              {oilChangeRecords.length === 0 ? (
-                <p className="text-sm text-zinc-500 text-center py-4">No oil change records</p>
-              ) : (
-                <div className="space-y-3">
-                  {oilChangeRecords.map(t => (
-                    <div key={t.id} className="flex justify-between items-start p-3 bg-zinc-50 rounded-lg">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2">
-                          {t.rickshaw_number && (
-                            <p className="text-sm font-medium text-zinc-900">Rickshaw {t.rickshaw_number}</p>
-                          )}
-                          {t.driver_name && (
-                            <p className="text-sm text-zinc-600">- {t.driver_name}</p>
-                          )}
-                        </div>
-                        <p className="text-xs text-zinc-500">
-                        {new Date(t.date).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
+            {oilChangeRecords.length === 0 ? (
+              <p className="text-[13px] text-zinc-400 text-center py-6">No oil change records</p>
+            ) : (
+              <div className="space-y-3">
+                {oilChangeRecords.map(t => (
+                  <div key={t.id} className="flex justify-between items-start p-3 bg-zinc-50 rounded-xl">
+                    <div>
+                      {t.rickshaw_number && (
+                        <p className="text-[13px] font-semibold text-zinc-900">Rickshaw {t.rickshaw_number}</p>
+                      )}
+                      <p className="text-[12px] text-zinc-500 mt-0.5">
+                        {new Date(t.date).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
                       </p>
-                        {t.notes && (
-                          <p className="text-xs text-zinc-600 mt-1 italic">"{t.notes}"</p>
-                        )}
-                      </div>
-                      <span className={`text-sm font-medium font-number ${
-                        t.type === 'expense' ? 'text-rose-600' : 'text-emerald-600'
-                      }`}>
-                        {t.type === 'expense' ? '-' : '+'}{currency}{t.amount.toLocaleString()}
-                      </span>
+                      {t.notes && (
+                        <p className="text-[12px] text-zinc-600 mt-1.5 italic">{t.notes}</p>
+                      )}
                     </div>
-                  ))}
-                </div>
-              )}
-            </div>
+                    <span className={`text-[13px] font-semibold font-number ${
+                      t.type === 'expense' ? 'text-rose-600' : 'text-emerald-600'
+                    }`}>
+                      {t.type === 'expense' ? '-' : '+'}{currency}{t.amount.toLocaleString()}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       )}
 
-      <div className="bg-white rounded-2xl shadow-sm border border-zinc-200/60 overflow-hidden">
-        <div className="p-4 md:p-6 border-b border-zinc-100">
+      {/* Recent Transactions */}
+      <div className="bg-white rounded-2xl border border-zinc-200/60 shadow-[0_2px_8px_rgba(0,0,0,0.04)] overflow-hidden">
+        <div className="p-5 md:p-6 border-b border-zinc-100">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-            <h3 className="text-base font-semibold text-zinc-900">Recent Transactions</h3>
-            <div className="flex items-center gap-3">
-              <div className="flex items-center gap-2 px-3 py-1.5 bg-emerald-50 rounded-lg">
-                <div className="w-2 h-2 rounded-full bg-emerald-500"></div>
-                <span className="text-xs font-medium text-emerald-700">
-                  {(Array.isArray(transactions) ? transactions : []).filter(t => t.type === 'income').length} Income
+            <h3 className="text-[17px] font-semibold text-zinc-900">Recent Transactions</h3>
+            <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 rounded-lg">
+                <div className="w-1.5 h-1.5 rounded-full bg-emerald-500"></div>
+                <span className="text-[12px] font-semibold text-emerald-700">
+                  {(Array.isArray(transactions) ? transactions : []).filter(t => t.type === 'income').length}
                 </span>
               </div>
-              <div className="flex items-center gap-2 px-3 py-1.5 bg-rose-50 rounded-lg">
-                <div className="w-2 h-2 rounded-full bg-rose-500"></div>
-                <span className="text-xs font-medium text-rose-700">
-                  {(Array.isArray(transactions) ? transactions : []).filter(t => t.type === 'expense').length} Expense
+              <div className="flex items-center gap-1.5 px-3 py-1.5 bg-rose-50 rounded-lg">
+                <div className="w-1.5 h-1.5 rounded-full bg-rose-500"></div>
+                <span className="text-[12px] font-semibold text-rose-700">
+                  {(Array.isArray(transactions) ? transactions : []).filter(t => t.type === 'expense').length}
                 </span>
               </div>
-              <div className="flex items-center gap-2 px-3 py-1.5 bg-amber-50 rounded-lg">
-                <div className="w-2 h-2 rounded-full bg-amber-500"></div>
-                <span className="text-xs font-medium text-amber-700">
-                  {(Array.isArray(transactions) ? transactions : []).filter(t => t.category === 'rent_pending').length} Pending
+              <div className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-50 rounded-lg">
+                <div className="w-1.5 h-1.5 rounded-full bg-amber-500"></div>
+                <span className="text-[12px] font-semibold text-amber-700">
+                  {(Array.isArray(transactions) ? transactions : []).filter(t => t.category === 'rent_pending').length}
                 </span>
               </div>
             </div>
           </div>
         </div>
         
-        {/* Mobile View: Cards */}
-        <div className="block md:hidden divide-y divide-zinc-100">
+        {/* Mobile View */}
+        <div className="block md:hidden">
           {(Array.isArray(transactions) ? transactions : []).map(t => (
-            <div key={t.id} className="p-4 space-y-3 bg-gradient-to-r from-transparent to-zinc-50/30 hover:from-zinc-50/50 transition-colors">
-              <div className="flex justify-between items-start">
-                <div className="flex-1">
-                  <div className="flex items-center gap-2 mb-2">
-                    <div className={`p-1.5 rounded-lg ${
-                      t.type === 'income' ? 'bg-emerald-100' : 
-                      t.category === 'rent_pending' ? 'bg-amber-100' :
-                      'bg-rose-100'
-                    }`}>
-                      {t.type === 'income' ? (
-                        <TrendingUp className="w-3.5 h-3.5 text-emerald-600" />
-                      ) : t.category === 'rent_pending' ? (
-                        <DollarSign className="w-3.5 h-3.5 text-amber-600" />
-                      ) : (
-                        <TrendingDown className="w-3.5 h-3.5 text-rose-600" />
+            <div key={t.id} className="p-4 border-b border-zinc-100 last:border-0">
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex items-start gap-3 flex-1 min-w-0">
+                  <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${
+                    t.type === 'income' ? 'bg-emerald-50' : 
+                    t.category === 'rent_pending' ? 'bg-amber-50' :
+                    'bg-rose-50'
+                  }`}>
+                    {t.type === 'income' ? (
+                      <TrendingUp className="w-4 h-4 text-emerald-600" />
+                    ) : t.category === 'rent_pending' ? (
+                      <DollarSign className="w-4 h-4 text-amber-600" />
+                    ) : (
+                      <TrendingDown className="w-4 h-4 text-rose-600" />
+                    )}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[14px] font-semibold text-zinc-900 capitalize">{t.category.replace('_', ' ')}</p>
+                    <p className="text-[12px] text-zinc-500 mt-0.5">
+                      {new Date(t.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                    </p>
+                    <div className="flex items-center gap-2 mt-2">
+                      {t.rickshaw_number && (
+                        <span className="text-[11px] text-zinc-500 bg-zinc-100 px-2 py-0.5 rounded-md">{t.rickshaw_number}</span>
+                      )}
+                      {t.driver_name && (
+                        <span className="text-[11px] text-zinc-500 bg-zinc-100 px-2 py-0.5 rounded-md">{t.driver_name}</span>
                       )}
                     </div>
-                    <span className="text-[10px] text-zinc-500 uppercase font-semibold tracking-wider">
-                      {new Date(t.date).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
-                    </span>
+                    {t.notes && (
+                      <p className="text-[12px] text-zinc-500 mt-2 italic truncate">{t.notes}</p>
+                    )}
                   </div>
-                  <p className="text-sm font-semibold text-zinc-900 capitalize">{t.category.replace('_', ' ')}</p>
                 </div>
-                <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-semibold ${
-                  t.type === 'income' ? 'bg-emerald-100 text-emerald-700' : 
-                  t.category === 'rent_pending' ? 'bg-amber-100 text-amber-700' :
-                  'bg-rose-100 text-rose-700'
-                }`}>
-                  {currency}{t.amount.toLocaleString()}
-                </span>
-              </div>
-              
-              <div className="flex justify-between items-center gap-2">
-                <div className="flex items-center gap-3">
-                  {t.rickshaw_number && (
-                    <div className="flex items-center gap-1.5 text-xs text-zinc-600 bg-zinc-100 px-2 py-1 rounded-md">
-                      <Car className="w-3 h-3 text-zinc-500" />
-                      <span className="font-medium">{t.rickshaw_number}</span>
-                    </div>
-                  )}
-                  {t.driver_name && (
-                    <div className="flex items-center gap-1.5 text-xs text-zinc-600 bg-zinc-100 px-2 py-1 rounded-md">
-                      <Users className="w-3 h-3 text-zinc-500" />
-                      <span className="font-medium">{t.driver_name}</span>
-                    </div>
-                  )}
+                <div className="text-right shrink-0">
+                  <p className={`text-[15px] font-bold font-number ${
+                    t.type === 'income' ? 'text-emerald-600' : 
+                    t.type === 'pending' ? 'text-amber-600' :
+                    'text-rose-600'
+                  }`}>
+                    {t.type === 'income' ? '+' : t.type === 'pending' ? '' : '-'}{currency}{t.amount.toLocaleString()}
+                  </p>
+                  <div className="flex items-center gap-3 mt-2 justify-end">
+                    <button 
+                      onClick={() => handleEditTransaction(t)} 
+                      className="text-zinc-400 hover:text-zinc-700"
+                    >
+                      <Edit className="w-4 h-4" />
+                    </button>
+                    <button 
+                      onClick={() => handleDeleteTransaction(t.id)} 
+                      className="text-zinc-400 hover:text-rose-500"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
                 </div>
-                <div className={`text-base font-bold font-number ${
-                  t.type === 'income' ? 'text-emerald-600' : 
-                  t.type === 'pending' ? 'text-amber-600' :
-                  'text-rose-600'
-                }`}>
-                  {t.type === 'income' ? '+' : t.type === 'pending' ? '' : '-'}{currency}{t.amount.toLocaleString()}
-                </div>
-              </div>
-              
-              {t.notes && (
-                <p className="text-xs text-zinc-500 bg-zinc-50 p-2 rounded-lg italic">
-                  "{t.notes}"
-                </p>
-              )}
-              
-              <div className="flex justify-end gap-3 pt-1">
-                <button 
-                  onClick={() => handleEditTransaction(t)} 
-                  className="text-zinc-400 hover:text-emerald-500 flex items-center gap-1 text-[11px] font-medium"
-                >
-                  <Edit className="w-3.5 h-3.5" /> Edit
-                </button>
-                <button 
-                  onClick={() => handleDeleteTransaction(t.id)} 
-                  className="text-zinc-400 hover:text-rose-500 flex items-center gap-1 text-[11px] font-medium"
-                >
-                  <Trash2 className="w-3.5 h-3.5" /> Delete
-                </button>
               </div>
             </div>
           ))}
@@ -544,7 +523,7 @@ export default function Dashboard({ selectedDriverId }: { selectedDriverId?: str
         <div className="hidden md:block overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="bg-gradient-to-r from-zinc-50 to-zinc-100/50 border-b border-zinc-200/60 text-[11px] font-semibold text-zinc-500 uppercase tracking-wider">
+              <tr className="bg-zinc-50 border-b border-zinc-200/60 text-[12px] font-semibold text-zinc-500 uppercase tracking-wider">
                 <th className="p-4 rounded-tl-lg">Date</th>
                 <th className="p-4">Type</th>
                 <th className="p-4">Category</th>
@@ -557,7 +536,7 @@ export default function Dashboard({ selectedDriverId }: { selectedDriverId?: str
             </thead>
             <tbody className="divide-y divide-zinc-100/80">
               {(Array.isArray(transactions) ? transactions : []).map(t => (
-                <tr key={t.id} className="hover:bg-gradient-to-r hover:from-zinc-50/50 hover:to-transparent transition-all group">
+                <tr key={t.id} className="hover:bg-zinc-50/50 transition-colors group">
                   <td className="p-4 text-sm text-zinc-600 font-medium">
                     <div className="flex items-center gap-2">
                       <div className={`w-2 h-2 rounded-full ${
@@ -651,20 +630,21 @@ export default function Dashboard({ selectedDriverId }: { selectedDriverId?: str
         )}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="bg-white p-6 rounded-2xl shadow-sm border border-zinc-200/60">
-          <div className="flex justify-between items-center mb-8">
-            <h3 className="text-base font-semibold text-zinc-900">Income vs Expense</h3>
-            <div className="flex bg-zinc-100/80 p-1 rounded-lg border border-zinc-200/50">
+      {/* Charts */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
+        <div className="bg-white p-5 md:p-6 rounded-2xl border border-zinc-200/60 shadow-[0_2px_8px_rgba(0,0,0,0.04)]">
+          <div className="flex justify-between items-center mb-6">
+            <h3 className="text-[15px] font-semibold text-zinc-900">Income vs Expense</h3>
+            <div className="flex bg-zinc-100 p-1 rounded-xl">
               <button 
                 onClick={() => setChartView('daily')}
-                className={`px-3 py-1.5 text-xs rounded-md transition-all ${chartView === 'daily' ? 'bg-white shadow-sm text-zinc-900 font-medium' : 'text-zinc-500 hover:text-zinc-700'}`}
+                className={`px-3 py-1.5 text-[13px] rounded-lg transition-all ${chartView === 'daily' ? 'bg-white shadow-sm text-zinc-900 font-medium' : 'text-zinc-500 hover:text-zinc-700'}`}
               >
                 Daily
               </button>
               <button 
                 onClick={() => setChartView('monthly')}
-                className={`px-3 py-1.5 text-xs rounded-md transition-all ${chartView === 'monthly' ? 'bg-white shadow-sm text-zinc-900 font-medium' : 'text-zinc-500 hover:text-zinc-700'}`}
+                className={`px-3 py-1.5 text-[13px] rounded-lg transition-all ${chartView === 'monthly' ? 'bg-white shadow-sm text-zinc-900 font-medium' : 'text-zinc-500 hover:text-zinc-700'}`}
               >
                 Monthly
               </button>
