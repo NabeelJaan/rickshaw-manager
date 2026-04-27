@@ -312,47 +312,41 @@ export default function Dashboard({ selectedDriverId }: { selectedDriverId?: str
 
       {/* Driver Performance */}
       {driverPerformance.length > 0 && (
-        <div className="space-y-4">
+        <div className="space-y-3">
           <div className="flex items-center gap-2">
-            <Users className="w-4 h-4 text-zinc-400" />
-            <h3 className="text-[15px] font-semibold text-zinc-700">Driver Performance</h3>
+            <Users className="w-3.5 h-3.5 text-zinc-400" />
+            <h3 className="text-[13px] font-semibold text-zinc-700">Driver Performance</h3>
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 md:gap-4">
+          <div className="space-y-2">
             {driverPerformance
               .filter(({ driver }) => !selectedDriverId || driver.id.toString() === selectedDriverId)
               .map(({ driver, stats }) => (
-                <div key={driver.id} className="bg-white p-5 rounded-2xl border border-zinc-200/60 shadow-[0_2px_8px_rgba(0,0,0,0.04)]">
-                  <div className="flex items-center gap-3 mb-4">
-                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-white font-semibold text-[15px] ${
-                      stats.growth > 10 ? 'bg-emerald-500' : stats.growth > 0 ? 'bg-blue-500' : stats.growth < 0 ? 'bg-rose-500' : 'bg-zinc-400'
-                    }`}>
-                      {driver.name.charAt(0)}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-[14px] font-semibold text-zinc-900 truncate">{driver.name}</p>
-                      <p className="text-[12px] text-zinc-500 truncate">{driver.assigned_rickshaw || 'Unassigned'}</p>
-                    </div>
-                    <div className={`flex items-center gap-0.5 text-[13px] font-semibold ${
-                      stats.growth > 0 ? 'text-emerald-600' : stats.growth < 0 ? 'text-rose-600' : 'text-zinc-500'
-                    }`}>
-                      {stats.growth > 0 ? <ArrowUpRight className="w-3.5 h-3.5" /> : stats.growth < 0 ? <ArrowDownRight className="w-3.5 h-3.5" /> : <Minus className="w-3.5 h-3.5" />}
-                      {Math.abs(stats.growth).toFixed(0)}%
-                    </div>
+                <div key={driver.id} className="bg-white rounded-xl border border-zinc-200/60 shadow-[0_1px_3px_rgba(0,0,0,0.04)] px-3 py-2.5 flex items-center gap-2.5">
+                  <div className={`w-7 h-7 rounded-lg flex items-center justify-center text-white font-semibold text-[11px] shrink-0 ${
+                    stats.growth > 10 ? 'bg-emerald-500' : stats.growth > 0 ? 'bg-blue-500' : stats.growth < 0 ? 'bg-rose-500' : 'bg-zinc-400'
+                  }`}>
+                    {driver.name.charAt(0)}
                   </div>
-                  <div className="space-y-2.5">
-                    <div className="flex justify-between items-center text-[13px]">
-                      <span className="text-zinc-500">Income</span>
-                      <span className="font-semibold text-emerald-600">{currency}{stats.income.toLocaleString()}</span>
+                  <div className="flex-1 min-w-0 flex items-center gap-2">
+                    <div className="min-w-0 flex-1">
+                      <p className="text-[12px] font-semibold text-zinc-900 truncate">{driver.name}</p>
+                      <p className="text-[10px] text-zinc-400 truncate">{driver.assigned_rickshaw || 'Unassigned'}</p>
                     </div>
-                    <div className="flex justify-between items-center text-[13px]">
-                      <span className="text-zinc-500">Expense</span>
-                      <span className="font-semibold text-rose-600">{currency}{stats.expense.toLocaleString()}</span>
-                    </div>
-                    <div className="pt-2.5 border-t border-zinc-100 flex justify-between items-center">
-                      <span className="text-[13px] font-medium text-zinc-700">Profit</span>
-                      <span className={`text-[15px] font-bold ${stats.profit >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
+                    <div className="flex items-center gap-3 text-[11px] shrink-0">
+                      <span className="text-emerald-600 font-semibold font-number">{currency}{stats.income.toLocaleString()}</span>
+                      <span className="text-rose-500 font-number">{currency}{stats.expense.toLocaleString()}</span>
+                      <span className={`font-bold font-number ${stats.profit >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
                         {stats.profit >= 0 ? '+' : ''}{currency}{stats.profit.toLocaleString()}
                       </span>
+                      <span className={`flex items-center gap-0.5 font-semibold ${
+                        stats.growth > 0 ? 'text-emerald-600' : stats.growth < 0 ? 'text-rose-600' : 'text-zinc-400'
+                      }`}>
+                        {stats.growth > 0 ? <ArrowUpRight className="w-3 h-3" /> : stats.growth < 0 ? <ArrowDownRight className="w-3 h-3" /> : <Minus className="w-3 h-3" />}
+                        {Math.abs(stats.growth).toFixed(0)}%
+                      </span>
+                      {driver.pending_balance > 0 && (
+                        <span className="text-amber-600 font-semibold font-number">{currency}{(driver.pending_balance || 0).toLocaleString()}</span>
+                      )}
                     </div>
                   </div>
                 </div>

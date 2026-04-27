@@ -7,7 +7,7 @@ export default function Reports({ selectedDriverId }: { selectedDriverId?: strin
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [selectedReportDriver, setSelectedReportDriver] = useState<string>(selectedDriverId || '');
   const [reportPeriod, setReportPeriod] = useState<string>('1month');
-  const [selectedMonth, setSelectedMonth] = useState<string>('');
+  const [selectedMonth, setSelectedMonth] = useState<string>(String(new Date().getMonth() + 1));
   const [selectedYear, setSelectedYear] = useState<string>(new Date().getFullYear().toString());
   const [loading, setLoading] = useState(false);
   const [currency, setCurrency] = useState('Rs.');
