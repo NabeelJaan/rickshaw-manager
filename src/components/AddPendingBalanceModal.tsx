@@ -1,19 +1,22 @@
 import React, { useState, useEffect } from 'react';
-import { X, DollarSign, User } from 'lucide-react';
-import { Driver } from '../types';
+import { X, DollarSign, User, Eye, EyeOff } from 'lucide-react';
+import { Driver, Transaction } from '../types';
 
 interface AddPendingBalanceModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSuccess: () => void;
+  selectedDriverId?: string;
 }
 
-export default function AddPendingBalanceModal({ isOpen, onClose, onSuccess }: AddPendingBalanceModalProps) {
+export default function AddPendingBalanceModal({ isOpen, onClose, onSuccess, selectedDriverId }: AddPendingBalanceModalProps) {
   const [drivers, setDrivers] = useState<Driver[]>([]);
   const [loading, setLoading] = useState(false);
   const [currency, setCurrency] = useState('Rs.');
+  const [showData, setShowData] = useState(false);
+  const [pendingTransactions, setPendingTransactions] = useState<Transaction[]>([]);
   const [formData, setFormData] = useState({
-    driver_id: '',
+    driver_id: selectedDriverId || '',
     amount: '',
     notes: ''
   });
@@ -22,12 +25,29 @@ export default function AddPendingBalanceModal({ isOpen, onClose, onSuccess }: A
     if (isOpen) {
       fetchDrivers();
       setFormData({
-        driver_id: '',
+        driver_id: selectedDriverId || '',
         amount: '',
         notes: ''
       });
+      if (selectedDriverId) {
+        fetchPendingData(selectedDriverId);
+      }
     }
-  }, [isOpen]);
+  }, [isOpen, selectedDriverId]);
+
+  const fetchPendingData = async (driverId: string) => {
+    const token = localStorage.getItem('auth_token');
+    const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+    try {
+      const res = await fetch(`/api/transactions?driver_id=${driverId}&category=rent_pending&limit=20`, { headers });
+      const data = await res.json();
+      if (Array.isArray(data)) {
+        setPendingTransactions(data);
+      }
+    } catch (error) {
+      console.error('Error fetching pending data:', error);
+    }
+  };
 
   useEffect(() => {
     const savedCurrency = localStorage.getItem('currency');
@@ -99,7 +119,15 @@ export default function AddPendingBalanceModal({ isOpen, onClose, onSuccess }: A
             <select
               required
               value={formData.driver_id}
-              onChange={(e) => setFormData({ ...formData, driver_id: e.target.value })}
+              onChange={(e) => {
+                const driverId = e.target.value;
+                setFormData({ ...formData, driver_id: driverId });
+                if (driverId) {
+                  fetchPendingData(driverId);
+                } else {
+                  setPendingTransactions([]);
+                }
+              }}
               className="w-full px-4 py-2.5 bg-zinc-50 border border-zinc-200 rounded-xl focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 transition-all"
             >
               <option value="">Select a driver</option>
@@ -137,19 +165,51 @@ export default function AddPendingBalanceModal({ isOpen, onClose, onSuccess }: A
             />
           </div>
 
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full bg-amber-500 hover:bg-amber-600 text-white py-3 rounded-xl font-medium transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
-          >
-            {loading ? 'Adding...' : (
-              <>
-                <DollarSign className="w-4 h-4" />
-                Add Pending Balance
-              </>
-            )}
-          </button>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={() => setShowData(!showData)}
+              className="flex-1 bg-zinc-100 hover:bg-zinc-200 text-zinc-700 py-3 rounded-xl font-medium transition-colors flex items-center justify-center gap-2"
+            >
+              {showData ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              {showData ? 'Hide Data' : 'Show Data'}
+            </button>
+            <button
+              type="submit"
+              disabled={loading}
+              className="flex-1 bg-amber-500 hover:bg-amber-600 text-white py-3 rounded-xl font-medium transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+            >
+              {loading ? 'Adding...' : (
+                <>
+                  <DollarSign className="w-4 h-4" />
+                  Add Pending
+                </>
+              )}
+            </button>
+          </div>
         </form>
+
+        {/* Show Data Section */}
+        {showData && (
+          <div className="mt-6 border-t border-zinc-200 pt-4">
+            <h3 className="text-sm font-semibold text-zinc-700 mb-3">Pending Transactions</h3>
+            {pendingTransactions.length === 0 ? (
+              <p className="text-sm text-zinc-500 text-center py-4">No pending transactions found</p>
+            ) : (
+              <div className="max-h-48 overflow-y-auto space-y-2">
+                {pendingTransactions.map((t) => (
+                  <div key={t.id} className="flex justify-between items-center p-3 bg-amber-50 rounded-lg">
+                    <div>
+                      <p className="text-xs font-medium text-zinc-700">{new Date(t.date).toLocaleDateString()}</p>
+                      {t.notes && <p className="text-xs text-zinc-500">{t.notes}</p>}
+                    </div>
+                    <span className="text-sm font-bold text-amber-600">{currency}{t.amount.toLocaleString()}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );

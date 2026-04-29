@@ -130,11 +130,11 @@ export default function Dashboard({ selectedDriverId }: { selectedDriverId?: str
   const totalProfit = (stats.allTimeProfit || 0) - (stats.totalInvestment || 0);
 
   const statCards = [
-    { title: 'Revenue', value: stats.totalIncome || 0, icon: TrendingUp, color: 'text-emerald-500', bg: 'bg-emerald-50', prefix: currency + ' ' },
-    { title: 'Expense', value: stats.totalExpense || 0, icon: TrendingDown, color: 'text-rose-500', bg: 'bg-rose-50', prefix: currency + ' ' },
-    { title: 'Net Profit', value: stats.profit || 0, icon: DollarSign, color: 'text-blue-500', bg: 'bg-blue-50', prefix: currency + ' ' },
-    { title: 'Pending', value: stats.pendingBalance || 0, icon: TrendingDown, color: 'text-amber-500', bg: 'bg-amber-50', prefix: currency + ' ' },
-    { title: 'Investment', value: stats.totalInvestment || 0, icon: Car, color: 'text-purple-500', bg: 'bg-purple-50', prefix: currency + ' ' },
+    { title: 'Revenue', value: stats.totalIncome || 0, icon: TrendingUp, color: 'text-emerald-500', bg: 'bg-emerald-50', prefix: currency + ' ', showOnMobile: true },
+    { title: 'Expense', value: stats.totalExpense || 0, icon: TrendingDown, color: 'text-rose-500', bg: 'bg-rose-50', prefix: currency + ' ', showOnMobile: true },
+    { title: 'Net Profit', value: stats.profit || 0, icon: DollarSign, color: 'text-blue-500', bg: 'bg-blue-50', prefix: currency + ' ', showOnMobile: true },
+    { title: 'Pending', value: stats.pendingBalance || 0, icon: TrendingDown, color: 'text-amber-500', bg: 'bg-amber-50', prefix: currency + ' ', showOnMobile: false },
+    { title: 'Investment', value: stats.totalInvestment || 0, icon: Car, color: 'text-purple-500', bg: 'bg-purple-50', prefix: currency + ' ', showOnMobile: false },
     { 
       title: isFullyRecovered ? 'Net Profit' : 'Remaining', 
       value: isFullyRecovered ? totalProfit : remainingInvestment, 
@@ -142,14 +142,19 @@ export default function Dashboard({ selectedDriverId }: { selectedDriverId?: str
       color: isFullyRecovered ? 'text-emerald-500' : 'text-orange-500', 
       bg: isFullyRecovered ? 'bg-emerald-50' : 'bg-orange-50', 
       prefix: isFullyRecovered ? '+' + currency + ' ' : currency + ' ',
-      subtitle: isFullyRecovered ? 'Investment recovered!' : undefined
+      subtitle: isFullyRecovered ? 'Investment recovered!' : undefined,
+      showOnMobile: false
     },
-    { title: 'Rickshaws', value: `${stats.activeRickshaws || 0}/${stats.totalRickshaws || 0}`, icon: Car, color: 'text-zinc-500', bg: 'bg-zinc-50', prefix: '', hideOnDriver: true },
+    { title: 'Rickshaws', value: `${stats.activeRickshaws || 0}/${stats.totalRickshaws || 0}`, icon: Car, color: 'text-zinc-500', bg: 'bg-zinc-50', prefix: '', hideOnDriver: true, showOnMobile: false },
   ];
 
+  // Filter cards - on mobile show only first 3, on desktop show all (minus hideOnDriver when driver selected)
   const filteredStatCards = selectedDriverId 
     ? statCards.filter(card => !card.hideOnDriver) 
     : statCards;
+  
+  // For mobile view, only show cards with showOnMobile: true (first 3)
+  const mobileStatCards = statCards.filter(card => card.showOnMobile).slice(0, 3);
 
   // Extract leave records from transactions
   const leaveRecords = (Array.isArray(transactions) ? transactions : []).filter(t => 
@@ -162,7 +167,7 @@ export default function Dashboard({ selectedDriverId }: { selectedDriverId?: str
   ).slice(0, 1);
 
   return (
-    <div className="max-w-7xl mx-auto px-3 md:px-10 py-4 md:py-16 space-y-5 md:space-y-20">
+    <div className="max-w-7xl mx-auto px-3 md:px-10 py-3 md:py-16 space-y-3 md:space-y-20">
       {/* Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:justify-between sm:items-end">
         <div>
@@ -239,8 +244,23 @@ export default function Dashboard({ selectedDriverId }: { selectedDriverId?: str
         </div>
       </div>
       
-      {/* Stats Grid */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
+      {/* Stats Grid - Mobile: 3 cards, Desktop: all cards */}
+      <div className="grid grid-cols-3 md:grid-cols-2 lg:grid-cols-4 gap-2.5 md:gap-4">
+        {/* Mobile view - only first 3 cards */}
+        {mobileStatCards.map((card, i) => (
+          <div key={`mobile-${i}`} className="md:hidden bg-white p-2.5 rounded-xl border border-zinc-200/60 shadow-[0_2px_8px_rgba(0,0,0,0.04)] flex flex-col gap-1">
+            <div className={`w-6 h-6 rounded-lg ${card.bg} flex items-center justify-center`}>
+              <card.icon className={`w-3 h-3 ${card.color}`} strokeWidth={2} />
+            </div>
+            <div>
+              <p className="text-[9px] text-zinc-500 font-medium">{card.title}</p>
+              <h3 className={`text-[13px] font-semibold tracking-tight font-number mt-0.5 ${card.color}`}>
+                {card.prefix}{typeof card.value === 'string' ? card.value : card.value.toLocaleString()}
+              </h3>
+            </div>
+          </div>
+        ))}
+        {/* Desktop view - all cards */}
         {filteredStatCards.map((card, i) => (
           <div key={i} className="bg-white p-3 md:p-6 rounded-xl md:rounded-2xl border border-zinc-200/60 shadow-[0_2px_8px_rgba(0,0,0,0.04)] flex flex-col gap-1.5 md:gap-3">
             <div className={`w-7 h-7 md:w-10 md:h-10 rounded-lg md:rounded-xl ${card.bg} flex items-center justify-center`}>
@@ -260,7 +280,7 @@ export default function Dashboard({ selectedDriverId }: { selectedDriverId?: str
       </div>
 
       {selectedDriverId && (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5 md:gap-4">
           <div className="bg-white p-3 md:p-6 rounded-xl md:rounded-2xl border border-zinc-200/60 shadow-[0_2px_8px_rgba(0,0,0,0.04)]">
             <div className="flex items-center justify-between mb-2 md:mb-4">
               <div className="flex items-center gap-1.5 md:gap-2">
@@ -391,11 +411,11 @@ export default function Dashboard({ selectedDriverId }: { selectedDriverId?: str
                 </div>
                 <div className="text-right shrink-0">
                   <p className={`text-[13px] font-bold font-number ${
+                    t.category === 'rent_pending' ? 'text-amber-600' :
                     t.type === 'income' ? 'text-emerald-600' : 
-                    t.type === 'pending' ? 'text-amber-600' :
                     'text-rose-600'
                   }`}>
-                    {t.type === 'income' ? '+' : t.type === 'pending' ? '' : '-'}{currency}{t.amount.toLocaleString()}
+                    {t.category === 'rent_pending' ? '+' : t.type === 'income' ? '+' : '-'}{currency}{t.amount.toLocaleString()}
                   </p>
                   <div className="flex items-center gap-2 mt-1.5 justify-end">
                     <button 
@@ -685,21 +705,6 @@ export default function Dashboard({ selectedDriverId }: { selectedDriverId?: str
       <LogRentModal 
         isOpen={isLogRentModalOpen} 
         onClose={() => setIsLogRentModalOpen(false)} 
-        onSubmit={fetchData}
-        onSuccess={fetchData}
-        selectedDriverId={selectedDriverId}
-      />
-      
-      <AddPendingBalanceModal
-        isOpen={isPendingBalanceModalOpen}
-        onClose={() => setIsPendingBalanceModalOpen(false)}
-        onSuccess={fetchData}
-      />
-      
-      <EditTransactionModal 
-        isOpen={!!editTransaction}
-        onClose={() => setEditTransaction(null)}
-        onSuccess={fetchData}
         transaction={editTransaction}
       />
       
@@ -709,6 +714,13 @@ export default function Dashboard({ selectedDriverId }: { selectedDriverId?: str
         onSuccess={fetchData}
         driverId={selectedDriverId || ''}
         driverName={selectedDriverName}
+      />
+      
+      <AddPendingBalanceModal 
+        isOpen={isPendingBalanceModalOpen} 
+        onClose={() => setIsPendingBalanceModalOpen(false)} 
+        onSuccess={fetchData}
+        selectedDriverId={selectedDriverId}
       />
     </div>
   );
