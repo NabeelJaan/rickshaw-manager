@@ -11,7 +11,7 @@ interface Category {
 interface LogRentModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSubmit: (data: any) => void;
+  onSubmit?: (data: any) => void;
   onSuccess: () => void;
   selectedDriverId?: string;
 }
