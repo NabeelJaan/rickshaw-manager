@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import ReactApexChart from 'react-apexcharts';
-import { TrendingUp, TrendingDown, DollarSign, Car, Plus, Edit, ChevronDown, Trash2, Users, ArrowUpRight, ArrowDownRight, Minus } from 'lucide-react';
+import { TrendingUp, TrendingDown, DollarSign, Car, Plus, Edit, ChevronDown, Trash2, Users } from 'lucide-react';
 import { DashboardStats, Transaction, Driver } from '../types';
 import LogRentModal from './LogRentModal';
 import ExpenseModal from './ExpenseModal';
@@ -20,7 +20,6 @@ export default function Dashboard({ selectedDriverId }: { selectedDriverId?: str
   const [currency, setCurrency] = useState('Rs.');
   const [showTransactionDropdown, setShowTransactionDropdown] = useState(false);
   const [selectedMonth, setSelectedMonth] = useState<string>('all');
-  const [driverPerformance, setDriverPerformance] = useState<{driver: Driver, stats: {income: number, expense: number, profit: number, lastMonthIncome: number, lastMonthExpense: number, growth: number}}[]>([]);
 
   // Load currency from settings
   useEffect(() => {
@@ -59,53 +58,6 @@ export default function Dashboard({ selectedDriverId }: { selectedDriverId?: str
         headers
       });
       fetchData();
-    }
-  };
-
-  const fetchDriverPerformance = async () => {
-    const token = localStorage.getItem('auth_token');
-    const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
-    
-    try {
-      const driversRes = await fetch('/api/drivers', { headers });
-      const drivers: Driver[] = await driversRes.json();
-      
-      const performanceData = await Promise.all(
-        drivers.map(async (driver) => {
-          // Current month stats
-          const currentMonth = new Date().toISOString().slice(0, 7);
-          const lastMonth = new Date(new Date().setMonth(new Date().getMonth() - 1)).toISOString().slice(0, 7);
-          
-          const currentRes = await fetch(`/api/transactions?driver_id=${driver.id}&month=${currentMonth}`, { headers });
-          const currentTx: Transaction[] = await currentRes.json();
-          
-          const lastRes = await fetch(`/api/transactions?driver_id=${driver.id}&month=${lastMonth}`, { headers });
-          const lastTx: Transaction[] = await lastRes.json();
-          
-          const currentIncome = currentTx.filter(t => t.type === 'income' && t.category !== 'rent_pending').reduce((sum, t) => sum + t.amount, 0);
-          const currentExpense = currentTx.filter(t => t.type === 'expense').reduce((sum, t) => sum + t.amount, 0);
-          const lastIncome = lastTx.filter(t => t.type === 'income' && t.category !== 'rent_pending').reduce((sum, t) => sum + t.amount, 0);
-          const lastExpense = lastTx.filter(t => t.type === 'expense').reduce((sum, t) => sum + t.amount, 0);
-          
-          const growth = lastIncome > 0 ? ((currentIncome - lastIncome) / lastIncome) * 100 : currentIncome > 0 ? 100 : 0;
-          
-          return {
-            driver,
-            stats: {
-              income: currentIncome,
-              expense: currentExpense,
-              profit: currentIncome - currentExpense,
-              lastMonthIncome: lastIncome,
-              lastMonthExpense: lastExpense,
-              growth
-            }
-          };
-        })
-      );
-      
-      setDriverPerformance(performanceData);
-    } catch (error) {
-      console.error('Error fetching driver performance:', error);
     }
   };
 
@@ -150,9 +102,6 @@ export default function Dashboard({ selectedDriverId }: { selectedDriverId?: str
 
   useEffect(() => {
     fetchData();
-    if (!selectedDriverId) {
-      fetchDriverPerformance();
-    }
   }, [selectedDriverId]);
 
   useEffect(() => {
@@ -309,51 +258,6 @@ export default function Dashboard({ selectedDriverId }: { selectedDriverId?: str
           </div>
         ))}
       </div>
-
-      {/* Driver Performance */}
-      {driverPerformance.length > 0 && (
-        <div className="space-y-3">
-          <div className="flex items-center gap-2">
-            <Users className="w-3.5 h-3.5 text-zinc-400" />
-            <h3 className="text-[13px] font-semibold text-zinc-700">Driver Performance</h3>
-          </div>
-          <div className="space-y-2">
-            {driverPerformance
-              .filter(({ driver }) => !selectedDriverId || driver.id.toString() === selectedDriverId)
-              .map(({ driver, stats }) => (
-                <div key={driver.id} className="bg-white rounded-xl border border-zinc-200/60 shadow-[0_1px_3px_rgba(0,0,0,0.04)] px-3 py-2.5 flex items-center gap-2.5">
-                  <div className={`w-7 h-7 rounded-lg flex items-center justify-center text-white font-semibold text-[11px] shrink-0 ${
-                    stats.growth > 10 ? 'bg-emerald-500' : stats.growth > 0 ? 'bg-blue-500' : stats.growth < 0 ? 'bg-rose-500' : 'bg-zinc-400'
-                  }`}>
-                    {driver.name.charAt(0)}
-                  </div>
-                  <div className="flex-1 min-w-0 flex items-center gap-2">
-                    <div className="min-w-0 flex-1">
-                      <p className="text-[12px] font-semibold text-zinc-900 truncate">{driver.name}</p>
-                      <p className="text-[10px] text-zinc-400 truncate">{driver.assigned_rickshaw || 'Unassigned'}</p>
-                    </div>
-                    <div className="flex items-center gap-3 text-[11px] shrink-0">
-                      <span className="text-emerald-600 font-semibold font-number">{currency}{stats.income.toLocaleString()}</span>
-                      <span className="text-rose-500 font-number">{currency}{stats.expense.toLocaleString()}</span>
-                      <span className={`font-bold font-number ${stats.profit >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
-                        {stats.profit >= 0 ? '+' : ''}{currency}{stats.profit.toLocaleString()}
-                      </span>
-                      <span className={`flex items-center gap-0.5 font-semibold ${
-                        stats.growth > 0 ? 'text-emerald-600' : stats.growth < 0 ? 'text-rose-600' : 'text-zinc-400'
-                      }`}>
-                        {stats.growth > 0 ? <ArrowUpRight className="w-3 h-3" /> : stats.growth < 0 ? <ArrowDownRight className="w-3 h-3" /> : <Minus className="w-3 h-3" />}
-                        {Math.abs(stats.growth).toFixed(0)}%
-                      </span>
-                      {driver.pending_balance > 0 && (
-                        <span className="text-amber-600 font-semibold font-number">{currency}{(driver.pending_balance || 0).toLocaleString()}</span>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              ))}
-          </div>
-        </div>
-      )}
 
       {selectedDriverId && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
