@@ -19,7 +19,10 @@ export default function Dashboard({ selectedDriverId }: { selectedDriverId?: str
   const [selectedDriverName, setSelectedDriverName] = useState('');
   const [currency, setCurrency] = useState('Rs.');
   const [showTransactionDropdown, setShowTransactionDropdown] = useState(false);
-  const [selectedMonth, setSelectedMonth] = useState<string>('all');
+  const [selectedMonth, setSelectedMonth] = useState<string>(() => {
+    const now = new Date();
+    return now.toISOString().slice(0, 7); // Current month in YYYY-MM format
+  });
 
   // Load currency from settings
   useEffect(() => {
@@ -194,6 +197,7 @@ export default function Dashboard({ selectedDriverId }: { selectedDriverId?: str
             <option value="all">All Time</option>
             {Array.from({ length: 12 }, (_, i) => {
               const date = new Date();
+              date.setDate(1); // Set to 1st to avoid month overflow issues
               date.setMonth(date.getMonth() - i);
               const monthStr = date.toISOString().slice(0, 7);
               const monthName = date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
@@ -252,7 +256,7 @@ export default function Dashboard({ selectedDriverId }: { selectedDriverId?: str
       </div>
       
       {/* Stats Grid */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
+      <div className="grid grid-cols-3 lg:grid-cols-4 gap-3 md:gap-4">
         {filteredStatCards.map((card, i) => (
           <div 
             key={i} 
