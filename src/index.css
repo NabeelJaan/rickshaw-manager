@@ -6,13 +6,44 @@
   --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
 }
 
+* {
+  -webkit-tap-highlight-color: transparent;
+}
+
+html, body, #root {
+  height: 100%;
+  overflow-x: hidden;
+}
+
 body {
   font-family: "Agency FB", "Agency", ui-sans-serif, system-ui, sans-serif;
   background-color: #f8fafc;
   color: #0f172a;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-y pan-x;
 }
 
 .font-number {
   font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
   letter-spacing: -0.02em;
+}
+
+/* Mobile scrolling fixes */
+@supports (-webkit-touch-callout: none) {
+  /* iOS specific fixes */
+  body {
+    position: fixed;
+    width: 100%;
+    height: 100%;
+  }
+
+  #root {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
 }

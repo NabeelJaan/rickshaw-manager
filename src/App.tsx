@@ -93,6 +93,7 @@ function AppContent() {
       <div className={`
         fixed md:static inset-y-0 left-0 z-50 w-64 bg-gradient-to-b from-zinc-950 to-zinc-900 text-zinc-300 transform transition-all duration-300 ease-in-out border-r border-zinc-800/50 flex flex-col shadow-2xl
         ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
+        ${!isMobileMenuOpen ? 'invisible md:visible' : ''}
       `}>
         <div className="p-6 hidden md:block border-b border-zinc-800/50">
           <h1 className="text-2xl font-bold text-white flex items-center gap-3 tracking-tight">
@@ -157,7 +158,7 @@ function AppContent() {
       </div>
 
       {/* Main Content */}
-      <main className="flex-1 p-4 md:p-8 lg:p-10 overflow-y-auto">
+      <main className="flex-1 p-4 md:p-8 lg:p-10 overflow-y-auto touch-pan-y min-h-screen">
         <div className="max-w-7xl mx-auto">
           {/* Driver Tabs */}
           <div className="mb-4 md:mb-6">
