@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import ReactApexChart from 'react-apexcharts';
-import { TrendingUp, TrendingDown, DollarSign, Car, Plus, Edit, ChevronDown, Trash2, Users, Sparkles, Crown } from 'lucide-react';
+import { TrendingUp, TrendingDown, DollarSign, Car, Plus, Edit, ChevronDown, Trash2, Users } from 'lucide-react';
 import { DashboardStats, Transaction, Driver } from '../types';
 import LogRentModal from './LogRentModal';
 import ExpenseModal from './ExpenseModal';
@@ -173,48 +173,36 @@ export default function Dashboard({ selectedDriverId }: { selectedDriverId?: str
 
   return (
     <div className="space-y-3 md:space-y-20">
-      {/* Header - Glassmorphism */}
-      <div className="relative">
-        <div className="absolute -inset-4 bg-gradient-to-r from-emerald-500/10 via-blue-500/10 to-purple-500/10 rounded-3xl blur-2xl"></div>
-        <div className="relative flex flex-col gap-4 sm:flex-row sm:justify-between sm:items-end bg-white/80 backdrop-blur-xl p-4 md:p-6 rounded-2xl md:rounded-3xl border border-white/50 shadow-lg shadow-zinc-200/50">
-          <div className="flex items-center gap-3">
-            <div className="w-12 h-12 md:w-14 md:h-14 rounded-xl md:rounded-2xl bg-gradient-to-br from-emerald-400 to-teal-500 flex items-center justify-center shadow-lg shadow-emerald-500/30">
-              <Crown className="w-6 h-6 md:w-7 md:h-7 text-white" />
-            </div>
-            <div>
-              <h1 className="text-[22px] md:text-[36px] font-bold text-zinc-900 tracking-tight leading-tight bg-gradient-to-r from-zinc-900 to-zinc-600 bg-clip-text">
-                {selectedDriverId ? (
+      {/* Header */}
+      <div className="flex flex-col gap-4 sm:flex-row sm:justify-between sm:items-end">
+        <div>
+          <h1 className="text-[22px] md:text-[40px] font-semibold text-zinc-900 tracking-tight leading-tight">
+            {selectedDriverId ? (
+              <>
+                {selectedMonth && selectedMonth !== 'all' ? (
                   <>
-                    {selectedMonth && selectedMonth !== 'all' ? (
-                      <>
-                        {new Date(selectedMonth + '-01').toLocaleDateString('en-US', { month: 'short', year: 'numeric' })} - {selectedDriverName}
-                      </>
-                    ) : (
-                      selectedDriverName
-                    )}
+                    {new Date(selectedMonth + '-01').toLocaleDateString('en-US', { month: 'short', year: 'numeric' })} - {selectedDriverName}
                   </>
                 ) : (
-                  <span className="flex items-center gap-2">
-                    Dashboard <Sparkles className="w-5 h-5 md:w-6 md:h-6 text-amber-400" />
-                  </span>
+                  selectedDriverName
                 )}
-              </h1>
-              <p className="text-[12px] md:text-[14px] text-zinc-500 mt-0.5 font-medium">
-                {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
-              </p>
-            </div>
-          </div>
+              </>
+            ) : 'Overview'}
+          </h1>
+          <p className="text-[12px] md:text-[14px] text-zinc-500 mt-0.5">
+            {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
+          </p>
         </div>
-        <div className="flex items-center gap-2 md:gap-3">
+        <div className="flex items-center gap-2">
           <select 
             value={selectedMonth} 
             onChange={(e) => setSelectedMonth(e.target.value)}
-            className="h-9 px-3 md:h-11 md:px-4 bg-white/80 backdrop-blur border border-zinc-200 rounded-lg md:rounded-xl text-[12px] md:text-[14px] text-zinc-700 font-semibold hover:border-zinc-300 hover:bg-white transition-all cursor-pointer focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none shadow-sm"
+            className="h-9 px-3 md:h-11 md:px-4 bg-zinc-100 border-0 rounded-lg md:rounded-xl text-[12px] md:text-[14px] text-zinc-700 font-medium hover:bg-zinc-200 transition-colors cursor-pointer focus:ring-2 focus:ring-zinc-300 outline-none"
           >
             <option value="all">All Time</option>
             {Array.from({ length: 12 }, (_, i) => {
               const date = new Date();
-              date.setDate(1);
+              date.setDate(1); // Set to 1st to avoid month overflow issues
               date.setMonth(date.getMonth() - i);
               const monthStr = date.toISOString().slice(0, 7);
               const monthName = date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
@@ -224,7 +212,7 @@ export default function Dashboard({ selectedDriverId }: { selectedDriverId?: str
           {selectedDriverId && (
             <button 
               onClick={() => setIsExpenseModalOpen(true)}
-              className="h-9 px-3 md:h-11 md:px-4 bg-gradient-to-r from-rose-500 to-pink-500 hover:from-rose-600 hover:to-pink-600 text-white rounded-lg md:rounded-xl text-[12px] md:text-[14px] font-semibold transition-all flex items-center gap-1.5 md:gap-2 shadow-lg shadow-rose-500/25 hover:shadow-rose-500/40 hover:-translate-y-0.5"
+              className="h-9 px-3 md:h-11 md:px-4 bg-zinc-900 hover:bg-zinc-800 text-white rounded-lg md:rounded-xl text-[12px] md:text-[14px] font-medium transition-colors flex items-center gap-1.5 md:gap-2"
             >
               <TrendingDown className="w-3.5 h-3.5 md:w-4 md:h-4" /> <span className="hidden sm:inline">Expense</span>
             </button>
@@ -232,39 +220,39 @@ export default function Dashboard({ selectedDriverId }: { selectedDriverId?: str
           <div className="relative">
             <button 
               onClick={() => setShowTransactionDropdown(!showTransactionDropdown)}
-              className="h-9 px-3 md:h-11 md:px-4 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white rounded-lg md:rounded-xl text-[12px] md:text-[14px] font-semibold transition-all flex items-center gap-1.5 md:gap-2 shadow-lg shadow-emerald-500/25 hover:shadow-emerald-500/40 hover:-translate-y-0.5"
+              className="h-9 px-3 md:h-11 md:px-4 bg-zinc-900 hover:bg-zinc-800 text-white rounded-lg md:rounded-xl text-[12px] md:text-[14px] font-medium transition-colors flex items-center gap-1.5 md:gap-2"
             >
               <Plus className="w-3.5 h-3.5 md:w-4 md:h-4" /> <span className="hidden sm:inline">Add</span>
               <ChevronDown className={`w-3.5 h-3.5 md:w-4 md:h-4 transition-transform ${showTransactionDropdown ? 'rotate-180' : ''}`} />
             </button>
             {showTransactionDropdown && (
-              <div className="absolute top-full right-0 mt-2 w-56 bg-white/95 backdrop-blur-xl rounded-2xl shadow-2xl border border-zinc-100/80 p-2 z-50 animate-in fade-in slide-in-from-top-2 duration-200">
+              <div className="absolute top-full right-0 mt-2 w-52 bg-white rounded-2xl shadow-xl border border-zinc-100 p-2 z-50">
                 <button 
                   onClick={() => { setIsLogRentModalOpen(true); setShowTransactionDropdown(false); }}
-                  className="w-full text-left px-4 py-3.5 rounded-xl text-[14px] font-medium text-zinc-700 hover:bg-gradient-to-r hover:from-emerald-50 hover:to-teal-50 hover:text-emerald-700 transition-all flex items-center gap-3 group"
+                  className="w-full text-left px-4 py-3 rounded-xl text-[14px] text-zinc-700 hover:bg-zinc-50 transition-colors flex items-center gap-3"
                 >
-                  <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-emerald-400 to-teal-500 flex items-center justify-center shadow-md group-hover:shadow-lg group-hover:scale-110 transition-all">
-                    <TrendingUp className="w-4 h-4 text-white" />
+                  <div className="w-8 h-8 rounded-full bg-emerald-50 flex items-center justify-center">
+                    <TrendingUp className="w-4 h-4 text-emerald-600" />
                   </div>
-                  <span className="group-hover:translate-x-0.5 transition-transform">Add Income</span>
+                  Add Income
                 </button>
                 <button 
                   onClick={() => { setIsExpenseModalOpen(true); setShowTransactionDropdown(false); }}
-                  className="w-full text-left px-4 py-3.5 rounded-xl text-[14px] font-medium text-zinc-700 hover:bg-gradient-to-r hover:from-rose-50 hover:to-pink-50 hover:text-rose-700 transition-all flex items-center gap-3 group"
+                  className="w-full text-left px-4 py-3 rounded-xl text-[14px] text-zinc-700 hover:bg-zinc-50 transition-colors flex items-center gap-3"
                 >
-                  <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-rose-400 to-pink-500 flex items-center justify-center shadow-md group-hover:shadow-lg group-hover:scale-110 transition-all">
-                    <TrendingDown className="w-4 h-4 text-white" />
+                  <div className="w-8 h-8 rounded-full bg-rose-50 flex items-center justify-center">
+                    <TrendingDown className="w-4 h-4 text-rose-600" />
                   </div>
-                  <span className="group-hover:translate-x-0.5 transition-transform">Add Expense</span>
+                  Add Expense
                 </button>
                 <button 
                   onClick={() => { setIsPendingBalanceModalOpen(true); setShowTransactionDropdown(false); }}
-                  className="w-full text-left px-4 py-3.5 rounded-xl text-[14px] font-medium text-zinc-700 hover:bg-gradient-to-r hover:from-amber-50 hover:to-yellow-50 hover:text-amber-700 transition-all flex items-center gap-3 group"
+                  className="w-full text-left px-4 py-3 rounded-xl text-[14px] text-zinc-700 hover:bg-zinc-50 transition-colors flex items-center gap-3"
                 >
-                  <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-amber-400 to-yellow-500 flex items-center justify-center shadow-md group-hover:shadow-lg group-hover:scale-110 transition-all">
-                    <DollarSign className="w-4 h-4 text-white" />
+                  <div className="w-8 h-8 rounded-full bg-amber-50 flex items-center justify-center">
+                    <DollarSign className="w-4 h-4 text-amber-600" />
                   </div>
-                  <span className="group-hover:translate-x-0.5 transition-transform">Add Pending</span>
+                  Add Pending
                 </button>
               </div>
             )}
@@ -272,29 +260,24 @@ export default function Dashboard({ selectedDriverId }: { selectedDriverId?: str
         </div>
       </div>
       
-      {/* Stats Grid - Modern Cards */}
-      <div className="grid grid-cols-3 lg:grid-cols-4 gap-2 md:gap-5">
+      {/* Stats Grid */}
+      <div className="grid grid-cols-3 lg:grid-cols-4 gap-2 md:gap-4">
         {filteredStatCards.map((card, i) => (
           <div 
             key={i} 
-            className="group relative bg-white p-2.5 md:p-5 rounded-xl md:rounded-2xl border border-zinc-100 shadow-[0_4px_20px_rgba(0,0,0,0.03)] hover:shadow-[0_8px_30px_rgba(0,0,0,0.08)] hover:-translate-y-1 transition-all duration-300 flex flex-col gap-1 md:gap-3 overflow-hidden"
+            className="bg-white p-2.5 md:p-6 rounded-xl md:rounded-2xl border border-zinc-200/60 shadow-[0_2px_8px_rgba(0,0,0,0.04)] flex flex-col gap-1 md:gap-3"
           >
-            <div className="absolute inset-0 bg-gradient-to-br from-white via-white to-zinc-50/50 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-            <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-br from-transparent via-transparent to-zinc-100/50 rounded-bl-full"></div>
-            <div className={`relative w-7 h-7 md:w-11 md:h-11 rounded-lg md:rounded-xl ${card.bg} flex items-center justify-center shadow-sm group-hover:scale-110 transition-transform duration-300`}>
-              <card.icon className={`w-3.5 h-3.5 md:w-5 md:h-5 ${card.color}`} strokeWidth={2} />
+            <div className={`w-6 h-6 md:w-10 md:h-10 rounded-lg md:rounded-xl ${card.bg} flex items-center justify-center`}>
+              <card.icon className={`w-3 h-3 md:w-5 md:h-5 ${card.color}`} strokeWidth={2} />
             </div>
-            <div className="relative">
-              <p className="text-[9px] md:text-[12px] text-zinc-400 font-semibold uppercase tracking-wider">{card.title}</p>
-              <h3 className={`text-[14px] md:text-[28px] font-bold tracking-tight font-number mt-0.5 md:mt-1 ${card.color} drop-shadow-sm`}>
+            <div>
+              <p className="text-[9px] md:text-[13px] text-zinc-500 font-medium">{card.title}</p>
+              <h3 className={`text-[13px] md:text-[26px] font-semibold tracking-tight font-number mt-0.5 md:mt-1 ${card.color}`}>
                 {card.prefix}{typeof card.value === 'string' ? card.value : card.value.toLocaleString()}
               </h3>
             </div>
             {card.subtitle && (
-              <p className="relative text-[10px] md:text-[12px] text-emerald-600 font-semibold flex items-center gap-1">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-                {card.subtitle}
-              </p>
+              <p className="text-[10px] md:text-[12px] text-emerald-600 font-medium">{card.subtitle}</p>
             )}
           </div>
         ))}

@@ -280,38 +280,36 @@ export default function Reports({ selectedDriverId }: { selectedDriverId?: strin
   };
 
   return (
-    <div className="space-y-6 md:space-y-8">
-      {/* Header - Clean Apple Style */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div>
-          <h1 className="text-[28px] md:text-[34px] font-semibold text-zinc-900 tracking-tight">Reports</h1>
-          <p className="text-[13px] md:text-[15px] text-zinc-500 mt-1">Analyze performance and export data</p>
-        </div>
-        <div className="flex items-center gap-2">
-          <button 
-            onClick={() => exportReport('csv')}
-            className="px-4 py-2 bg-white hover:bg-zinc-50 text-zinc-900 rounded-full flex items-center gap-2 transition-all text-[13px] font-medium border border-zinc-200 shadow-sm hover:shadow-md"
-          >
-            <Download className="w-4 h-4" /> Excel
-          </button>
-          <button 
-            onClick={() => exportReport('json')}
-            className="px-4 py-2 bg-zinc-900 hover:bg-zinc-800 text-white rounded-full flex items-center gap-2 transition-all text-[13px] font-medium shadow-sm hover:shadow-md"
-          >
-            <Download className="w-4 h-4" /> JSON
-          </button>
+    <div className="space-y-4 md:space-y-6">
+      <div className="bg-gradient-to-br from-zinc-900 via-zinc-800 to-zinc-900 p-4 md:p-5 rounded-2xl shadow-sm">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 md:gap-3">
+          <h2 className="text-lg md:text-xl font-semibold text-white tracking-tight">Reports</h2>
+          <div className="flex items-center gap-1.5 md:gap-2 w-full sm:w-auto">
+            <button 
+              onClick={() => exportReport('csv')}
+              className="flex-1 sm:flex-none bg-white/10 hover:bg-white/20 backdrop-blur text-white px-2.5 md:px-3.5 py-1.5 md:py-2 rounded-lg flex items-center justify-center gap-1 md:gap-1.5 transition-all text-[11px] md:text-xs font-medium border border-white/10"
+            >
+              <Download className="w-3 h-3 md:w-3.5 md:h-3.5" /> Excel/CSV
+            </button>
+            <button 
+              onClick={() => exportReport('json')}
+              className="flex-1 sm:flex-none bg-white/10 hover:bg-white/20 backdrop-blur text-white px-2.5 md:px-3.5 py-1.5 md:py-2 rounded-lg flex items-center justify-center gap-1 md:gap-1.5 transition-all text-[11px] md:text-xs font-medium border border-white/10"
+            >
+              <Download className="w-3 h-3 md:w-3.5 md:h-3.5" /> JSON
+            </button>
+          </div>
         </div>
       </div>
 
-      {/* Report Filters - Apple Style */}
-      <div className="bg-white rounded-3xl shadow-[0_2px_20px_rgba(0,0,0,0.06)] border border-zinc-100 p-5 md:p-6">
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 md:gap-5">
-          <div className="space-y-1.5">
-            <label className="text-[12px] font-medium text-zinc-500 flex items-center gap-1.5">
-              <Users className="w-3.5 h-3.5" /> Driver
+      {/* Report Filters */}
+      <div className="bg-white/80 backdrop-blur-sm p-3 md:p-5 rounded-2xl shadow-sm border border-zinc-200/60">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2.5 md:gap-3">
+          <div>
+            <label className="block text-[11px] md:text-xs font-medium text-zinc-500 mb-1 md:mb-1.5 flex items-center gap-1">
+              <Users className="w-3 h-3 md:w-3.5 md:h-3.5" /> Driver
             </label>
             <select 
-              className="w-full px-3 py-2.5 bg-zinc-50 border border-zinc-200 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all text-[13px] font-medium text-zinc-900 outline-none"
+              className="w-full px-2.5 md:px-3 py-1.5 md:py-2 bg-zinc-50/80 border border-zinc-200/80 rounded-lg focus:ring-2 focus:ring-zinc-900/10 focus:border-zinc-400 transition-all text-[11px] md:text-xs"
               value={selectedReportDriver}
               onChange={(e) => setSelectedReportDriver(e.target.value)}
             >
@@ -321,12 +319,12 @@ export default function Reports({ selectedDriverId }: { selectedDriverId?: strin
               ))}
             </select>
           </div>
-          <div className="space-y-1.5">
-            <label className="text-[12px] font-medium text-zinc-500 flex items-center gap-1.5">
-              <Calendar className="w-3.5 h-3.5" /> Filter Type
+          <div>
+            <label className="block text-[11px] md:text-xs font-medium text-zinc-500 mb-1 md:mb-1.5 flex items-center gap-1">
+              <Calendar className="w-3 h-3 md:w-3.5 md:h-3.5" /> Filter Type
             </label>
             <select
-              className="w-full px-3 py-2.5 bg-zinc-50 border border-zinc-200 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all text-[13px] font-medium text-zinc-900 outline-none"
+              className="w-full px-2.5 md:px-3 py-1.5 md:py-2 bg-zinc-50/80 border border-zinc-200/80 rounded-lg focus:ring-2 focus:ring-zinc-900/10 focus:border-zinc-400 transition-all text-[11px] md:text-xs"
               value={selectedMonth ? 'month' : 'period'}
               onChange={(e) => {
                 if (e.target.value === 'month') {
@@ -341,12 +339,12 @@ export default function Reports({ selectedDriverId }: { selectedDriverId?: strin
             </select>
           </div>
           {!selectedMonth ? (
-            <div className="space-y-1.5">
-              <label className="text-[12px] font-medium text-zinc-500 flex items-center gap-1.5">
-                <Calendar className="w-3.5 h-3.5" /> Period
+            <div className="col-span-2 sm:col-span-1 lg:col-span-1">
+              <label className="block text-[11px] md:text-xs font-medium text-zinc-500 mb-1 md:mb-1.5 flex items-center gap-1">
+                <Calendar className="w-3 h-3 md:w-3.5 md:h-3.5" /> Period
               </label>
               <select 
-                className="w-full px-3 py-2.5 bg-zinc-50 border border-zinc-200 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all text-[13px] font-medium text-zinc-900 outline-none"
+                className="w-full px-2.5 md:px-3 py-1.5 md:py-2 bg-zinc-50/80 border border-zinc-200/80 rounded-lg focus:ring-2 focus:ring-zinc-900/10 focus:border-zinc-400 transition-all text-[11px] md:text-xs"
                 value={reportPeriod}
                 onChange={(e) => setReportPeriod(e.target.value)}
               >
@@ -359,12 +357,12 @@ export default function Reports({ selectedDriverId }: { selectedDriverId?: strin
             </div>
           ) : (
             <>
-              <div className="space-y-1.5">
-                <label className="text-[12px] font-medium text-zinc-500 flex items-center gap-1.5">
-                  <Calendar className="w-3.5 h-3.5" /> Month
+              <div>
+                <label className="block text-[11px] md:text-xs font-medium text-zinc-500 mb-1 md:mb-1.5 flex items-center gap-1">
+                  <Calendar className="w-3 h-3 md:w-3.5 md:h-3.5" /> Month
                 </label>
                 <select 
-                  className="w-full px-3 py-2.5 bg-zinc-50 border border-zinc-200 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all text-[13px] font-medium text-zinc-900 outline-none"
+                  className="w-full px-2.5 md:px-3 py-1.5 md:py-2 bg-zinc-50/80 border border-zinc-200/80 rounded-lg focus:ring-2 focus:ring-zinc-900/10 focus:border-zinc-400 transition-all text-[11px] md:text-xs"
                   value={selectedMonth}
                   onChange={(e) => setSelectedMonth(e.target.value)}
                 >
@@ -382,12 +380,12 @@ export default function Reports({ selectedDriverId }: { selectedDriverId?: strin
                   <option value="12">December</option>
                 </select>
               </div>
-              <div className="space-y-1.5">
-                <label className="text-[12px] font-medium text-zinc-500 flex items-center gap-1.5">
-                  <Calendar className="w-3.5 h-3.5" /> Year
+              <div>
+                <label className="block text-[11px] md:text-xs font-medium text-zinc-500 mb-1 md:mb-1.5 flex items-center gap-1">
+                  <Calendar className="w-3 h-3 md:w-3.5 md:h-3.5" /> Year
                 </label>
                 <select 
-                  className="w-full px-3 py-2.5 bg-zinc-50 border border-zinc-200 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all text-[13px] font-medium text-zinc-900 outline-none"
+                  className="w-full px-2.5 md:px-3 py-1.5 md:py-2 bg-zinc-50/80 border border-zinc-200/80 rounded-lg focus:ring-2 focus:ring-zinc-900/10 focus:border-zinc-400 transition-all text-[11px] md:text-xs"
                   value={selectedYear}
                   onChange={(e) => setSelectedYear(e.target.value)}
                 >
@@ -398,83 +396,94 @@ export default function Reports({ selectedDriverId }: { selectedDriverId?: strin
               </div>
             </>
           )}
-          <div className="space-y-1.5">
-            <label className="text-[12px] font-medium text-zinc-500">&nbsp;</label>
+          <div className="col-span-2 sm:col-span-1 lg:col-span-1">
+            <label className="block text-[11px] md:text-xs font-medium text-zinc-500 mb-1 md:mb-1.5">
+              &nbsp;
+            </label>
             <button 
               onClick={generateReport}
               disabled={loading}
-              className="w-full px-4 py-2.5 bg-zinc-900 hover:bg-zinc-800 text-white rounded-xl flex items-center justify-center gap-2 transition-all text-[13px] font-medium disabled:opacity-50 shadow-sm"
+              className="w-full px-3 md:px-4 py-1.5 md:py-2 bg-zinc-900 hover:bg-zinc-800 text-white rounded-lg flex items-center justify-center gap-1.5 transition-all text-[11px] md:text-xs font-medium disabled:opacity-50"
             >
-              <Filter className="w-4 h-4" /> {loading ? 'Loading...' : 'Generate'}
+              <Filter className="w-3 h-3 md:w-3.5 md:h-3.5" /> {loading ? 'Loading...' : 'Generate'}
             </button>
           </div>
         </div>
       </div>
 
-      {/* Stats Cards - Apple Style */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-5">
-        <div className="bg-white p-5 md:p-6 rounded-3xl shadow-[0_2px_20px_rgba(0,0,0,0.04)] border border-zinc-100 flex flex-col gap-3 transition-all duration-300 hover:shadow-[0_8px_30px_rgba(0,0,0,0.08)] group">
-          <div className="w-10 h-10 md:w-12 md:h-12 rounded-2xl bg-emerald-50 flex items-center justify-center">
-            <TrendingUp className="w-5 h-5 md:w-6 md:h-6 text-emerald-600" strokeWidth={1.5} />
+      {/* Stats Cards */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
+        <div className="bg-white p-3.5 md:p-5 rounded-2xl shadow-sm border border-zinc-200/60 flex flex-col gap-2 md:gap-3 transition-all duration-300 hover:shadow-lg group">
+          <div className="flex justify-between items-start">
+            <div className="p-2 md:p-2.5 rounded-xl bg-emerald-500/10 group-hover:scale-110 transition-transform duration-300">
+              <TrendingUp className="w-4 h-4 md:w-5 md:h-5 text-emerald-500" />
+            </div>
           </div>
           <div>
-            <p className="text-[13px] font-medium text-zinc-500">Total Income</p>
-            <h3 className="text-[22px] md:text-[26px] font-semibold text-zinc-900 tracking-tight mt-0.5">
+            <p className="text-[11px] md:text-xs font-medium text-zinc-500 mb-0.5 md:mb-1">Total Income</p>
+            <h3 className="text-base md:text-xl font-bold text-zinc-900 font-number tracking-tight">
               {currency}{stats.income.toLocaleString()}
             </h3>
           </div>
         </div>
 
-        <div className="bg-white p-5 md:p-6 rounded-3xl shadow-[0_2px_20px_rgba(0,0,0,0.04)] border border-zinc-100 flex flex-col gap-3 transition-all duration-300 hover:shadow-[0_8px_30px_rgba(0,0,0,0.08)] group">
-          <div className="w-10 h-10 md:w-12 md:h-12 rounded-2xl bg-rose-50 flex items-center justify-center">
-            <TrendingDown className="w-5 h-5 md:w-6 md:h-6 text-rose-600" strokeWidth={1.5} />
+        <div className="bg-white p-3.5 md:p-5 rounded-2xl shadow-sm border border-zinc-200/60 flex flex-col gap-2 md:gap-3 transition-all duration-300 hover:shadow-lg group">
+          <div className="flex justify-between items-start">
+            <div className="p-2 md:p-2.5 rounded-xl bg-rose-500/10 group-hover:scale-110 transition-transform duration-300">
+              <TrendingDown className="w-4 h-4 md:w-5 md:h-5 text-rose-500" />
+            </div>
           </div>
           <div>
-            <p className="text-[13px] font-medium text-zinc-500">Total Expense</p>
-            <h3 className="text-[22px] md:text-[26px] font-semibold text-zinc-900 tracking-tight mt-0.5">
+            <p className="text-[11px] md:text-xs font-medium text-zinc-500 mb-0.5 md:mb-1">Total Expense</p>
+            <h3 className="text-base md:text-xl font-bold text-zinc-900 font-number tracking-tight">
               {currency}{stats.expense.toLocaleString()}
             </h3>
           </div>
         </div>
 
-        <div className="bg-white p-5 md:p-6 rounded-3xl shadow-[0_2px_20px_rgba(0,0,0,0.04)] border border-zinc-100 flex flex-col gap-3 transition-all duration-300 hover:shadow-[0_8px_30px_rgba(0,0,0,0.08)] group">
-          <div className="w-10 h-10 md:w-12 md:h-12 rounded-2xl bg-blue-50 flex items-center justify-center">
-            <DollarSign className="w-5 h-5 md:w-6 md:h-6 text-blue-600" strokeWidth={1.5} />
+        <div className="bg-white p-3.5 md:p-5 rounded-2xl shadow-sm border border-zinc-200/60 flex flex-col gap-2 md:gap-3 transition-all duration-300 hover:shadow-lg group">
+          <div className="flex justify-between items-start">
+            <div className="p-2 md:p-2.5 rounded-xl bg-blue-500/10 group-hover:scale-110 transition-transform duration-300">
+              <DollarSign className="w-4 h-4 md:w-5 md:h-5 text-blue-500" />
+            </div>
           </div>
           <div>
-            <p className="text-[13px] font-medium text-zinc-500">Net Profit</p>
-            <h3 className={`text-[22px] md:text-[26px] font-semibold tracking-tight mt-0.5 ${stats.profit >= 0 ? 'text-zinc-900' : 'text-rose-600'}`}>
+            <p className="text-[11px] md:text-xs font-medium text-zinc-500 mb-0.5 md:mb-1">Net Profit</p>
+            <h3 className={`text-base md:text-xl font-bold font-number tracking-tight ${stats.profit >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
               {stats.profit >= 0 ? '+' : ''}{currency}{stats.profit.toLocaleString()}
             </h3>
           </div>
         </div>
 
-        <div className="bg-amber-50/50 p-5 md:p-6 rounded-3xl shadow-[0_2px_20px_rgba(0,0,0,0.04)] border border-amber-100 flex flex-col gap-3 transition-all duration-300 hover:shadow-[0_8px_30px_rgba(0,0,0,0.08)] group">
-          <div className="w-10 h-10 md:w-12 md:h-12 rounded-2xl bg-amber-100 flex items-center justify-center">
-            <AlertCircle className="w-5 h-5 md:w-6 md:h-6 text-amber-600" strokeWidth={1.5} />
+        <div className="bg-gradient-to-br from-amber-50 to-yellow-50 p-3.5 md:p-5 rounded-2xl shadow-sm border border-amber-200/60 flex flex-col gap-2 md:gap-3 transition-all duration-300 hover:shadow-lg group">
+          <div className="flex justify-between items-start">
+            <div className="p-2 md:p-2.5 rounded-xl bg-amber-500/15 group-hover:scale-110 transition-transform duration-300">
+              <AlertCircle className="w-4 h-4 md:w-5 md:h-5 text-amber-600" />
+            </div>
           </div>
           <div>
-            <p className="text-[13px] font-medium text-amber-600">Pending Amount</p>
-            <h3 className="text-[22px] md:text-[26px] font-semibold text-amber-700 tracking-tight mt-0.5">
+            <p className="text-[11px] md:text-xs font-medium text-amber-600 mb-0.5 md:mb-1">Pending Amount</p>
+            <h3 className="text-base md:text-xl font-bold text-amber-700 font-number tracking-tight">
               {currency}{stats.pending.toLocaleString()}
             </h3>
           </div>
         </div>
 
         {topDriver && (
-          <div className="bg-gradient-to-br from-yellow-50 to-amber-50 p-5 md:p-6 rounded-3xl shadow-[0_2px_20px_rgba(0,0,0,0.04)] border border-yellow-200/60 flex flex-col gap-3 transition-all duration-300 hover:shadow-[0_8px_30px_rgba(0,0,0,0.08)] group">
+          <div className="bg-gradient-to-br from-yellow-100 via-amber-50 to-yellow-100 p-3.5 md:p-5 rounded-2xl shadow-sm border border-yellow-300/60 flex flex-col gap-2 md:gap-3 transition-all duration-300 hover:shadow-lg group relative overflow-hidden">
+            <div className="absolute top-0 right-0 w-16 h-16 bg-gradient-to-br from-yellow-400/20 to-amber-500/20 rounded-bl-full"></div>
             <div className="flex justify-between items-start">
-              <div className="w-10 h-10 md:w-12 md:h-12 rounded-2xl bg-gradient-to-br from-yellow-400 to-amber-500 flex items-center justify-center shadow-sm">
-                <Star className="w-5 h-5 md:w-6 md:h-6 text-white fill-white" strokeWidth={1.5} />
+              <div className="p-2 md:p-2.5 rounded-xl bg-gradient-to-br from-yellow-400 to-amber-500 group-hover:scale-110 transition-transform duration-300 shadow-md">
+                <Star className="w-4 h-4 md:w-5 md:h-5 text-white fill-white" />
               </div>
-              <span className="text-[11px] font-semibold text-amber-700 bg-amber-100 px-2.5 py-1 rounded-full">TOP</span>
+              <span className="text-[10px] md:text-xs font-bold text-amber-600 bg-amber-100 px-2 py-0.5 rounded-full">TOP</span>
             </div>
             <div>
-              <p className="text-[13px] font-medium text-amber-600">Top Driver</p>
-              <h3 className="text-[18px] md:text-[20px] font-semibold text-amber-900 tracking-tight mt-0.5 truncate">
+              <p className="text-[11px] md:text-xs font-medium text-amber-700 mb-0.5 md:mb-1">Top Driver</p>
+              <h3 className="text-sm md:text-lg font-bold text-amber-900 tracking-tight truncate">
                 {topDriver.name}
               </h3>
-              <p className="text-[13px] font-medium text-amber-600 mt-1">
+              <p className="text-[10px] md:text-xs font-semibold text-amber-600 mt-0.5">
                 +{currency}{topDriver.profit.toLocaleString()}
               </p>
             </div>
@@ -482,52 +491,52 @@ export default function Reports({ selectedDriverId }: { selectedDriverId?: strin
         )}
       </div>
 
-      {/* Transactions Table - Apple Style */}
-      <div className="bg-white rounded-3xl shadow-[0_2px_20px_rgba(0,0,0,0.04)] border border-zinc-100 overflow-hidden">
-        <div className="px-5 py-4 md:px-6 md:py-5 border-b border-zinc-100">
-          <h3 className="text-[17px] font-semibold text-zinc-900 flex items-center gap-2">
-            <FileText className="w-4 h-4 text-zinc-500" strokeWidth={1.5} />
-            Transactions
+      {/* Transactions Table */}
+      <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-sm border border-zinc-200/60 overflow-hidden">
+        <div className="p-3 md:p-5 border-b border-zinc-100">
+          <h3 className="text-sm md:text-base font-semibold text-zinc-900 flex items-center gap-1.5 md:gap-2">
+            <FileText className="w-3.5 h-3.5 md:w-4 md:h-4 text-zinc-500" />
+            Transaction Details
           </h3>
         </div>
         
         <div className="overflow-x-auto">
           <table className="w-full">
-            <thead>
-              <tr className="border-b border-zinc-100">
-                <th className="px-5 py-3 md:px-6 md:py-4 text-left text-[12px] font-medium text-zinc-500">Date</th>
-                <th className="px-5 py-3 md:px-6 md:py-4 text-left text-[12px] font-medium text-zinc-500">Type</th>
-                <th className="px-5 py-3 md:px-6 md:py-4 text-left text-[12px] font-medium text-zinc-500">Category</th>
-                <th className="px-5 py-3 md:px-6 md:py-4 text-left text-[12px] font-medium text-zinc-500">Amount</th>
-                <th className="px-5 py-3 md:px-6 md:py-4 text-left text-[12px] font-medium text-zinc-500">Driver</th>
-                <th className="px-5 py-3 md:px-6 md:py-4 text-left text-[12px] font-medium text-zinc-500">Rickshaw</th>
+            <thead className="bg-zinc-50/80 border-b border-zinc-100">
+              <tr>
+                <th className="px-3 md:px-4 py-2 md:py-3 text-left text-[10px] md:text-xs font-semibold text-zinc-500 uppercase tracking-wider">Date</th>
+                <th className="px-3 md:px-4 py-2 md:py-3 text-left text-[10px] md:text-xs font-semibold text-zinc-500 uppercase tracking-wider">Type</th>
+                <th className="px-3 md:px-4 py-2 md:py-3 text-left text-[10px] md:text-xs font-semibold text-zinc-500 uppercase tracking-wider">Category</th>
+                <th className="px-3 md:px-4 py-2 md:py-3 text-left text-[10px] md:text-xs font-semibold text-zinc-500 uppercase tracking-wider">Amount</th>
+                <th className="px-3 md:px-4 py-2 md:py-3 text-left text-[10px] md:text-xs font-semibold text-zinc-500 uppercase tracking-wider">Driver</th>
+                <th className="px-3 md:px-4 py-2 md:py-3 text-left text-[10px] md:text-xs font-semibold text-zinc-500 uppercase tracking-wider">Rickshaw</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-zinc-100">
               {loading ? (
                 <tr>
-                  <td colSpan={6} className="px-5 py-12 md:px-6 text-center text-[14px] text-zinc-500">
-                    Loading transactions...
+                  <td colSpan={6} className="px-3 md:px-4 py-6 md:py-8 text-center text-xs md:text-sm text-zinc-500">
+                    Loading report data...
                   </td>
                 </tr>
               ) : transactions.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-5 py-12 md:px-6 text-center text-[14px] text-zinc-500">
-                    No transactions found
+                  <td colSpan={6} className="px-3 md:px-4 py-6 md:py-8 text-center text-xs md:text-sm text-zinc-500">
+                    No transactions found for the selected period
                   </td>
                 </tr>
               ) : (
                 transactions.map(t => (
                   <tr key={t.id} className={`transition-colors ${
                     t.category === 'rent_pending' 
-                      ? 'bg-amber-50/30' 
+                      ? 'bg-amber-50/60 hover:bg-amber-100/60' 
                       : 'hover:bg-zinc-50/50'
                   }`}>
-                    <td className="px-5 py-3 md:px-6 md:py-4 text-[14px] text-zinc-900">
+                    <td className="px-3 md:px-4 py-2 md:py-3 text-[11px] md:text-sm text-zinc-900">
                       {new Date(t.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
                     </td>
-                    <td className="px-5 py-3 md:px-6 md:py-4">
-                      <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-[12px] font-medium ${
+                    <td className="px-3 md:px-4 py-2 md:py-3">
+                      <span className={`inline-flex items-center px-1.5 md:px-2 py-0.5 md:py-1 rounded-md text-[10px] md:text-xs font-medium ${
                         t.category === 'rent_pending' 
                           ? 'bg-amber-100 text-amber-700' 
                           : t.type === 'income' 
@@ -537,10 +546,10 @@ export default function Reports({ selectedDriverId }: { selectedDriverId?: strin
                         {t.category === 'rent_pending' ? 'pending' : t.type}
                       </span>
                     </td>
-                    <td className={`px-5 py-3 md:px-6 md:py-4 text-[14px] capitalize ${
+                    <td className={`px-3 md:px-4 py-2 md:py-3 text-[11px] md:text-sm capitalize ${
                       t.category === 'rent_pending' ? 'text-amber-700 font-medium' : 'text-zinc-900'
                     }`}>{t.category.replace('_', ' ')}</td>
-                    <td className={`px-5 py-3 md:px-6 md:py-4 text-[14px] font-medium ${
+                    <td className={`px-3 md:px-4 py-2 md:py-3 text-[11px] md:text-sm font-medium font-number ${
                       t.category === 'rent_pending' 
                         ? 'text-amber-600' 
                         : t.type === 'income' 
@@ -549,8 +558,8 @@ export default function Reports({ selectedDriverId }: { selectedDriverId?: strin
                     }`}>
                       {t.category === 'rent_pending' ? '+' : t.type === 'income' ? '+' : '-'}{currency}{t.amount.toLocaleString()}
                     </td>
-                    <td className="px-5 py-3 md:px-6 md:py-4 text-[14px] text-zinc-600">{t.driver_name || '-'}</td>
-                    <td className="px-5 py-3 md:px-6 md:py-4 text-[14px] text-zinc-600">{t.rickshaw_number || '-'}</td>
+                    <td className="px-3 md:px-4 py-2 md:py-3 text-[11px] md:text-sm text-zinc-600">{t.driver_name || '-'}</td>
+                    <td className="px-3 md:px-4 py-2 md:py-3 text-[11px] md:text-sm text-zinc-600">{t.rickshaw_number || '-'}</td>
                   </tr>
                 ))
               )}
