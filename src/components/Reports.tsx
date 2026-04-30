@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { FileText, Calendar, Download, TrendingUp, TrendingDown, DollarSign, Car, Users, Filter, AlertCircle } from 'lucide-react';
+import { FileText, Calendar, Download, TrendingUp, TrendingDown, DollarSign, Car, Users, Filter, AlertCircle, Star } from 'lucide-react';
 import { Driver, Transaction } from '../types';
 
 export default function Reports({ selectedDriverId }: { selectedDriverId?: string }) {
@@ -102,6 +102,40 @@ export default function Reports({ selectedDriverId }: { selectedDriverId?: strin
   };
 
   const stats = calculateStats();
+
+  // Calculate top driver by profit
+  const calculateTopDriver = () => {
+    if (selectedReportDriver) return null; // Don't show when single driver selected
+    
+    const driverProfits = new Map<string, { income: number; expense: number; profit: number }>();
+    
+    transactions.forEach(t => {
+      if (!t.driver_name) return;
+      const existing = driverProfits.get(t.driver_name) || { income: 0, expense: 0, profit: 0 };
+      
+      if (t.type === 'income' && t.category !== 'rent_pending') {
+        existing.income += t.amount;
+      } else if (t.type === 'expense') {
+        existing.expense += t.amount;
+      }
+      existing.profit = existing.income - existing.expense;
+      driverProfits.set(t.driver_name, existing);
+    });
+    
+    let topDriver = null;
+    let maxProfit = -Infinity;
+    
+    driverProfits.forEach((data, name) => {
+      if (data.profit > maxProfit) {
+        maxProfit = data.profit;
+        topDriver = { name, ...data };
+      }
+    });
+    
+    return topDriver;
+  };
+
+  const topDriver = calculateTopDriver();
 
   const exportReport = (format: 'json' | 'csv' | 'excel') => {
     const driverName = selectedReportDriver ? drivers.find(d => d.id === selectedReportDriver)?.name : 'All Drivers';
@@ -434,6 +468,27 @@ export default function Reports({ selectedDriverId }: { selectedDriverId?: strin
             </h3>
           </div>
         </div>
+
+        {topDriver && (
+          <div className="bg-gradient-to-br from-yellow-100 via-amber-50 to-yellow-100 p-3.5 md:p-5 rounded-2xl shadow-sm border border-yellow-300/60 flex flex-col gap-2 md:gap-3 transition-all duration-300 hover:shadow-lg group relative overflow-hidden">
+            <div className="absolute top-0 right-0 w-16 h-16 bg-gradient-to-br from-yellow-400/20 to-amber-500/20 rounded-bl-full"></div>
+            <div className="flex justify-between items-start">
+              <div className="p-2 md:p-2.5 rounded-xl bg-gradient-to-br from-yellow-400 to-amber-500 group-hover:scale-110 transition-transform duration-300 shadow-md">
+                <Star className="w-4 h-4 md:w-5 md:h-5 text-white fill-white" />
+              </div>
+              <span className="text-[10px] md:text-xs font-bold text-amber-600 bg-amber-100 px-2 py-0.5 rounded-full">TOP</span>
+            </div>
+            <div>
+              <p className="text-[11px] md:text-xs font-medium text-amber-700 mb-0.5 md:mb-1">Top Driver</p>
+              <h3 className="text-sm md:text-lg font-bold text-amber-900 tracking-tight truncate">
+                {topDriver.name}
+              </h3>
+              <p className="text-[10px] md:text-xs font-semibold text-amber-600 mt-0.5">
+                +{currency}{topDriver.profit.toLocaleString()}
+              </p>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Transactions Table */}
