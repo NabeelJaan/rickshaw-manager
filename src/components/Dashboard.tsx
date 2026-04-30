@@ -131,6 +131,8 @@ export default function Dashboard({ selectedDriverId }: { selectedDriverId?: str
   const remainingInvestment = Math.max(0, (stats.totalInvestment || 0) - (stats.allTimeProfit || 0));
   const isFullyRecovered = remainingInvestment === 0 && (stats.totalInvestment || 0) > 0;
   const totalProfit = (stats.allTimeProfit || 0) - (stats.totalInvestment || 0);
+  const activeDrivers = stats.activeRickshaws || 1;
+  const monthlyAvg = Math.round(((stats.totalIncome || 0) + (stats.pendingBalance || 0)) / activeDrivers);
 
   const statCards = [
     { title: 'Revenue', value: stats.totalIncome || 0, icon: TrendingUp, color: 'text-emerald-500', bg: 'bg-emerald-50', prefix: currency + ' ', showOnMobile: true },
@@ -140,6 +142,7 @@ export default function Dashboard({ selectedDriverId }: { selectedDriverId?: str
     { title: 'Revenue + Pending', value: (stats.totalIncome || 0) + (stats.pendingBalance || 0), icon: TrendingUp, color: 'text-teal-500', bg: 'bg-teal-50', prefix: currency + ' ', showOnMobile: true },
     { title: 'Profit + Pending', value: (stats.profit || 0) + (stats.pendingBalance || 0), icon: DollarSign, color: 'text-indigo-500', bg: 'bg-indigo-50', prefix: currency + ' ', showOnMobile: true },
     { title: 'Investment', value: stats.totalInvestment || 0, icon: Car, color: 'text-purple-500', bg: 'bg-purple-50', prefix: currency + ' ', showOnMobile: false },
+    { title: 'Monthly Avg', value: monthlyAvg, icon: DollarSign, color: 'text-cyan-500', bg: 'bg-cyan-50', prefix: currency + ' ', showOnMobile: false, hideOnDriver: true },
     { 
       title: isFullyRecovered ? 'Net Profit' : 'Remaining', 
       value: isFullyRecovered ? totalProfit : remainingInvestment, 
@@ -169,7 +172,7 @@ export default function Dashboard({ selectedDriverId }: { selectedDriverId?: str
   ).slice(0, 1);
 
   return (
-    <div className="max-w-7xl mx-auto px-2.5 md:px-10 py-3 md:py-16 space-y-3 md:space-y-20">
+    <div className="space-y-3 md:space-y-20">
       {/* Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:justify-between sm:items-end">
         <div>
@@ -741,6 +744,13 @@ export default function Dashboard({ selectedDriverId }: { selectedDriverId?: str
         onClose={() => setIsPendingBalanceModalOpen(false)} 
         onSuccess={fetchData}
         selectedDriverId={selectedDriverId}
+      />
+      
+      <EditTransactionModal
+        isOpen={!!editTransaction}
+        onClose={() => setEditTransaction(null)}
+        onSuccess={fetchData}
+        transaction={editTransaction}
       />
     </div>
   );
