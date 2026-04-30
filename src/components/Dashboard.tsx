@@ -137,9 +137,9 @@ export default function Dashboard({ selectedDriverId }: { selectedDriverId?: str
     { title: 'Expense', value: stats.totalExpense || 0, icon: TrendingDown, color: 'text-rose-500', bg: 'bg-rose-50', prefix: currency + ' ', showOnMobile: true },
     { title: 'Net Profit', value: stats.profit || 0, icon: DollarSign, color: 'text-blue-500', bg: 'bg-blue-50', prefix: currency + ' ', showOnMobile: true },
     { title: 'Pending', value: stats.pendingBalance || 0, icon: TrendingDown, color: 'text-amber-500', bg: 'bg-amber-50', prefix: currency + ' ', showOnMobile: false },
-    { title: 'Investment', value: stats.totalInvestment || 0, icon: Car, color: 'text-purple-500', bg: 'bg-purple-50', prefix: currency + ' ', showOnMobile: false },
     { title: 'Revenue + Pending', value: (stats.totalIncome || 0) + (stats.pendingBalance || 0), icon: TrendingUp, color: 'text-teal-500', bg: 'bg-teal-50', prefix: currency + ' ', showOnMobile: true },
     { title: 'Profit + Pending', value: (stats.profit || 0) + (stats.pendingBalance || 0), icon: DollarSign, color: 'text-indigo-500', bg: 'bg-indigo-50', prefix: currency + ' ', showOnMobile: true },
+    { title: 'Investment', value: stats.totalInvestment || 0, icon: Car, color: 'text-purple-500', bg: 'bg-purple-50', prefix: currency + ' ', showOnMobile: false },
     { 
       title: isFullyRecovered ? 'Net Profit' : 'Remaining', 
       value: isFullyRecovered ? totalProfit : remainingInvestment, 
