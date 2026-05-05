@@ -132,7 +132,7 @@ export default function Dashboard({ selectedDriverId }: { selectedDriverId?: str
   const isFullyRecovered = remainingInvestment === 0 && (stats.totalInvestment || 0) > 0;
   const totalProfit = (stats.allTimeProfit || 0) - (stats.totalInvestment || 0);
   const activeDrivers = stats.activeRickshaws || 1;
-  const monthlyAvg = Math.round(((stats.totalIncome || 0) + (stats.pendingBalance || 0)) / activeDrivers);
+  const monthlyAvg = Math.round(((stats.profit || 0) + (stats.pendingBalance || 0)) / activeDrivers);
 
   const statCards = [
     { title: 'Revenue', value: stats.totalIncome || 0, icon: TrendingUp, color: 'text-emerald-500', bg: 'bg-emerald-50', prefix: currency + ' ', showOnMobile: true },
