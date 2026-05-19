@@ -162,19 +162,22 @@ export default function Rickshaws({ selectedDriverId }: { selectedDriverId?: str
   };
 
   const calculateRickshawNetIncome = (rickshawId: number, purchaseDate: string) => {
-    // Match transactions by rickshaw_id directly OR by driver assignment history at the time of the transaction
+    // Use loose equality for IDs since API may return strings, not numbers
+    const rid = Number(rickshawId);
+
     const rickshawTransactions = transactions.filter(t => {
       const txDate = new Date(t.date);
       const purchase = new Date(purchaseDate);
       if (txDate < purchase) return false;
 
-      // Direct rickshaw link (most reliable)
-      if (t.rickshaw_id === rickshawId) return true;
+      // Direct rickshaw link (coerce to number for JSON string IDs)
+      if (t.rickshaw_id != null && Number(t.rickshaw_id) === rid) return true;
 
       // No rickshaw link - check if driver was assigned to this rickshaw at the time of the transaction
-      if (t.rickshaw_id === null && t.driver_id !== null) {
+      if (t.rickshaw_id == null && t.driver_id != null) {
+        const txDriverId = Number(t.driver_id);
         const wasAssigned = assignments.some(a => {
-          if (a.rickshaw_id !== rickshawId || a.driver_id !== t.driver_id) return false;
+          if (Number(a.rickshaw_id) !== rid || Number(a.driver_id) !== txDriverId) return false;
           const start = new Date(a.start_date);
           const end = a.end_date ? new Date(a.end_date) : null;
           return txDate >= start && (end === null || txDate <= end);
@@ -185,8 +188,9 @@ export default function Rickshaws({ selectedDriverId }: { selectedDriverId?: str
       return false;
     });
 
+    // Match backend stats: exclude rent_pending from BOTH income and expense
     const income = rickshawTransactions.filter(t => t.type === 'income' && t.category !== 'rent_pending').reduce((sum, t) => sum + t.amount, 0);
-    const expense = rickshawTransactions.filter(t => t.type === 'expense').reduce((sum, t) => sum + t.amount, 0);
+    const expense = rickshawTransactions.filter(t => t.type === 'expense' && t.category !== 'rent_pending').reduce((sum, t) => sum + t.amount, 0);
     return { income, expense, netIncome: income - expense };
   };
 
@@ -359,8 +363,8 @@ export default function Rickshaws({ selectedDriverId }: { selectedDriverId?: str
                           <span className="text-rose-500">- {currency} {rickshawStats.expense.toLocaleString()}</span>
                         </div>
                         <div className="flex justify-between text-[11px] font-number mt-1 pt-1 border-t border-emerald-200/60">
-                          <span className="text-zinc-600 font-medium">Gross Profit</span>
-                          <span className="text-zinc-700 font-semibold">{currency} {netIncome.toLocaleString()}</span>
+                          <span className="text-blue-700 font-semibold">Net Profit</span>
+                          <span className="text-blue-600 font-bold">{currency} {netIncome.toLocaleString()}</span>
                         </div>
                         <div className="flex justify-between text-[11px] font-number mt-1">
                           <span className="text-zinc-500 font-medium">Investment</span>
@@ -369,7 +373,7 @@ export default function Rickshaws({ selectedDriverId }: { selectedDriverId?: str
                         <div className="flex justify-between text-[11px] font-number mt-1 pt-1 border-t border-emerald-200/60">
                           {isFullyRecovered ? (
                             <>
-                              <span className="text-emerald-700 font-semibold">Net Profit</span>
+                              <span className="text-emerald-700 font-semibold">Profit After Investment</span>
                               <span className="text-emerald-600 font-bold">+{currency} {profit.toLocaleString()}</span>
                             </>
                           ) : (
@@ -381,7 +385,7 @@ export default function Rickshaws({ selectedDriverId }: { selectedDriverId?: str
                         </div>
                         {isFullyRecovered ? (
                           <div className="text-[10px] text-center mt-2 text-emerald-600 font-medium bg-emerald-100/50 rounded py-1">
-                            This rickshaw is now in profit!
+                            Investment recovered — now in profit!
                           </div>
                         ) : (
                           <div className="text-[10px] text-center mt-2 text-orange-600 font-medium bg-orange-100/50 rounded py-1">
