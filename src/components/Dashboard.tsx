@@ -128,9 +128,20 @@ export default function Dashboard({ selectedDriverId }: { selectedDriverId?: str
 
   if (loading) return <div className="p-8 text-center text-zinc-500">Loading...</div>;
 
-  const remainingInvestment = Math.max(0, (stats.totalInvestment || 0) - (stats.allTimeProfit || 0));
+  // Calculate cumulative profit up to selected month for correct remaining investment
+  const calculateCumulativeProfit = () => {
+    if (!selectedMonth || selectedMonth === 'all') return stats.allTimeProfit || 0;
+    if (!stats.monthlyData || !Array.isArray(stats.monthlyData)) return stats.allTimeProfit || 0;
+    return [...stats.monthlyData]
+      .sort((a: any, b: any) => a.month.localeCompare(b.month))
+      .filter((d: any) => d.month <= selectedMonth)
+      .reduce((sum: number, d: any) => sum + ((d.income || 0) - (d.expense || 0)), 0);
+  };
+
+  const cumulativeProfit = calculateCumulativeProfit();
+  const remainingInvestment = Math.max(0, (stats.totalInvestment || 0) - cumulativeProfit);
   const isFullyRecovered = remainingInvestment === 0 && (stats.totalInvestment || 0) > 0;
-  const totalProfit = (stats.allTimeProfit || 0) - (stats.totalInvestment || 0);
+  const totalProfit = cumulativeProfit - (stats.totalInvestment || 0);
   const activeDrivers = stats.activeRickshaws || 1;
   const monthlyAvg = Math.round(((stats.profit || 0) + (stats.pendingBalance || 0)) / activeDrivers);
 
@@ -261,7 +272,7 @@ export default function Dashboard({ selectedDriverId }: { selectedDriverId?: str
       </div>
       
       {/* Stats Grid */}
-      <div className="grid grid-cols-3 lg:grid-cols-4 gap-2 md:gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2 md:gap-4">
         {filteredStatCards.map((card, i) => (
           <div 
             key={i} 
