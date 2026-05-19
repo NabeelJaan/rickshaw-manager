@@ -162,7 +162,29 @@ export default function Rickshaws({ selectedDriverId }: { selectedDriverId?: str
   };
 
   const calculateRickshawNetIncome = (rickshawId: number, purchaseDate: string) => {
-    const rickshawTransactions = transactions.filter(t => t.rickshaw_id === rickshawId && new Date(t.date) >= new Date(purchaseDate));
+    // Match transactions by rickshaw_id directly OR by driver assignment history at the time of the transaction
+    const rickshawTransactions = transactions.filter(t => {
+      const txDate = new Date(t.date);
+      const purchase = new Date(purchaseDate);
+      if (txDate < purchase) return false;
+
+      // Direct rickshaw link (most reliable)
+      if (t.rickshaw_id === rickshawId) return true;
+
+      // No rickshaw link - check if driver was assigned to this rickshaw at the time of the transaction
+      if (t.rickshaw_id === null && t.driver_id !== null) {
+        const wasAssigned = assignments.some(a => {
+          if (a.rickshaw_id !== rickshawId || a.driver_id !== t.driver_id) return false;
+          const start = new Date(a.start_date);
+          const end = a.end_date ? new Date(a.end_date) : null;
+          return txDate >= start && (end === null || txDate <= end);
+        });
+        if (wasAssigned) return true;
+      }
+
+      return false;
+    });
+
     const income = rickshawTransactions.filter(t => t.type === 'income' && t.category !== 'rent_pending').reduce((sum, t) => sum + t.amount, 0);
     const expense = rickshawTransactions.filter(t => t.type === 'expense').reduce((sum, t) => sum + t.amount, 0);
     return { income, expense, netIncome: income - expense };
