@@ -442,15 +442,15 @@ app.use(express.json());
       }
       
       const monthlyData = db.prepare(`
-        SELECT strftime('%Y-%m', date) as month, 
+        SELECT strftime('%Y-%m', date) as month,
                SUM(CASE WHEN type = 'income' AND category != 'rent_pending' THEN amount ELSE 0 END) as income,
                SUM(CASE WHEN type = 'expense' AND category != 'rent_pending' THEN amount ELSE 0 END) as expense
         FROM transactions
         WHERE 1=1 ${driverFilter}
         GROUP BY month
-        ORDER BY month ASC
+        ORDER BY month DESC
         LIMIT 12
-      `).all(...params);
+      `).all(...params).reverse();
 
       const dailyData = db.prepare(`
         SELECT date, 

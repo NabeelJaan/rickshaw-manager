@@ -71,7 +71,8 @@ export default function Dashboard({ selectedDriverId }: { selectedDriverId?: str
     if (selectedMonth) queryParts.push(`month=${selectedMonth}`);
     const query = queryParts.length > 0 ? `?${queryParts.join('&')}` : '';
     const token = localStorage.getItem('auth_token');
-    const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+    const headers: Record<string, string> = { 'Cache-Control': 'no-cache', 'Pragma': 'no-cache' };
+    if (token) headers['Authorization'] = `Bearer ${token}`;
     
     Promise.all([
       fetch(`/api/stats${query}`, { headers }).then(res => res.json()).catch(() => ({})),
@@ -130,8 +131,15 @@ export default function Dashboard({ selectedDriverId }: { selectedDriverId?: str
 
   // Calculate cumulative profit up to selected month for correct remaining investment
   const calculateCumulativeProfit = () => {
-    if (!selectedMonth || selectedMonth === 'all') return stats.allTimeProfit || 0;
-    if (!stats.monthlyData || !Array.isArray(stats.monthlyData)) return stats.allTimeProfit || 0;
+    // 'all' or no month selected: use allTimeProfit (Vercel) or profit (local SQLite fallback)
+    if (!selectedMonth || selectedMonth === 'all') return stats.allTimeProfit ?? stats.profit ?? 0;
+    if (!stats.monthlyData || !Array.isArray(stats.monthlyData)) return stats.profit ?? 0;
+    
+    // If monthlyData doesn't include the selected month, backend likely filtered profit already
+    const hasSelectedMonth = stats.monthlyData.some((d: any) => d.month === selectedMonth);
+    if (!hasSelectedMonth) return stats.profit ?? 0;
+    
+    // Sum all months up to and including selected month
     return [...stats.monthlyData]
       .sort((a: any, b: any) => a.month.localeCompare(b.month))
       .filter((d: any) => d.month <= selectedMonth)
@@ -149,7 +157,7 @@ export default function Dashboard({ selectedDriverId }: { selectedDriverId?: str
     { title: 'Revenue', value: stats.totalIncome || 0, icon: TrendingUp, color: 'text-emerald-500', bg: 'bg-emerald-50', prefix: currency + ' ', showOnMobile: true },
     { title: 'Expense', value: stats.totalExpense || 0, icon: TrendingDown, color: 'text-rose-500', bg: 'bg-rose-50', prefix: currency + ' ', showOnMobile: true },
     { title: 'Net Profit', value: stats.profit || 0, icon: DollarSign, color: 'text-blue-500', bg: 'bg-blue-50', prefix: currency + ' ', showOnMobile: true },
-    { title: 'Pending', value: stats.pendingBalance || 0, icon: TrendingDown, color: 'text-amber-500', bg: 'bg-amber-50', prefix: currency + ' ', showOnMobile: false },
+    { title: 'Pending', value: stats.pendingBalance || 0, icon: TrendingDown, color: 'text-amber-500', bg: 'bg-amber-50', prefix: currency + ' ', showOnMobile: true },
     { title: 'Revenue + Pending', value: (stats.totalIncome || 0) + (stats.pendingBalance || 0), icon: TrendingUp, color: 'text-teal-500', bg: 'bg-teal-50', prefix: currency + ' ', showOnMobile: true },
     { title: 'Profit + Pending', value: (stats.profit || 0) + (stats.pendingBalance || 0), icon: DollarSign, color: 'text-indigo-500', bg: 'bg-indigo-50', prefix: currency + ' ', showOnMobile: true },
     { title: 'Investment', value: stats.totalInvestment || 0, icon: Car, color: 'text-purple-500', bg: 'bg-purple-50', prefix: currency + ' ', showOnMobile: false },
@@ -162,12 +170,12 @@ export default function Dashboard({ selectedDriverId }: { selectedDriverId?: str
       bg: isFullyRecovered ? 'bg-emerald-50' : 'bg-orange-50', 
       prefix: isFullyRecovered ? '+' + currency + ' ' : currency + ' ',
       subtitle: isFullyRecovered ? 'Investment recovered!' : undefined,
-      showOnMobile: false
+      showOnMobile: true
     },
     { title: 'Rickshaws', value: `${stats.activeRickshaws || 0}/${stats.totalRickshaws || 0}`, icon: Car, color: 'text-zinc-500', bg: 'bg-zinc-50', prefix: '', hideOnDriver: true, showOnMobile: false },
   ];
 
-  // Filter cards - on mobile show only first 3, on desktop show all (minus hideOnDriver when driver selected)
+  // Filter cards - hide driver-specific cards when a driver is selected
   const filteredStatCards = selectedDriverId 
     ? statCards.filter(card => !card.hideOnDriver) 
     : statCards;
@@ -272,7 +280,7 @@ export default function Dashboard({ selectedDriverId }: { selectedDriverId?: str
       </div>
       
       {/* Stats Grid */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2 md:gap-4">
+      <div className="grid grid-cols-3 lg:grid-cols-4 gap-2 md:gap-4">
         {filteredStatCards.map((card, i) => (
           <div 
             key={i} 
@@ -282,7 +290,7 @@ export default function Dashboard({ selectedDriverId }: { selectedDriverId?: str
               <card.icon className={`w-3 h-3 md:w-5 md:h-5 ${card.color}`} strokeWidth={2} />
             </div>
             <div>
-              <p className="text-[9px] md:text-[13px] text-zinc-500 font-medium">{card.title}</p>
+              <p className="text-[10px] md:text-[13px] text-zinc-500 font-medium leading-tight">{card.title}</p>
               <h3 className={`text-[13px] md:text-[26px] font-semibold tracking-tight font-number mt-0.5 md:mt-1 ${card.color}`}>
                 {card.prefix}{typeof card.value === 'string' ? card.value : card.value.toLocaleString()}
               </h3>
@@ -603,6 +611,7 @@ export default function Dashboard({ selectedDriverId }: { selectedDriverId?: str
           </div>
           <div className="h-48 md:h-72">
             <ReactApexChart
+              key={`main-chart-${chartView}-${stats.monthlyData?.length}-${stats.dailyData?.length}`}
               options={{
                 chart: {
                   type: 'bar',
@@ -675,6 +684,7 @@ export default function Dashboard({ selectedDriverId }: { selectedDriverId?: str
           <h3 className="text-[11px] md:text-[15px] font-semibold text-zinc-900 mb-2 md:mb-6">Total Income by Month (Last Year)</h3>
           <div className="h-48 md:h-72">
             <ReactApexChart
+              key={`year-chart-${stats.monthlyData?.length}-${stats.monthlyData?.map((d: any) => d.month).join(',')}`}
               options={{
                 chart: {
                   type: 'bar',

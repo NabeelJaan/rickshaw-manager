@@ -21,7 +21,8 @@ export default function Reports({ selectedDriverId }: { selectedDriverId?: strin
 
   useEffect(() => {
     const token = localStorage.getItem('auth_token');
-    const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+    const headers: Record<string, string> = { 'Cache-Control': 'no-cache', 'Pragma': 'no-cache' };
+    if (token) headers['Authorization'] = `Bearer ${token}`;
     fetch('/api/drivers', { headers }).then(res => res.json()).then(data => {
       if (Array.isArray(data)) setDrivers(data);
     });
@@ -73,7 +74,7 @@ export default function Reports({ selectedDriverId }: { selectedDriverId?: strin
     }).toString();
 
     try {
-      const res = await fetch(`/api/transactions?${query}`, { headers });
+      const res = await fetch(`/api/transactions?${query}`, { headers: { ...headers, 'Cache-Control': 'no-cache', 'Pragma': 'no-cache' } });
       const data = await res.json();
       if (Array.isArray(data)) {
         setTransactions(data);

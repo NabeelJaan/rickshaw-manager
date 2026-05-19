@@ -682,7 +682,8 @@ app.get('/api/stats', authenticate, async (req, res) => {
       SELECT TO_CHAR(TO_DATE(date,'YYYY-MM-DD'),'YYYY-MM') as month,
         SUM(CASE WHEN type='income' AND category!='rent_pending' THEN amount ELSE 0 END) as income,
         SUM(CASE WHEN type='expense' AND category!='rent_pending' THEN amount ELSE 0 END) as expense
-      FROM transactions WHERE 1=1 ${df} GROUP BY month ORDER BY month ASC LIMIT 12`, da);
+      FROM transactions WHERE 1=1 ${df} GROUP BY month ORDER BY month DESC LIMIT 12`, da);
+    monR.rows.reverse();
 
     const dayR = await sql.query(`
       SELECT date,
