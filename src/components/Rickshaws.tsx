@@ -42,7 +42,8 @@ export default function Rickshaws({ selectedDriverId }: { selectedDriverId?: str
 
   const fetchData = () => {
     const token = localStorage.getItem('auth_token');
-    const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+    const headers: Record<string, string> = { 'Cache-Control': 'no-cache', 'Pragma': 'no-cache' };
+    if (token) headers['Authorization'] = `Bearer ${token}`;
     fetch('/api/rickshaws', { headers }).then(res => res.json()).then(data => { if (Array.isArray(data)) setRickshaws(data); });
     fetch('/api/drivers', { headers }).then(res => res.json()).then(data => { if (Array.isArray(data)) setDrivers(data); });
     fetch('/api/assignments', { headers }).then(res => res.json()).then(data => { if (Array.isArray(data)) setAssignments(data); });
@@ -326,38 +327,46 @@ export default function Rickshaws({ selectedDriverId }: { selectedDriverId?: str
                           style={{ width: `${Math.min(100, Math.max(0, (netIncome / r.investment_cost) * 100))}%` }}
                         ></div>
                       </div>
-                      {isFullyRecovered ? (
-                        <div className="mt-2 p-2 bg-emerald-50 rounded-lg border border-emerald-200/60">
-                          <div className="flex justify-between text-[11px] font-number">
-                            <span className="text-emerald-700 font-medium">Total Income</span>
-                            <span className="text-emerald-600 font-semibold">{currency} {rickshawStats.income.toLocaleString()}</span>
-                          </div>
-                          <div className="flex justify-between text-[11px] font-number mt-1">
-                            <span className="text-rose-600 font-medium">Total Expenses</span>
-                            <span className="text-rose-500">- {currency} {rickshawStats.expense.toLocaleString()}</span>
-                          </div>
-                          <div className="flex justify-between text-[11px] font-number mt-1 pt-1 border-t border-emerald-200/60">
-                            <span className="text-zinc-600 font-medium">Gross Profit</span>
-                            <span className="text-zinc-700 font-semibold">{currency} {netIncome.toLocaleString()}</span>
-                          </div>
-                          <div className="flex justify-between text-[11px] font-number mt-1">
-                            <span className="text-zinc-500 font-medium">Investment</span>
-                            <span className="text-zinc-500">- {currency} {r.investment_cost.toLocaleString()}</span>
-                          </div>
-                          <div className="flex justify-between text-[11px] font-number mt-1 pt-1 border-t border-emerald-200/60">
-                            <span className="text-emerald-700 font-semibold">Net Profit</span>
-                            <span className="text-emerald-600 font-bold">+{currency} {profit.toLocaleString()}</span>
-                          </div>
+                      <div className="mt-2 p-2 bg-emerald-50 rounded-lg border border-emerald-200/60">
+                        <div className="flex justify-between text-[11px] font-number">
+                          <span className="text-emerald-700 font-medium">Total Income</span>
+                          <span className="text-emerald-600 font-semibold">{currency} {rickshawStats.income.toLocaleString()}</span>
+                        </div>
+                        <div className="flex justify-between text-[11px] font-number mt-1">
+                          <span className="text-rose-600 font-medium">Total Expenses</span>
+                          <span className="text-rose-500">- {currency} {rickshawStats.expense.toLocaleString()}</span>
+                        </div>
+                        <div className="flex justify-between text-[11px] font-number mt-1 pt-1 border-t border-emerald-200/60">
+                          <span className="text-zinc-600 font-medium">Gross Profit</span>
+                          <span className="text-zinc-700 font-semibold">{currency} {netIncome.toLocaleString()}</span>
+                        </div>
+                        <div className="flex justify-between text-[11px] font-number mt-1">
+                          <span className="text-zinc-500 font-medium">Investment</span>
+                          <span className="text-zinc-500">- {currency} {r.investment_cost.toLocaleString()}</span>
+                        </div>
+                        <div className="flex justify-between text-[11px] font-number mt-1 pt-1 border-t border-emerald-200/60">
+                          {isFullyRecovered ? (
+                            <>
+                              <span className="text-emerald-700 font-semibold">Net Profit</span>
+                              <span className="text-emerald-600 font-bold">+{currency} {profit.toLocaleString()}</span>
+                            </>
+                          ) : (
+                            <>
+                              <span className="text-orange-600 font-semibold">Remaining Amount</span>
+                              <span className="text-orange-600 font-bold">{currency} {remainingInvestment.toLocaleString()}</span>
+                            </>
+                          )}
+                        </div>
+                        {isFullyRecovered ? (
                           <div className="text-[10px] text-center mt-2 text-emerald-600 font-medium bg-emerald-100/50 rounded py-1">
                             This rickshaw is now in profit!
                           </div>
-                        </div>
-                      ) : (
-                        <div className="flex justify-between text-[11px] mt-2 text-zinc-500 font-number">
-                          <span className="text-emerald-600 font-medium">{currency} {netIncome.toLocaleString()}</span>
-                          <span>{currency} {remainingInvestment.toLocaleString()} left</span>
-                        </div>
-                      )}
+                        ) : (
+                          <div className="text-[10px] text-center mt-2 text-orange-600 font-medium bg-orange-100/50 rounded py-1">
+                            {currency} {remainingInvestment.toLocaleString()} left to recover investment
+                          </div>
+                        )}
+                      </div>
                     </>
                   );
                 })()}
