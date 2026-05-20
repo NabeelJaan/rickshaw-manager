@@ -19,6 +19,7 @@ export default function Dashboard({ selectedDriverId }: { selectedDriverId?: str
   const [selectedDriverName, setSelectedDriverName] = useState('');
   const [currency, setCurrency] = useState('Rs.');
   const [showTransactionDropdown, setShowTransactionDropdown] = useState(false);
+  const [txFilter, setTxFilter] = useState<'all' | 'income' | 'expense'>('all');
   const [selectedMonth, setSelectedMonth] = useState<string>(() => {
     const now = new Date();
     return now.toISOString().slice(0, 7); // Current month in YYYY-MM format
@@ -31,7 +32,6 @@ export default function Dashboard({ selectedDriverId }: { selectedDriverId?: str
       setCurrency(savedCurrency);
     }
     
-    // Listen for storage changes (when settings are updated)
     const handleStorageChange = () => {
       const newCurrency = localStorage.getItem('currency');
       if (newCurrency) {
@@ -76,23 +76,8 @@ export default function Dashboard({ selectedDriverId }: { selectedDriverId?: str
     
     Promise.all([
       fetch(`/api/stats${query}`, { headers }).then(res => res.json()).catch(() => ({})),
-      fetch(`/api/transactions${query ? query + '&' : '?'}limit=10`, { headers }).then(res => res.json()).catch(() => [])
+      fetch(`/api/transactions${query ? query + '&' : '?'}limit=20`, { headers }).then(res => res.json()).catch(() => [])
     ]).then(([statsData, txData]) => {
-      console.log('Dashboard received stats:', statsData);
-      console.log('Dashboard received transactions:', txData);
-      console.log('Number of transactions:', Array.isArray(txData) ? txData.length : 0);
-      
-      // Log each transaction's driver_id for debugging
-      if (Array.isArray(txData) && txData.length > 0) {
-        console.log('Transaction driver_ids:', txData.map((t: any) => ({
-          id: t.id,
-          driver_id: t.driver_id,
-          driver_id_type: typeof t.driver_id,
-          amount: t.amount,
-          date: t.date
-        })));
-      }
-      
       setStats(statsData || {});
       setTransactions(Array.isArray(txData) ? txData : []);
       setLoading(false);
@@ -129,17 +114,13 @@ export default function Dashboard({ selectedDriverId }: { selectedDriverId?: str
 
   if (loading) return <div className="p-8 text-center text-zinc-500">Loading...</div>;
 
-  // Calculate cumulative profit up to selected month for correct remaining investment
   const calculateCumulativeProfit = () => {
-    // 'all' or no month selected: use allTimeProfit (Vercel) or profit (local SQLite fallback)
     if (!selectedMonth || selectedMonth === 'all') return stats.allTimeProfit ?? stats.profit ?? 0;
     if (!stats.monthlyData || !Array.isArray(stats.monthlyData)) return stats.profit ?? 0;
     
-    // If monthlyData doesn't include the selected month, backend likely filtered profit already
     const hasSelectedMonth = stats.monthlyData.some((d: any) => d.month === selectedMonth);
     if (!hasSelectedMonth) return stats.profit ?? 0;
     
-    // Sum all months up to and including selected month
     return [...stats.monthlyData]
       .sort((a: any, b: any) => a.month.localeCompare(b.month))
       .filter((d: any) => d.month <= selectedMonth)
@@ -175,20 +156,70 @@ export default function Dashboard({ selectedDriverId }: { selectedDriverId?: str
     { title: 'Rickshaws', value: `${stats.activeRickshaws || 0}/${stats.totalRickshaws || 0}`, icon: Car, color: 'text-zinc-500', bg: 'bg-zinc-50', prefix: '', hideOnDriver: true, showOnMobile: false },
   ];
 
-  // Filter cards - hide driver-specific cards when a driver is selected
   const filteredStatCards = selectedDriverId 
     ? statCards.filter(card => !card.hideOnDriver) 
     : statCards;
 
-  // Extract leave records from transactions
   const leaveRecords = (Array.isArray(transactions) ? transactions : []).filter(t => 
     t.notes && (t.notes.toLowerCase().includes('leave') || t.notes.toLowerCase().includes('off'))
   );
 
-  // Extract engine oil change records from transactions
   const oilChangeRecords = (Array.isArray(transactions) ? transactions : []).filter(t => 
     t.category && (t.category.toLowerCase().includes('oil') || t.category.toLowerCase().includes('engine'))
   ).slice(0, 1);
+
+  // Filtered transactions for the table
+  const allTransactions = Array.isArray(transactions) ? transactions : [];
+  const filteredTransactions = txFilter === 'all'
+    ? allTransactions
+    : txFilter === 'income'
+      ? allTransactions.filter(t => t.type === 'income')
+      : allTransactions.filter(t => t.type === 'expense');
+
+  // Chart helpers for mobile — limit daily labels to avoid overflow
+  const buildChartData = (view: 'daily' | 'monthly') => {
+    const raw = (view === 'daily' ? stats.dailyData : stats.monthlyData) || [];
+    // On daily view, trim label to DD (e.g. "15") to save space
+    const categories = raw.map((d: any) => {
+      if (view === 'daily') {
+        const parts = (d.date || '').split('-');
+        return parts[2] ? parts[2] : d.date;
+      }
+      // Monthly: shorten to "Jan", "Feb", etc.
+      try {
+        const [y, m] = (d.month || '').split('-');
+        const date = new Date(Number(y), Number(m) - 1, 1);
+        return date.toLocaleDateString('en-US', { month: 'short' });
+      } catch {
+        return d.month;
+      }
+    });
+    return { categories, raw };
+  };
+
+  const mainChartData = buildChartData(chartView);
+  const yearChartData = buildChartData('monthly');
+
+  const mobileXAxisOptions = {
+    labels: {
+      rotate: -45,
+      rotateAlways: true,
+      style: { colors: '#71717a', fontSize: '9px' },
+      trim: true,
+      hideOverlappingLabels: true,
+    },
+    axisBorder: { show: false },
+    axisTicks: { show: false },
+  };
+
+  const desktopXAxisOptions = {
+    labels: {
+      style: { colors: '#71717a', fontSize: '12px' },
+      hideOverlappingLabels: true,
+    },
+    axisBorder: { show: false },
+    axisTicks: { show: false },
+  };
 
   return (
     <div className="space-y-3 md:space-y-20">
@@ -221,7 +252,7 @@ export default function Dashboard({ selectedDriverId }: { selectedDriverId?: str
             <option value="all">All Time</option>
             {Array.from({ length: 12 }, (_, i) => {
               const date = new Date();
-              date.setDate(1); // Set to 1st to avoid month overflow issues
+              date.setDate(1);
               date.setMonth(date.getMonth() - i);
               const monthStr = date.toISOString().slice(0, 7);
               const monthName = date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
@@ -370,26 +401,45 @@ export default function Dashboard({ selectedDriverId }: { selectedDriverId?: str
       {/* Recent Transactions */}
       <div className="bg-white rounded-xl md:rounded-2xl border border-zinc-200/60 shadow-[0_2px_8px_rgba(0,0,0,0.04)] overflow-hidden">
         <div className="p-2.5 md:p-6 border-b border-zinc-100">
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-1.5 md:gap-4">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 md:gap-4">
             <h3 className="text-[11px] md:text-[17px] font-semibold text-zinc-900">Recent Transactions</h3>
-            <div className="flex items-center gap-1 md:gap-2">
-              <div className="flex items-center gap-0.5 px-1.5 py-0.5 md:px-3 md:py-1.5 bg-emerald-50 rounded-md md:rounded-lg">
-                <div className="w-1 h-1 md:w-1.5 md:h-1.5 rounded-full bg-emerald-500"></div>
-                <span className="text-[9px] md:text-[12px] font-semibold text-emerald-700">
-                  {(Array.isArray(transactions) ? transactions : []).filter(t => t.type === 'income').length}
-                </span>
+            <div className="flex items-center gap-1.5 md:gap-3 flex-wrap">
+              {/* Filter tabs */}
+              <div className="flex bg-zinc-100 p-0.5 rounded-lg">
+                {(['all', 'income', 'expense'] as const).map(f => (
+                  <button
+                    key={f}
+                    onClick={() => setTxFilter(f)}
+                    className={`px-2 py-1 md:px-3 md:py-1.5 text-[9px] md:text-[12px] rounded-md transition-all font-medium capitalize ${
+                      txFilter === f
+                        ? 'bg-white shadow-sm text-zinc-900'
+                        : 'text-zinc-500 hover:text-zinc-700'
+                    }`}
+                  >
+                    {f}
+                  </button>
+                ))}
               </div>
-              <div className="flex items-center gap-0.5 px-1.5 py-0.5 md:px-3 md:py-1.5 bg-rose-50 rounded-md md:rounded-lg">
-                <div className="w-1 h-1 md:w-1.5 md:h-1.5 rounded-full bg-rose-500"></div>
-                <span className="text-[9px] md:text-[12px] font-semibold text-rose-700">
-                  {(Array.isArray(transactions) ? transactions : []).filter(t => t.type === 'expense').length}
-                </span>
-              </div>
-              <div className="flex items-center gap-0.5 px-1.5 py-0.5 md:px-3 md:py-1.5 bg-amber-50 rounded-md md:rounded-lg">
-                <div className="w-1 h-1 md:w-1.5 md:h-1.5 rounded-full bg-amber-500"></div>
-                <span className="text-[9px] md:text-[12px] font-semibold text-amber-700">
-                  {(Array.isArray(transactions) ? transactions : []).filter(t => t.category === 'rent_pending').length}
-                </span>
+              {/* Count badges */}
+              <div className="flex items-center gap-1">
+                <div className="flex items-center gap-0.5 px-1.5 py-0.5 md:px-3 md:py-1.5 bg-emerald-50 rounded-md md:rounded-lg">
+                  <div className="w-1 h-1 md:w-1.5 md:h-1.5 rounded-full bg-emerald-500"></div>
+                  <span className="text-[9px] md:text-[12px] font-semibold text-emerald-700">
+                    {allTransactions.filter(t => t.type === 'income').length}
+                  </span>
+                </div>
+                <div className="flex items-center gap-0.5 px-1.5 py-0.5 md:px-3 md:py-1.5 bg-rose-50 rounded-md md:rounded-lg">
+                  <div className="w-1 h-1 md:w-1.5 md:h-1.5 rounded-full bg-rose-500"></div>
+                  <span className="text-[9px] md:text-[12px] font-semibold text-rose-700">
+                    {allTransactions.filter(t => t.type === 'expense').length}
+                  </span>
+                </div>
+                <div className="flex items-center gap-0.5 px-1.5 py-0.5 md:px-3 md:py-1.5 bg-amber-50 rounded-md md:rounded-lg">
+                  <div className="w-1 h-1 md:w-1.5 md:h-1.5 rounded-full bg-amber-500"></div>
+                  <span className="text-[9px] md:text-[12px] font-semibold text-amber-700">
+                    {allTransactions.filter(t => t.category === 'rent_pending').length}
+                  </span>
+                </div>
               </div>
             </div>
           </div>
@@ -397,7 +447,7 @@ export default function Dashboard({ selectedDriverId }: { selectedDriverId?: str
         
         {/* Mobile View */}
         <div className="block md:hidden">
-          {(Array.isArray(transactions) ? transactions : []).map(t => (
+          {filteredTransactions.map(t => (
             <div key={t.id} className="px-2.5 py-2 border-b border-zinc-100 last:border-0">
               <div className="flex items-start justify-between gap-2">
                 <div className="flex items-start gap-2 flex-1 min-w-0">
@@ -480,7 +530,7 @@ export default function Dashboard({ selectedDriverId }: { selectedDriverId?: str
               </tr>
             </thead>
             <tbody className="divide-y divide-zinc-100/80">
-              {(Array.isArray(transactions) ? transactions : []).map(t => (
+              {filteredTransactions.map(t => (
                 <tr key={t.id} className="hover:bg-zinc-50/50 transition-colors group">
                   <td className="p-4 text-sm text-zinc-600 font-medium">
                     <div className="flex items-center gap-2">
@@ -574,7 +624,7 @@ export default function Dashboard({ selectedDriverId }: { selectedDriverId?: str
             </tbody>
           </table>
         </div>
-        {transactions.length === 0 && (
+        {filteredTransactions.length === 0 && (
           <div className="p-12 text-center text-zinc-500">
             No recent transactions
           </div>
@@ -609,7 +659,8 @@ export default function Dashboard({ selectedDriverId }: { selectedDriverId?: str
               </button>
             </div>
           </div>
-          <div className="h-48 md:h-72">
+          {/* Mobile chart: fixed height with overflow scroll wrapper */}
+          <div className="h-52 md:h-72">
             <ReactApexChart
               key={`main-chart-${chartView}-${stats.monthlyData?.length}-${stats.dailyData?.length}`}
               options={{
@@ -630,36 +681,57 @@ export default function Dashboard({ selectedDriverId }: { selectedDriverId?: str
                 dataLabels: { enabled: false },
                 stroke: { show: true, width: 2, colors: ['transparent'] },
                 xaxis: {
-                  categories: (chartView === 'daily' ? stats.dailyData : stats.monthlyData)?.map((d: any) => chartView === 'daily' ? d.date : d.month) || [],
+                  categories: mainChartData.categories,
                   labels: {
-                    style: { colors: '#71717a', fontSize: '12px' },
+                    rotate: -45,
+                    rotateAlways: false,
+                    hideOverlappingLabels: true,
+                    trim: true,
+                    style: { colors: '#71717a', fontSize: '10px' },
                   },
                   axisBorder: { show: false },
                   axisTicks: { show: false },
                 },
                 yaxis: {
                   labels: {
-                    style: { colors: '#71717a', fontSize: '12px' },
+                    style: { colors: '#71717a', fontSize: '10px' },
+                    formatter: (val: number) => val >= 1000 ? `${(val/1000).toFixed(0)}k` : `${val}`,
                   },
                 },
                 fill: { opacity: 1 },
                 tooltip: {
                   theme: 'light',
-                  style: { fontSize: '13px' },
+                  style: { fontSize: '12px' },
                 },
                 colors: ['#10b981', '#f43f5e'],
                 legend: {
                   position: 'top',
                   horizontalAlign: 'left',
                   markers: { radius: 12 },
+                  fontSize: '11px',
                 },
                 responsive: [
                   {
                     breakpoint: 768,
                     options: {
-                      chart: { height: 250 },
-                      plotOptions: { bar: { columnWidth: '50%' } },
-                      xaxis: { labels: { style: { fontSize: '10px' } } },
+                      chart: { height: 208 },
+                      plotOptions: { bar: { columnWidth: '70%', borderRadius: 3 } },
+                      xaxis: {
+                        labels: {
+                          rotate: -45,
+                          rotateAlways: true,
+                          hideOverlappingLabels: true,
+                          trim: true,
+                          style: { fontSize: '9px', colors: '#71717a' },
+                        },
+                      },
+                      yaxis: {
+                        labels: {
+                          style: { fontSize: '9px' },
+                          formatter: (val: number) => val >= 1000 ? `${(val/1000).toFixed(0)}k` : `${val}`,
+                        },
+                      },
+                      legend: { fontSize: '10px' },
                     },
                   },
                 ],
@@ -667,11 +739,11 @@ export default function Dashboard({ selectedDriverId }: { selectedDriverId?: str
               series={[
                 {
                   name: 'Income',
-                  data: (chartView === 'daily' ? stats.dailyData : stats.monthlyData)?.map((d: any) => d.income) || [],
+                  data: mainChartData.raw.map((d: any) => d.income) || [],
                 },
                 {
                   name: 'Expense',
-                  data: (chartView === 'daily' ? stats.dailyData : stats.monthlyData)?.map((d: any) => d.expense) || [],
+                  data: mainChartData.raw.map((d: any) => d.expense) || [],
                 },
               ]}
               type="bar"
@@ -682,7 +754,7 @@ export default function Dashboard({ selectedDriverId }: { selectedDriverId?: str
 
         <div className="bg-white p-2.5 md:p-6 rounded-xl md:rounded-2xl border border-zinc-200/60 shadow-[0_2px_8px_rgba(0,0,0,0.04)]">
           <h3 className="text-[11px] md:text-[15px] font-semibold text-zinc-900 mb-2 md:mb-6">Total Income by Month (Last Year)</h3>
-          <div className="h-48 md:h-72">
+          <div className="h-52 md:h-72">
             <ReactApexChart
               key={`year-chart-${stats.monthlyData?.length}-${stats.monthlyData?.map((d: any) => d.month).join(',')}`}
               options={{
@@ -703,31 +775,50 @@ export default function Dashboard({ selectedDriverId }: { selectedDriverId?: str
                 dataLabels: { enabled: false },
                 stroke: { show: true, width: 2, colors: ['transparent'] },
                 xaxis: {
-                  categories: stats.monthlyData?.map((d: any) => d.month) || [],
+                  categories: yearChartData.categories,
                   labels: {
-                    style: { colors: '#71717a', fontSize: '12px' },
+                    rotate: -45,
+                    rotateAlways: false,
+                    hideOverlappingLabels: true,
+                    trim: true,
+                    style: { colors: '#71717a', fontSize: '10px' },
                   },
                   axisBorder: { show: false },
                   axisTicks: { show: false },
                 },
                 yaxis: {
                   labels: {
-                    style: { colors: '#71717a', fontSize: '12px' },
+                    style: { colors: '#71717a', fontSize: '10px' },
+                    formatter: (val: number) => val >= 1000 ? `${(val/1000).toFixed(0)}k` : `${val}`,
                   },
                 },
                 fill: { opacity: 1 },
                 tooltip: {
                   theme: 'light',
-                  style: { fontSize: '13px' },
+                  style: { fontSize: '12px' },
                 },
                 colors: ['#10b981'],
                 responsive: [
                   {
                     breakpoint: 768,
                     options: {
-                      chart: { height: 250 },
-                      plotOptions: { bar: { columnWidth: '50%' } },
-                      xaxis: { labels: { style: { fontSize: '10px' } } },
+                      chart: { height: 208 },
+                      plotOptions: { bar: { columnWidth: '70%', borderRadius: 3 } },
+                      xaxis: {
+                        labels: {
+                          rotate: -45,
+                          rotateAlways: true,
+                          hideOverlappingLabels: true,
+                          trim: true,
+                          style: { fontSize: '9px', colors: '#71717a' },
+                        },
+                      },
+                      yaxis: {
+                        labels: {
+                          style: { fontSize: '9px' },
+                          formatter: (val: number) => val >= 1000 ? `${(val/1000).toFixed(0)}k` : `${val}`,
+                        },
+                      },
                     },
                   },
                 ],
@@ -735,7 +826,7 @@ export default function Dashboard({ selectedDriverId }: { selectedDriverId?: str
               series={[
                 {
                   name: 'Income',
-                  data: stats.monthlyData?.map((d: any) => d.income) || [],
+                  data: yearChartData.raw.map((d: any) => d.income) || [],
                 },
               ]}
               type="bar"
