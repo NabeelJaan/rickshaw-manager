@@ -195,7 +195,7 @@ export default function Dashboard({ selectedDriverId }: { selectedDriverId?: str
       {/* Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:justify-between sm:items-end">
         <div>
-          <h1 className="text-[22px] md:text-[40px] font-semibold text-zinc-900 tracking-tight leading-tight">
+          <h1 className="text-[18px] sm:text-[22px] md:text-[40px] font-semibold text-zinc-900 tracking-tight leading-tight break-words">
             {selectedDriverId ? (
               <>
                 {selectedMonth && selectedMonth !== 'all' ? (
@@ -212,11 +212,11 @@ export default function Dashboard({ selectedDriverId }: { selectedDriverId?: str
             {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <select 
             value={selectedMonth} 
             onChange={(e) => setSelectedMonth(e.target.value)}
-            className="h-9 px-3 md:h-11 md:px-4 bg-zinc-100 border-0 rounded-lg md:rounded-xl text-[12px] md:text-[14px] text-zinc-700 font-medium hover:bg-zinc-200 transition-colors cursor-pointer focus:ring-2 focus:ring-zinc-300 outline-none"
+            className="h-9 px-3 md:h-11 md:px-4 bg-zinc-100 border-0 rounded-lg md:rounded-xl text-[12px] md:text-[14px] text-zinc-700 font-medium hover:bg-zinc-200 transition-colors cursor-pointer focus:ring-2 focus:ring-zinc-300 outline-none max-w-[120px] sm:max-w-none"
           >
             <option value="all">All Time</option>
             {Array.from({ length: 12 }, (_, i) => {
