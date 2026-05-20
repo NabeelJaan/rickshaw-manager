@@ -16,24 +16,17 @@ export default function Rickshaws({ selectedDriverId }: { selectedDriverId?: str
   const [assignData, setAssignData] = useState({ rickshaw_id: '', driver_id: '', start_date: new Date().toISOString().split('T')[0] });
   const [editFormData, setEditFormData] = useState({ number: '', purchase_date: '', investment_cost: '', id: '' });
 
-  // Load currency from settings
   useEffect(() => {
     const savedCurrency = localStorage.getItem('currency');
-    if (savedCurrency) {
-      setCurrency(savedCurrency);
-    }
+    if (savedCurrency) setCurrency(savedCurrency);
     
-    // Listen for storage changes (when settings are updated)
     const handleStorageChange = () => {
       const newCurrency = localStorage.getItem('currency');
-      if (newCurrency) {
-        setCurrency(newCurrency);
-      }
+      if (newCurrency) setCurrency(newCurrency);
     };
     
     window.addEventListener('storage', handleStorageChange);
     window.addEventListener('localStorageUpdated', handleStorageChange);
-    
     return () => {
       window.removeEventListener('storage', handleStorageChange);
       window.removeEventListener('localStorageUpdated', handleStorageChange);
@@ -50,29 +43,14 @@ export default function Rickshaws({ selectedDriverId }: { selectedDriverId?: str
     fetch('/api/transactions', { headers }).then(res => res.json()).then(data => { if (Array.isArray(data)) setTransactions(data); });
   };
 
-  useEffect(() => {
-    fetchData();
-  }, []);
+  useEffect(() => { fetchData(); }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const token = localStorage.getItem('auth_token');
-    const headers = { 
-      'Content-Type': 'application/json',
-      ...(token ? { 'Authorization': `Bearer ${token}` } : {})
-    };
-    const res = await fetch('/api/rickshaws', {
-      method: 'POST',
-      headers,
-      body: JSON.stringify(formData),
-    });
-    
-    if (!res.ok) {
-      const error = await res.json();
-      alert(`Error adding rickshaw: ${error.error}`);
-      return;
-    }
-    
+    const headers = { 'Content-Type': 'application/json', ...(token ? { 'Authorization': `Bearer ${token}` } : {}) };
+    const res = await fetch('/api/rickshaws', { method: 'POST', headers, body: JSON.stringify(formData) });
+    if (!res.ok) { const error = await res.json(); alert(`Error adding rickshaw: ${error.error}`); return; }
     setShowForm(false);
     setFormData({ number: '', purchase_date: '', investment_cost: '' });
     fetchData();
@@ -81,22 +59,9 @@ export default function Rickshaws({ selectedDriverId }: { selectedDriverId?: str
   const handleAssign = async (e: React.FormEvent) => {
     e.preventDefault();
     const token = localStorage.getItem('auth_token');
-    const headers = { 
-      'Content-Type': 'application/json',
-      ...(token ? { 'Authorization': `Bearer ${token}` } : {})
-    };
-    const res = await fetch('/api/assignments', {
-      method: 'POST',
-      headers,
-      body: JSON.stringify(assignData),
-    });
-    
-    if (!res.ok) {
-      const error = await res.json();
-      alert(`Error assigning driver: ${error.error}`);
-      return;
-    }
-    
+    const headers = { 'Content-Type': 'application/json', ...(token ? { 'Authorization': `Bearer ${token}` } : {}) };
+    const res = await fetch('/api/assignments', { method: 'POST', headers, body: JSON.stringify(assignData) });
+    if (!res.ok) { const error = await res.json(); alert(`Error assigning driver: ${error.error}`); return; }
     setShowAssignForm(null);
     setAssignData({ rickshaw_id: '', driver_id: '', start_date: new Date().toISOString().split('T')[0] });
     fetchData();
@@ -104,37 +69,18 @@ export default function Rickshaws({ selectedDriverId }: { selectedDriverId?: str
 
   const handleEdit = (rickshaw: Rickshaw) => {
     setEditingRickshaw(rickshaw);
-    setEditFormData({
-      number: rickshaw.number,
-      purchase_date: rickshaw.purchase_date,
-      investment_cost: rickshaw.investment_cost.toString(),
-      id: rickshaw.id.toString()
-    });
+    setEditFormData({ number: rickshaw.number, purchase_date: rickshaw.purchase_date, investment_cost: rickshaw.investment_cost.toString(), id: rickshaw.id.toString() });
   };
 
   const handleUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
     const token = localStorage.getItem('auth_token');
-    const headers = { 
-      'Content-Type': 'application/json',
-      ...(token ? { 'Authorization': `Bearer ${token}` } : {})
-    };
+    const headers = { 'Content-Type': 'application/json', ...(token ? { 'Authorization': `Bearer ${token}` } : {}) };
     const res = await fetch(`/api/rickshaws/${editFormData.id}`, {
-      method: 'PUT',
-      headers,
-      body: JSON.stringify({
-        number: editFormData.number,
-        purchase_date: editFormData.purchase_date,
-        investment_cost: parseFloat(editFormData.investment_cost)
-      }),
+      method: 'PUT', headers,
+      body: JSON.stringify({ number: editFormData.number, purchase_date: editFormData.purchase_date, investment_cost: parseFloat(editFormData.investment_cost) }),
     });
-    
-    if (!res.ok) {
-      const error = await res.json();
-      alert(`Error updating rickshaw: ${error.error}`);
-      return;
-    }
-    
+    if (!res.ok) { const error = await res.json(); alert(`Error updating rickshaw: ${error.error}`); return; }
     setEditingRickshaw(null);
     fetchData();
   };
@@ -143,15 +89,8 @@ export default function Rickshaws({ selectedDriverId }: { selectedDriverId?: str
     if (confirm('Are you sure you want to delete this rickshaw? This will also delete all its assignments and transactions.')) {
       const token = localStorage.getItem('auth_token');
       const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
-      const res = await fetch(`/api/rickshaws/${id}`, { 
-        method: 'DELETE',
-        headers
-      });
-      if (!res.ok) {
-        const error = await res.json();
-        alert(`Error deleting rickshaw: ${error.error}`);
-        return;
-      }
+      const res = await fetch(`/api/rickshaws/${id}`, { method: 'DELETE', headers });
+      if (!res.ok) { const error = await res.json(); alert(`Error deleting rickshaw: ${error.error}`); return; }
       fetchData();
     }
   };
@@ -161,8 +100,7 @@ export default function Rickshaws({ selectedDriverId }: { selectedDriverId?: str
     return activeAssignment ? activeAssignment.driver_name : 'Unassigned';
   };
 
-  const calculateRickshawNetIncome = (rickshawId: number, purchaseDate: string) => {
-    // Use loose equality for IDs since API may return strings, not numbers
+  const calculateRickshawStats = (rickshawId: number, purchaseDate: string) => {
     const rid = Number(rickshawId);
 
     const rickshawTransactions = transactions.filter(t => {
@@ -170,10 +108,8 @@ export default function Rickshaws({ selectedDriverId }: { selectedDriverId?: str
       const purchase = new Date(purchaseDate);
       if (txDate < purchase) return false;
 
-      // Direct rickshaw link (coerce to number for JSON string IDs)
       if (t.rickshaw_id != null && Number(t.rickshaw_id) === rid) return true;
 
-      // No rickshaw link - check if driver was assigned to this rickshaw at the time of the transaction
       if (t.rickshaw_id == null && t.driver_id != null) {
         const txDriverId = Number(t.driver_id);
         const wasAssigned = assignments.some(a => {
@@ -188,10 +124,26 @@ export default function Rickshaws({ selectedDriverId }: { selectedDriverId?: str
       return false;
     });
 
-    // Match backend stats: exclude rent_pending from BOTH income and expense
-    const income = rickshawTransactions.filter(t => t.type === 'income' && t.category !== 'rent_pending').reduce((sum, t) => sum + t.amount, 0);
-    const expense = rickshawTransactions.filter(t => t.type === 'expense' && t.category !== 'rent_pending').reduce((sum, t) => sum + t.amount, 0);
-    return { income, expense, netIncome: income - expense };
+    // Income: paid rent (excludes pending)
+    const income = rickshawTransactions
+      .filter(t => t.type === 'income' && t.category !== 'rent_pending')
+      .reduce((sum, t) => sum + t.amount, 0);
+
+    // Expense: all expenses
+    const expense = rickshawTransactions
+      .filter(t => t.type === 'expense' && t.category !== 'rent_pending')
+      .reduce((sum, t) => sum + t.amount, 0);
+
+    // Pending balance (rent not yet collected)
+    const pending = rickshawTransactions
+      .filter(t => t.category === 'rent_pending')
+      .reduce((sum, t) => sum + t.amount, 0);
+
+    const netIncome = income - expense;
+    // Effective value towards recovering investment = net income + pending
+    const effectiveTotal = netIncome + pending;
+
+    return { income, expense, pending, netIncome, effectiveTotal };
   };
 
   const filteredRickshaws = selectedDriverId 
@@ -226,27 +178,18 @@ export default function Rickshaws({ selectedDriverId }: { selectedDriverId?: str
         <form onSubmit={handleSubmit} className="bg-white p-6 rounded-2xl shadow-sm border border-zinc-200/60 grid grid-cols-1 md:grid-cols-3 gap-5">
           <div>
             <label className="block text-[13px] font-medium text-zinc-700 mb-1.5">Rickshaw Number</label>
-            <input 
-              type="text" required 
-              className="w-full px-4 py-2.5 bg-zinc-50 border border-zinc-200 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all text-sm"
-              value={formData.number} onChange={e => setFormData({...formData, number: e.target.value})}
-            />
+            <input type="text" required className="w-full px-4 py-2.5 bg-zinc-50 border border-zinc-200 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all text-sm"
+              value={formData.number} onChange={e => setFormData({...formData, number: e.target.value})} />
           </div>
           <div>
             <label className="block text-[13px] font-medium text-zinc-700 mb-1.5">Purchase Date</label>
-            <input 
-              type="date" required 
-              className="w-full px-4 py-2.5 bg-zinc-50 border border-zinc-200 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all text-sm"
-              value={formData.purchase_date} onChange={e => setFormData({...formData, purchase_date: e.target.value})}
-            />
+            <input type="date" required className="w-full px-4 py-2.5 bg-zinc-50 border border-zinc-200 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all text-sm"
+              value={formData.purchase_date} onChange={e => setFormData({...formData, purchase_date: e.target.value})} />
           </div>
           <div>
             <label className="block text-[13px] font-medium text-zinc-700 mb-1.5">Investment Cost</label>
-            <input 
-              type="number" required step="0.01"
-              className="w-full px-4 py-2.5 bg-zinc-50 border border-zinc-200 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all text-sm font-number"
-              value={formData.investment_cost} onChange={e => setFormData({...formData, investment_cost: e.target.value})}
-            />
+            <input type="number" required step="0.01" className="w-full px-4 py-2.5 bg-zinc-50 border border-zinc-200 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all text-sm font-number"
+              value={formData.investment_cost} onChange={e => setFormData({...formData, investment_cost: e.target.value})} />
           </div>
           <div className="md:col-span-3 flex justify-end gap-3 mt-2">
             <button type="button" onClick={() => setShowForm(false)} className="px-4 py-2 text-sm font-medium text-zinc-600 hover:bg-zinc-100 rounded-xl transition-colors">Cancel</button>
@@ -259,45 +202,22 @@ export default function Rickshaws({ selectedDriverId }: { selectedDriverId?: str
         <form onSubmit={handleUpdate} className="bg-amber-50 p-6 rounded-2xl shadow-sm border border-amber-200/60 grid grid-cols-1 md:grid-cols-3 gap-5">
           <div>
             <label className="block text-[13px] font-medium text-zinc-700 mb-1.5">Rickshaw Number</label>
-            <input 
-              type="text" required 
-              className="w-full px-4 py-2.5 bg-white border border-amber-200 rounded-xl focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 transition-all text-sm"
-              value={editFormData.number} 
-              onChange={e => setEditFormData({...editFormData, number: e.target.value})}
-            />
+            <input type="text" required className="w-full px-4 py-2.5 bg-white border border-amber-200 rounded-xl focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 transition-all text-sm"
+              value={editFormData.number} onChange={e => setEditFormData({...editFormData, number: e.target.value})} />
           </div>
           <div>
             <label className="block text-[13px] font-medium text-zinc-700 mb-1.5">Purchase Date</label>
-            <input 
-              type="date" required 
-              className="w-full px-4 py-2.5 bg-white border border-amber-200 rounded-xl focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 transition-all text-sm"
-              value={editFormData.purchase_date} 
-              onChange={e => setEditFormData({...editFormData, purchase_date: e.target.value})}
-            />
+            <input type="date" required className="w-full px-4 py-2.5 bg-white border border-amber-200 rounded-xl focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 transition-all text-sm"
+              value={editFormData.purchase_date} onChange={e => setEditFormData({...editFormData, purchase_date: e.target.value})} />
           </div>
           <div>
             <label className="block text-[13px] font-medium text-zinc-700 mb-1.5">Investment Cost</label>
-            <input 
-              type="number" required step="0.01"
-              className="w-full px-4 py-2.5 bg-white border border-amber-200 rounded-xl focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 transition-all text-sm font-number"
-              value={editFormData.investment_cost} 
-              onChange={e => setEditFormData({...editFormData, investment_cost: e.target.value})}
-            />
+            <input type="number" required step="0.01" className="w-full px-4 py-2.5 bg-white border border-amber-200 rounded-xl focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 transition-all text-sm font-number"
+              value={editFormData.investment_cost} onChange={e => setEditFormData({...editFormData, investment_cost: e.target.value})} />
           </div>
           <div className="md:col-span-3 flex justify-end gap-3 mt-2">
-            <button 
-              type="button" 
-              onClick={() => setEditingRickshaw(null)} 
-              className="px-4 py-2 text-sm font-medium text-zinc-600 hover:bg-zinc-100 rounded-xl transition-colors"
-            >
-              Cancel
-            </button>
-            <button 
-              type="submit" 
-              className="px-5 py-2 text-sm font-medium bg-amber-500 text-white rounded-xl hover:bg-amber-600 transition-colors shadow-sm"
-            >
-              Update Rickshaw
-            </button>
+            <button type="button" onClick={() => setEditingRickshaw(null)} className="px-4 py-2 text-sm font-medium text-zinc-600 hover:bg-zinc-100 rounded-xl transition-colors">Cancel</button>
+            <button type="submit" className="px-5 py-2 text-sm font-medium bg-amber-500 text-white rounded-xl hover:bg-amber-600 transition-colors shadow-sm">Update Rickshaw</button>
           </div>
         </form>
       )}
@@ -331,50 +251,79 @@ export default function Rickshaws({ selectedDriverId }: { selectedDriverId?: str
               
               <div className="pt-3 pb-1">
                 {(() => {
-                  const rickshawStats = calculateRickshawNetIncome(r.id, r.purchase_date);
-                  const netIncome = rickshawStats.netIncome;
-                  const remainingInvestment = Math.max(0, r.investment_cost - netIncome);
-                  const isFullyRecovered = netIncome >= r.investment_cost;
-                  const profit = isFullyRecovered ? netIncome - r.investment_cost : 0;
-                  
+                  const stats = calculateRickshawStats(r.id, r.purchase_date);
+                  const { income, expense, pending, netIncome, effectiveTotal } = stats;
+
+                  // Recovery is based on net income + pending vs investment
+                  const progressPct = r.investment_cost > 0
+                    ? Math.min(100, Math.max(0, (effectiveTotal / r.investment_cost) * 100))
+                    : 100;
+                  const isFullyRecovered = effectiveTotal >= r.investment_cost;
+                  const remainingInvestment = Math.max(0, r.investment_cost - effectiveTotal);
+                  const profitAfterInvestment = isFullyRecovered ? effectiveTotal - r.investment_cost : 0;
+
                   return (
                     <>
                       <div className="flex justify-between text-[11px] mb-1.5">
                         <span className="font-medium text-zinc-500 uppercase tracking-wider">
-                          {isFullyRecovered ? 'Investment Recovered' : 'Net Income Progress'}
+                          {isFullyRecovered ? 'Investment Recovered' : 'Recovery Progress'}
                         </span>
                         <span className="text-emerald-600 font-semibold font-number">
-                          {isFullyRecovered ? '100% Complete' : `${Math.min(100, Math.max(0, (netIncome / r.investment_cost) * 100)).toFixed(1)}%`}
+                          {isFullyRecovered ? '100% Complete' : `${progressPct.toFixed(1)}%`}
                         </span>
                       </div>
                       <div className="w-full bg-zinc-100 rounded-full h-1.5 overflow-hidden">
                         <div 
                           className="bg-emerald-500 h-1.5 rounded-full transition-all duration-1000 ease-out" 
-                          style={{ width: `${Math.min(100, Math.max(0, (netIncome / r.investment_cost) * 100))}%` }}
+                          style={{ width: `${progressPct}%` }}
                         ></div>
                       </div>
-                      <div className="mt-2 p-2 bg-emerald-50 rounded-lg border border-emerald-200/60">
+
+                      <div className="mt-2 p-2 bg-emerald-50 rounded-lg border border-emerald-200/60 space-y-1">
+                        {/* Income */}
                         <div className="flex justify-between text-[11px] font-number">
                           <span className="text-emerald-700 font-medium">Total Income</span>
-                          <span className="text-emerald-600 font-semibold">{currency} {rickshawStats.income.toLocaleString()}</span>
+                          <span className="text-emerald-600 font-semibold">+{currency} {income.toLocaleString()}</span>
                         </div>
-                        <div className="flex justify-between text-[11px] font-number mt-1">
+                        {/* Pending */}
+                        {pending > 0 && (
+                          <div className="flex justify-between text-[11px] font-number">
+                            <span className="text-amber-600 font-medium">Pending Balance</span>
+                            <span className="text-amber-500">+{currency} {pending.toLocaleString()}</span>
+                          </div>
+                        )}
+                        {/* Expense */}
+                        <div className="flex justify-between text-[11px] font-number">
                           <span className="text-rose-600 font-medium">Total Expenses</span>
-                          <span className="text-rose-500">- {currency} {rickshawStats.expense.toLocaleString()}</span>
+                          <span className="text-rose-500">-{currency} {expense.toLocaleString()}</span>
                         </div>
-                        <div className="flex justify-between text-[11px] font-number mt-1 pt-1 border-t border-emerald-200/60">
+
+                        {/* Net Profit (income - expense, no pending) */}
+                        <div className="flex justify-between text-[11px] font-number pt-1 border-t border-emerald-200/60">
                           <span className="text-blue-700 font-semibold">Net Profit</span>
                           <span className="text-blue-600 font-bold">{currency} {netIncome.toLocaleString()}</span>
                         </div>
-                        <div className="flex justify-between text-[11px] font-number mt-1">
+
+                        {/* Effective total line */}
+                        {pending > 0 && (
+                          <div className="flex justify-between text-[11px] font-number">
+                            <span className="text-indigo-600 font-medium">Net + Pending</span>
+                            <span className="text-indigo-600 font-semibold">{currency} {effectiveTotal.toLocaleString()}</span>
+                          </div>
+                        )}
+
+                        {/* Investment deduction */}
+                        <div className="flex justify-between text-[11px] font-number">
                           <span className="text-zinc-500 font-medium">Investment</span>
-                          <span className="text-zinc-500">- {currency} {r.investment_cost.toLocaleString()}</span>
+                          <span className="text-zinc-500">-{currency} {r.investment_cost.toLocaleString()}</span>
                         </div>
-                        <div className="flex justify-between text-[11px] font-number mt-1 pt-1 border-t border-emerald-200/60">
+
+                        {/* Remaining or Profit after investment */}
+                        <div className="flex justify-between text-[11px] font-number pt-1 border-t border-emerald-200/60">
                           {isFullyRecovered ? (
                             <>
                               <span className="text-emerald-700 font-semibold">Profit After Investment</span>
-                              <span className="text-emerald-600 font-bold">+{currency} {profit.toLocaleString()}</span>
+                              <span className="text-emerald-600 font-bold">+{currency} {profitAfterInvestment.toLocaleString()}</span>
                             </>
                           ) : (
                             <>
@@ -383,12 +332,14 @@ export default function Rickshaws({ selectedDriverId }: { selectedDriverId?: str
                             </>
                           )}
                         </div>
+
+                        {/* Status pill */}
                         {isFullyRecovered ? (
-                          <div className="text-[10px] text-center mt-2 text-emerald-600 font-medium bg-emerald-100/50 rounded py-1">
+                          <div className="text-[10px] text-center mt-1 text-emerald-600 font-medium bg-emerald-100/60 rounded py-1">
                             Investment recovered — now in profit!
                           </div>
                         ) : (
-                          <div className="text-[10px] text-center mt-2 text-orange-600 font-medium bg-orange-100/50 rounded py-1">
+                          <div className="text-[10px] text-center mt-1 text-orange-600 font-medium bg-orange-100/50 rounded py-1">
                             {currency} {remainingInvestment.toLocaleString()} left to recover investment
                           </div>
                         )}
@@ -405,29 +356,17 @@ export default function Rickshaws({ selectedDriverId }: { selectedDriverId?: str
             </div>
 
             <div className="flex gap-2 mt-4 pt-4 border-t border-zinc-100">
-              <button 
-                onClick={() => handleEdit(r)}
-                className="flex-1 bg-amber-50 hover:bg-amber-100 text-amber-600 px-3 py-2 rounded-xl text-[12px] font-medium transition-colors flex items-center justify-center gap-1.5"
-              >
-                <Edit className="w-3.5 h-3.5" />
-                Edit
+              <button onClick={() => handleEdit(r)} className="flex-1 bg-amber-50 hover:bg-amber-100 text-amber-600 px-3 py-2 rounded-xl text-[12px] font-medium transition-colors flex items-center justify-center gap-1.5">
+                <Edit className="w-3.5 h-3.5" /> Edit
+              </button>
+              <button onClick={() => handleDelete(r.id)} className="flex-1 bg-rose-50 hover:bg-rose-100 text-rose-600 px-3 py-2 rounded-xl text-[12px] font-medium transition-colors flex items-center justify-center gap-1.5">
+                <Trash2 className="w-3.5 h-3.5" /> Delete
               </button>
               <button 
-                onClick={() => handleDelete(r.id)}
-                className="flex-1 bg-rose-50 hover:bg-rose-100 text-rose-600 px-3 py-2 rounded-xl text-[12px] font-medium transition-colors flex items-center justify-center gap-1.5"
-              >
-                <Trash2 className="w-3.5 h-3.5" />
-                Delete
-              </button>
-              <button 
-                onClick={() => {
-                  setShowAssignForm(r.id);
-                  setAssignData({ ...assignData, rickshaw_id: r.id.toString() });
-                }}
+                onClick={() => { setShowAssignForm(r.id); setAssignData({ ...assignData, rickshaw_id: r.id.toString() }); }}
                 className="flex-1 bg-zinc-50 hover:bg-zinc-100 text-zinc-700 px-3 py-2 rounded-xl text-[12px] font-medium transition-colors flex items-center justify-center gap-1.5"
               >
-                <UserPlus className="w-3.5 h-3.5" />
-                Assign
+                <UserPlus className="w-3.5 h-3.5" /> Assign
               </button>
             </div>
 
