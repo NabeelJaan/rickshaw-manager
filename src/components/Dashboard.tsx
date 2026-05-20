@@ -405,12 +405,12 @@ export default function Dashboard({ selectedDriverId }: { selectedDriverId?: str
             <h3 className="text-[11px] md:text-[17px] font-semibold text-zinc-900">Recent Transactions</h3>
             <div className="flex items-center gap-1.5 md:gap-3 flex-wrap">
               {/* Filter tabs */}
-              <div className="flex bg-zinc-100 p-0.5 rounded-lg">
+              <div className="flex bg-zinc-100 p-0.5 rounded-lg shrink-0">
                 {(['all', 'income', 'expense'] as const).map(f => (
                   <button
                     key={f}
                     onClick={() => setTxFilter(f)}
-                    className={`px-2 py-1 md:px-3 md:py-1.5 text-[9px] md:text-[12px] rounded-md transition-all font-medium capitalize ${
+                    className={`px-3 py-1.5 text-[11px] md:text-[12px] rounded-md transition-all font-medium capitalize whitespace-nowrap ${
                       txFilter === f
                         ? 'bg-white shadow-sm text-zinc-900'
                         : 'text-zinc-500 hover:text-zinc-700'
