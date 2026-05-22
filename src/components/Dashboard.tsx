@@ -19,7 +19,7 @@ export default function Dashboard({ selectedDriverId }: { selectedDriverId?: str
   const [selectedDriverName, setSelectedDriverName] = useState('');
   const [currency, setCurrency] = useState('Rs.');
   const [showTransactionDropdown, setShowTransactionDropdown] = useState(false);
-  const [txFilter, setTxFilter] = useState<'all' | 'income' | 'expense'>('all');
+  const [txFilter, setTxFilter] = useState<'all' | 'income' | 'expense' | 'pending'>('all');
   const [selectedMonth, setSelectedMonth] = useState<string>(() => {
     const now = new Date();
     return now.toISOString().slice(0, 7); // Current month in YYYY-MM format
@@ -132,7 +132,13 @@ export default function Dashboard({ selectedDriverId }: { selectedDriverId?: str
   const isFullyRecovered = remainingInvestment === 0 && (stats.totalInvestment || 0) > 0;
   const totalProfit = cumulativeProfit - (stats.totalInvestment || 0);
   const activeDrivers = stats.activeRickshaws || 1;
-  const monthlyAvg = Math.round(((stats.profit || 0) + (stats.pendingBalance || 0)) / activeDrivers);
+
+  // Monthly avg: always based on the selected month's data, never affected by All Time
+  const currentMonthData = (stats.monthlyData || []).find((d: any) => d.month === selectedMonth);
+  const monthlyProfit = currentMonthData
+    ? (currentMonthData.income || 0) - (currentMonthData.expense || 0)
+    : (stats.profit || 0);
+  const monthlyAvg = Math.round((monthlyProfit + (stats.pendingBalance || 0)) / activeDrivers);
 
   const statCards = [
     { title: 'Revenue', value: stats.totalIncome || 0, icon: TrendingUp, color: 'text-emerald-500', bg: 'bg-emerald-50', prefix: currency + ' ', showOnMobile: true },
@@ -174,7 +180,9 @@ export default function Dashboard({ selectedDriverId }: { selectedDriverId?: str
     ? allTransactions
     : txFilter === 'income'
       ? allTransactions.filter(t => t.type === 'income')
-      : allTransactions.filter(t => t.type === 'expense');
+      : txFilter === 'pending'
+        ? allTransactions.filter(t => t.category === 'rent_pending')
+        : allTransactions.filter(t => t.type === 'expense' && t.category !== 'rent_pending');
 
   // Chart helpers for mobile — limit daily labels to avoid overflow
   const buildChartData = (view: 'daily' | 'monthly') => {
@@ -406,7 +414,7 @@ export default function Dashboard({ selectedDriverId }: { selectedDriverId?: str
             <div className="flex items-center gap-1.5 md:gap-3 flex-wrap">
               {/* Filter tabs */}
               <div className="flex bg-zinc-100 p-0.5 rounded-lg shrink-0">
-                {(['all', 'income', 'expense'] as const).map(f => (
+                {(['all', 'income', 'expense', 'pending'] as const).map(f => (
                   <button
                     key={f}
                     onClick={() => setTxFilter(f)}
@@ -431,7 +439,7 @@ export default function Dashboard({ selectedDriverId }: { selectedDriverId?: str
                 <div className="flex items-center gap-0.5 px-1.5 py-0.5 md:px-3 md:py-1.5 bg-rose-50 rounded-md md:rounded-lg">
                   <div className="w-1 h-1 md:w-1.5 md:h-1.5 rounded-full bg-rose-500"></div>
                   <span className="text-[9px] md:text-[12px] font-semibold text-rose-700">
-                    {allTransactions.filter(t => t.type === 'expense').length}
+                    {allTransactions.filter(t => t.type === 'expense' && t.category !== 'rent_pending').length}
                   </span>
                 </div>
                 <div className="flex items-center gap-0.5 px-1.5 py-0.5 md:px-3 md:py-1.5 bg-amber-50 rounded-md md:rounded-lg">
