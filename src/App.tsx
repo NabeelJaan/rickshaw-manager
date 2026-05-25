@@ -84,9 +84,12 @@ function AppContent() {
   }
 
   // Sort drivers: pinned-last names go to the end, rest keep original order
+  const isPinnedLast = (name: string) =>
+    PINNED_LAST_NAMES.some(p => name.toLowerCase().includes(p));
+
   const sortedDrivers = [...drivers].sort((a, b) => {
-    const aLast = PINNED_LAST_NAMES.includes(a.name.toLowerCase().trim());
-    const bLast = PINNED_LAST_NAMES.includes(b.name.toLowerCase().trim());
+    const aLast = isPinnedLast(a.name);
+    const bLast = isPinnedLast(b.name);
     if (aLast && !bLast) return 1;
     if (!aLast && bLast) return -1;
     return 0;
@@ -257,18 +260,30 @@ function AppContent() {
               {sortedDrivers.map(d => {
                 const dId = d.id.toString();
                 const isSelected = selectedDriverId === dId;
+                // Calculate pending display value: divide by 1000, show as integer or 1 decimal
+                const pendingBalance = Number(d.pending_balance) || 0;
+                const pendingDays = pendingBalance > 0 ? pendingBalance / 1000 : 0;
+                const pendingLabel = pendingDays > 0
+                  ? (Number.isInteger(pendingDays) ? String(pendingDays) : pendingDays.toFixed(1).replace(/\.0$/, ''))
+                  : null;
                 return (
-                  <button
-                    key={d.id}
-                    onClick={() => {
-                      setSelectedDriverId(dId);
-                      setShowAddDriverForm(false);
-                      setIsMobileMenuOpen(false);
-                    }}
-                    className={`px-3 md:px-4 py-1.5 md:py-2 rounded-lg md:rounded-xl text-xs md:text-sm font-medium transition-all ${getDriverButtonClasses(dId, isSelected)}`}
-                  >
-                    {d.name}
-                  </button>
+                  <div key={d.id} className="relative inline-flex">
+                    <button
+                      onClick={() => {
+                        setSelectedDriverId(dId);
+                        setShowAddDriverForm(false);
+                        setIsMobileMenuOpen(false);
+                      }}
+                      className={`px-3 md:px-4 py-1.5 md:py-2 rounded-lg md:rounded-xl text-xs md:text-sm font-medium transition-all ${getDriverButtonClasses(dId, isSelected)}`}
+                    >
+                      {d.name}
+                    </button>
+                    {pendingLabel && (
+                      <span className="absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] px-1 flex items-center justify-center rounded-full bg-amber-500 text-white text-[9px] font-bold leading-none shadow-md shadow-amber-500/40 pointer-events-none">
+                        {pendingLabel}
+                      </span>
+                    )}
+                  </div>
                 );
               })}
 
