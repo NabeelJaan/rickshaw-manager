@@ -10,6 +10,9 @@ import Reports from './components/Reports';
 import SettingsPage from './components/Settings';
 import { Driver } from './types';
 
+// Names to always show last in the driver list (case-insensitive)
+const PINNED_LAST_NAMES = ['zain', 'hassan'];
+
 function AppContent() {
   const { isAuthenticated, logout, user } = useAuth();
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -18,11 +21,13 @@ function AppContent() {
   const [selectedDriverId, setSelectedDriverId] = useState<string>('');
   const [showAddDriverForm, setShowAddDriverForm] = useState(false);
 
+  // Map of driverId -> 'income' | 'pending' | null for today's entries
+  const [todayEntryMap, setTodayEntryMap] = useState<Record<string, 'income' | 'pending' | null>>({});
+
   const fetchDrivers = () => {
     const token = localStorage.getItem('auth_token');
     const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
     fetch('/api/drivers', { headers }).then(res => res.json()).then(data => {
-      // Ensure we only set array data, not error objects
       if (Array.isArray(data)) {
         setDrivers(data);
       } else {
@@ -32,15 +37,81 @@ function AppContent() {
     });
   };
 
+  // Fetch today's transactions to determine driver button colors
+  const fetchTodayEntries = () => {
+    const token = localStorage.getItem('auth_token');
+    const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+    const today = new Date().toISOString().split('T')[0];
+    fetch(`/api/transactions?start_date=${today}&end_date=${today}`, { headers })
+      .then(res => res.json())
+      .then((data: any[]) => {
+        if (!Array.isArray(data)) return;
+        const map: Record<string, 'income' | 'pending' | null> = {};
+        data.forEach(tx => {
+          if (!tx.driver_id) return;
+          const id = tx.driver_id.toString();
+          if (tx.category === 'rent_pending') {
+            // Only set pending if not already income
+            if (map[id] !== 'income') {
+              map[id] = 'pending';
+            }
+          } else if (tx.type === 'income') {
+            // Income wins over pending
+            map[id] = 'income';
+          }
+        });
+        setTodayEntryMap(map);
+      })
+      .catch(() => {});
+  };
+
   useEffect(() => {
     if (isAuthenticated) {
       fetchDrivers();
+      fetchTodayEntries();
     }
+  }, [isAuthenticated]);
+
+  // Re-fetch today entries periodically (every 60s) to keep colors fresh
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    const interval = setInterval(fetchTodayEntries, 60_000);
+    return () => clearInterval(interval);
   }, [isAuthenticated]);
 
   if (!isAuthenticated) {
     return <LoginPage />;
   }
+
+  // Sort drivers: pinned-last names go to the end, rest keep original order
+  const sortedDrivers = [...drivers].sort((a, b) => {
+    const aLast = PINNED_LAST_NAMES.includes(a.name.toLowerCase().trim());
+    const bLast = PINNED_LAST_NAMES.includes(b.name.toLowerCase().trim());
+    if (aLast && !bLast) return 1;
+    if (!aLast && bLast) return -1;
+    return 0;
+  });
+
+  // Return Tailwind classes for a driver button based on today's entry
+  const getDriverButtonClasses = (driverId: string, isSelected: boolean) => {
+    if (isSelected) {
+      const entry = todayEntryMap[driverId];
+      if (entry === 'income') {
+        return 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/20';
+      } else if (entry === 'pending') {
+        return 'bg-amber-500 text-white shadow-lg shadow-amber-500/20';
+      }
+      return 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/20';
+    }
+
+    const entry = todayEntryMap[driverId];
+    if (entry === 'income') {
+      return 'bg-emerald-50 text-emerald-700 border border-emerald-300 hover:bg-emerald-100';
+    } else if (entry === 'pending') {
+      return 'bg-amber-50 text-amber-700 border border-amber-300 hover:bg-amber-100';
+    }
+    return 'bg-white text-zinc-600 hover:bg-zinc-50 border border-zinc-200';
+  };
 
   const navItems = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -166,6 +237,7 @@ function AppContent() {
               <span className="text-xs md:text-sm font-medium text-zinc-600">Select Driver:</span>
             </div>
             <div className="flex flex-wrap gap-1.5 md:gap-2">
+              {/* All Drivers button */}
               <button
                 onClick={() => {
                   setSelectedDriverId('');
@@ -180,23 +252,27 @@ function AppContent() {
               >
                 All Drivers
               </button>
-              {drivers.map(d => (
-                <button
-                  key={d.id}
-                  onClick={() => {
-                    setSelectedDriverId(d.id.toString());
-                    setShowAddDriverForm(false);
-                    setIsMobileMenuOpen(false);
-                  }}
-                  className={`px-3 md:px-4 py-1.5 md:py-2 rounded-lg md:rounded-xl text-xs md:text-sm font-medium transition-all ${
-                    selectedDriverId === d.id.toString() 
-                      ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/20' 
-                      : 'bg-white text-zinc-600 hover:bg-zinc-50 border border-zinc-200'
-                  }`}
-                >
-                  {d.name}
-                </button>
-              ))}
+
+              {/* Individual driver buttons — sorted with Zain & Hassan last */}
+              {sortedDrivers.map(d => {
+                const dId = d.id.toString();
+                const isSelected = selectedDriverId === dId;
+                return (
+                  <button
+                    key={d.id}
+                    onClick={() => {
+                      setSelectedDriverId(dId);
+                      setShowAddDriverForm(false);
+                      setIsMobileMenuOpen(false);
+                    }}
+                    className={`px-3 md:px-4 py-1.5 md:py-2 rounded-lg md:rounded-xl text-xs md:text-sm font-medium transition-all ${getDriverButtonClasses(dId, isSelected)}`}
+                  >
+                    {d.name}
+                  </button>
+                );
+              })}
+
+              {/* Add Driver button */}
               <button
                 onClick={() => {
                   setActiveTab('drivers');
