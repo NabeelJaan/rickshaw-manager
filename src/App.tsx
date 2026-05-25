@@ -27,6 +27,8 @@ function AppContent() {
   const [monthlyPendingMap, setMonthlyPendingMap] = useState<Record<string, number>>({});
   // True once today's fetch completed — prevents flashing red before data loads
   const [todayFetched, setTodayFetched] = useState(false);
+  // Driver id with highest profit this month
+  const [topDriverId, setTopDriverId] = useState<string | null>(null);
 
   const fetchDrivers = () => {
     const token = localStorage.getItem('auth_token');
@@ -75,6 +77,24 @@ function AppContent() {
           pendMap[id] = (pendMap[id] || 0) + Number(tx.amount);
         });
         setMonthlyPendingMap(pendMap);
+
+        // Compute each driver's profit this month: income - expense (excluding rent_pending)
+        const profitMap: Record<string, number> = {};
+        monthData.forEach((tx: any) => {
+          if (!tx.driver_id || tx.category === 'rent_pending') return;
+          const id = tx.driver_id.toString();
+          if (!profitMap[id]) profitMap[id] = 0;
+          if (tx.type === 'income') profitMap[id] += Number(tx.amount);
+          else if (tx.type === 'expense') profitMap[id] -= Number(tx.amount);
+        });
+        // Find driver with highest profit (must be > 0 and strictly the best)
+        let bestId: string | null = null;
+        let bestProfit = -Infinity;
+        Object.entries(profitMap).forEach(([id, profit]) => {
+          if (profit > bestProfit) { bestProfit = profit; bestId = id; }
+        });
+        // Only crown if there's a clear winner with positive profit
+        setTopDriverId(bestProfit > 0 ? bestId : null);
       }
     }).catch(() => {});
   };
@@ -269,6 +289,7 @@ function AppContent() {
               {sortedDrivers.map(d => {
                 const dId = d.id.toString();
                 const isSelected = selectedDriverId === dId;
+                const isTop = topDriverId === dId;
                 // Badge uses current month's pending only
                 const monthPending = monthlyPendingMap[dId] || 0;
                 const pendingLabel = formatPendingBadge(monthPending);
@@ -278,7 +299,7 @@ function AppContent() {
                       onClick={() => { setSelectedDriverId(dId); setShowAddDriverForm(false); setIsMobileMenuOpen(false); }}
                       className={`px-3 md:px-4 py-1.5 md:py-2 rounded-lg md:rounded-xl text-xs md:text-sm font-medium transition-all ${getDriverButtonClasses(dId, isSelected)}`}
                     >
-                      {d.name}
+                      {isTop && <span className="mr-1 text-[11px]">⭐</span>}{d.name}
                     </button>
                     {pendingLabel && (
                       <span className="absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] px-1 flex items-center justify-center rounded-full bg-amber-500 text-white text-[9px] font-bold leading-none shadow-md shadow-amber-500/40 pointer-events-none">
