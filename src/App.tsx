@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { LayoutDashboard, Users, Car, Receipt, Settings, Menu, X, ChevronDown, LogOut, FileText } from 'lucide-react';
+import { LayoutDashboard, Users, Car, Receipt, Settings, Menu, X, LogOut, FileText } from 'lucide-react';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import LoginPage from './components/LoginPage';
 import Dashboard from './components/Dashboard';
@@ -10,7 +10,7 @@ import Reports from './components/Reports';
 import SettingsPage from './components/Settings';
 import { Driver } from './types';
 
-// Names to always show last in the driver list (case-insensitive)
+// Names to always show last in the driver list (case-insensitive substring match)
 const PINNED_LAST_NAMES = ['zain', 'hassan'];
 
 function AppContent() {
@@ -21,48 +21,62 @@ function AppContent() {
   const [selectedDriverId, setSelectedDriverId] = useState<string>('');
   const [showAddDriverForm, setShowAddDriverForm] = useState(false);
 
-  // Map of driverId -> 'income' | 'pending' | null for today's entries
+  // Today's entry color: driverId -> 'income' | 'pending' | null
   const [todayEntryMap, setTodayEntryMap] = useState<Record<string, 'income' | 'pending' | null>>({});
+  // Current month pending balance per driver (from rent_pending transactions this month only)
+  const [monthlyPendingMap, setMonthlyPendingMap] = useState<Record<string, number>>({});
+  // True once today's fetch completed — prevents flashing red before data loads
+  const [todayFetched, setTodayFetched] = useState(false);
 
   const fetchDrivers = () => {
     const token = localStorage.getItem('auth_token');
     const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
-    fetch('/api/drivers', { headers }).then(res => res.json()).then(data => {
-      if (Array.isArray(data)) {
-        setDrivers(data);
-      } else {
-        console.error('fetchDrivers error:', data);
-        setDrivers([]);
-      }
-    });
+    fetch('/api/drivers', { headers })
+      .then(res => res.json())
+      .then(data => {
+        if (Array.isArray(data)) setDrivers(data);
+        else { console.error('fetchDrivers error:', data); setDrivers([]); }
+      });
   };
 
-  // Fetch today's transactions to determine driver button colors
+  // Fetch today's transactions (button color) + this month's pending transactions (badge)
   const fetchTodayEntries = () => {
     const token = localStorage.getItem('auth_token');
     const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
     const today = new Date().toISOString().split('T')[0];
-    fetch(`/api/transactions?start_date=${today}&end_date=${today}`, { headers })
-      .then(res => res.json())
-      .then((data: any[]) => {
-        if (!Array.isArray(data)) return;
+    const currentMonth = today.slice(0, 7); // YYYY-MM
+
+    Promise.all([
+      fetch(`/api/transactions?start_date=${today}&end_date=${today}`, { headers }).then(r => r.json()),
+      fetch(`/api/transactions?month=${currentMonth}`, { headers }).then(r => r.json()),
+    ]).then(([todayData, monthData]) => {
+      // Today color map
+      if (Array.isArray(todayData)) {
         const map: Record<string, 'income' | 'pending' | null> = {};
-        data.forEach(tx => {
+        todayData.forEach((tx: any) => {
           if (!tx.driver_id) return;
           const id = tx.driver_id.toString();
           if (tx.category === 'rent_pending') {
-            // Only set pending if not already income
-            if (map[id] !== 'income') {
-              map[id] = 'pending';
-            }
+            if (map[id] !== 'income') map[id] = 'pending';
           } else if (tx.type === 'income') {
-            // Income wins over pending
             map[id] = 'income';
           }
         });
         setTodayEntryMap(map);
-      })
-      .catch(() => {});
+        setTodayFetched(true);
+      }
+
+      // This month's pending balance per driver
+      if (Array.isArray(monthData)) {
+        const pendMap: Record<string, number> = {};
+        monthData.forEach((tx: any) => {
+          if (!tx.driver_id || tx.category !== 'rent_pending') return;
+          const id = tx.driver_id.toString();
+          pendMap[id] = (pendMap[id] || 0) + Number(tx.amount);
+        });
+        setMonthlyPendingMap(pendMap);
+      }
+    }).catch(() => {});
   };
 
   useEffect(() => {
@@ -72,18 +86,16 @@ function AppContent() {
     }
   }, [isAuthenticated]);
 
-  // Re-fetch today entries periodically (every 60s) to keep colors fresh
+  // Refresh every 60s
   useEffect(() => {
     if (!isAuthenticated) return;
     const interval = setInterval(fetchTodayEntries, 60_000);
     return () => clearInterval(interval);
   }, [isAuthenticated]);
 
-  if (!isAuthenticated) {
-    return <LoginPage />;
-  }
+  if (!isAuthenticated) return <LoginPage />;
 
-  // Sort drivers: pinned-last names go to the end, rest keep original order
+  // Sort: Zain & Hassan always last
   const isPinnedLast = (name: string) =>
     PINNED_LAST_NAMES.some(p => name.toLowerCase().includes(p));
 
@@ -95,25 +107,28 @@ function AppContent() {
     return 0;
   });
 
-  // Return Tailwind classes for a driver button based on today's entry
+  // Driver button background based on today's entry status
   const getDriverButtonClasses = (driverId: string, isSelected: boolean) => {
+    const entry = todayEntryMap[driverId];
+    const noEntry = todayFetched && !entry;
     if (isSelected) {
-      const entry = todayEntryMap[driverId];
-      if (entry === 'income') {
-        return 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/20';
-      } else if (entry === 'pending') {
-        return 'bg-amber-500 text-white shadow-lg shadow-amber-500/20';
-      }
+      if (entry === 'income') return 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/20';
+      if (entry === 'pending') return 'bg-amber-500 text-white shadow-lg shadow-amber-500/20';
+      if (noEntry) return 'bg-rose-500 text-white shadow-lg shadow-rose-500/20';
       return 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/20';
     }
-
-    const entry = todayEntryMap[driverId];
-    if (entry === 'income') {
-      return 'bg-emerald-50 text-emerald-700 border border-emerald-300 hover:bg-emerald-100';
-    } else if (entry === 'pending') {
-      return 'bg-amber-50 text-amber-700 border border-amber-300 hover:bg-amber-100';
-    }
+    if (entry === 'income') return 'bg-emerald-50 text-emerald-700 border border-emerald-300 hover:bg-emerald-100';
+    if (entry === 'pending') return 'bg-amber-50 text-amber-700 border border-amber-300 hover:bg-amber-100';
+    if (noEntry) return 'bg-rose-50 text-rose-700 border border-rose-300 hover:bg-rose-100';
     return 'bg-white text-zinc-600 hover:bg-zinc-50 border border-zinc-200';
+  };
+
+  // Format pending badge: 1000->1, 2700->2.7, 7000->7
+  const formatPendingBadge = (amount: number): string | null => {
+    if (!amount || amount <= 0) return null;
+    const val = amount / 1000;
+    if (Number.isInteger(val)) return String(val);
+    return parseFloat(val.toFixed(1)).toString();
   };
 
   const navItems = [
@@ -147,7 +162,7 @@ function AppContent() {
           </div>
           Rickshaw Manager
         </h1>
-        <button 
+        <button
           onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
           className="p-2 hover:bg-zinc-800 rounded-lg transition-colors"
         >
@@ -157,15 +172,16 @@ function AppContent() {
 
       {/* Mobile Backdrop */}
       {isMobileMenuOpen && (
-        <div 
+        <div
           className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 md:hidden transition-opacity"
           onClick={() => setIsMobileMenuOpen(false)}
-        ></div>
+        />
       )}
 
       {/* Sidebar */}
       <div className={`
-        fixed md:static inset-y-0 left-0 z-50 w-64 bg-gradient-to-b from-zinc-950 to-zinc-900 text-zinc-300 transform transition-all duration-300 ease-in-out border-r border-zinc-800/50 flex flex-col shadow-2xl
+        fixed md:static inset-y-0 left-0 z-50 w-64 bg-gradient-to-b from-zinc-950 to-zinc-900 text-zinc-300
+        transform transition-all duration-300 ease-in-out border-r border-zinc-800/50 flex flex-col shadow-2xl
         ${isMobileMenuOpen ? 'translate-x-0 pointer-events-auto' : '-translate-x-full md:translate-x-0 pointer-events-none md:pointer-events-auto'}
       `}>
         <div className="p-6 hidden md:block border-b border-zinc-800/50">
@@ -198,29 +214,24 @@ function AppContent() {
             return (
               <button
                 key={item.id}
-                onClick={() => {
-                  setActiveTab(item.id);
-                  setIsMobileMenuOpen(false);
-                }}
+                onClick={() => { setActiveTab(item.id); setIsMobileMenuOpen(false); }}
                 className={`
                   w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 group
-                  ${isActive 
-                    ? 'bg-gradient-to-r from-emerald-500/20 to-emerald-600/10 text-emerald-400 font-medium border border-emerald-500/30 shadow-lg shadow-emerald-500/10' 
+                  ${isActive
+                    ? 'bg-gradient-to-r from-emerald-500/20 to-emerald-600/10 text-emerald-400 font-medium border border-emerald-500/30 shadow-lg shadow-emerald-500/10'
                     : 'text-zinc-400 hover:bg-zinc-800/50 hover:text-zinc-200 border border-transparent'}
                 `}
               >
                 <Icon className={`w-5 h-5 ${isActive ? 'text-emerald-400' : 'text-zinc-500 group-hover:text-zinc-300 transition-colors'}`} />
                 <span className="text-sm">{item.label}</span>
-                {isActive && (
-                  <div className="ml-auto w-1.5 h-1.5 rounded-full bg-emerald-400 shadow-lg shadow-emerald-400/50"></div>
-                )}
+                {isActive && <div className="ml-auto w-1.5 h-1.5 rounded-full bg-emerald-400 shadow-lg shadow-emerald-400/50" />}
               </button>
             );
           })}
         </nav>
 
         <div className="p-4 mt-auto border-t border-zinc-800/50">
-          <button 
+          <button
             onClick={logout}
             className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-zinc-400 hover:bg-rose-500/10 hover:text-rose-400 hover:border-rose-500/30 border border-transparent transition-all duration-200 group"
           >
@@ -233,47 +244,38 @@ function AppContent() {
       {/* Main Content */}
       <main className="flex-1 p-3 md:p-8 lg:p-10 overflow-y-auto min-h-screen">
         <div className="max-w-7xl mx-auto">
-          {/* Driver Tabs */}
+
+          {/* Driver Filter Tabs */}
           <div className="mb-4 md:mb-6">
             <div className="flex items-center gap-1.5 md:gap-2 mb-2 md:mb-3">
               <Users className="w-3.5 h-3.5 md:w-4 md:h-4 text-zinc-500" />
               <span className="text-xs md:text-sm font-medium text-zinc-600">Select Driver:</span>
             </div>
             <div className="flex flex-wrap gap-1.5 md:gap-2">
-              {/* All Drivers button */}
+
+              {/* All Drivers */}
               <button
-                onClick={() => {
-                  setSelectedDriverId('');
-                  setShowAddDriverForm(false);
-                  setIsMobileMenuOpen(false);
-                }}
+                onClick={() => { setSelectedDriverId(''); setShowAddDriverForm(false); setIsMobileMenuOpen(false); }}
                 className={`px-3 md:px-4 py-1.5 md:py-2 rounded-lg md:rounded-xl text-xs md:text-sm font-medium transition-all ${
-                  selectedDriverId === '' 
-                    ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/20' 
+                  selectedDriverId === ''
+                    ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/20'
                     : 'bg-white text-zinc-600 hover:bg-zinc-50 border border-zinc-200'
                 }`}
               >
                 All Drivers
               </button>
 
-              {/* Individual driver buttons — sorted with Zain & Hassan last */}
+              {/* Individual drivers — Zain & Hassan pinned last */}
               {sortedDrivers.map(d => {
                 const dId = d.id.toString();
                 const isSelected = selectedDriverId === dId;
-                // Calculate pending display value: divide by 1000, show as integer or 1 decimal
-                const pendingBalance = Number(d.pending_balance) || 0;
-                const pendingDays = pendingBalance > 0 ? pendingBalance / 1000 : 0;
-                const pendingLabel = pendingDays > 0
-                  ? (Number.isInteger(pendingDays) ? String(pendingDays) : pendingDays.toFixed(1).replace(/\.0$/, ''))
-                  : null;
+                // Badge uses current month's pending only
+                const monthPending = monthlyPendingMap[dId] || 0;
+                const pendingLabel = formatPendingBadge(monthPending);
                 return (
                   <div key={d.id} className="relative inline-flex">
                     <button
-                      onClick={() => {
-                        setSelectedDriverId(dId);
-                        setShowAddDriverForm(false);
-                        setIsMobileMenuOpen(false);
-                      }}
+                      onClick={() => { setSelectedDriverId(dId); setShowAddDriverForm(false); setIsMobileMenuOpen(false); }}
                       className={`px-3 md:px-4 py-1.5 md:py-2 rounded-lg md:rounded-xl text-xs md:text-sm font-medium transition-all ${getDriverButtonClasses(dId, isSelected)}`}
                     >
                       {d.name}
@@ -287,20 +289,16 @@ function AppContent() {
                 );
               })}
 
-              {/* Add Driver button */}
+              {/* Add Driver */}
               <button
-                onClick={() => {
-                  setActiveTab('drivers');
-                  setShowAddDriverForm(true);
-                  setSelectedDriverId('');
-                  setIsMobileMenuOpen(false);
-                }}
+                onClick={() => { setActiveTab('drivers'); setShowAddDriverForm(true); setSelectedDriverId(''); setIsMobileMenuOpen(false); }}
                 className="px-3 md:px-4 py-1.5 md:py-2 rounded-lg md:rounded-xl text-xs md:text-sm font-medium bg-zinc-100 text-zinc-600 hover:bg-zinc-200 border border-dashed border-zinc-300 transition-all flex items-center gap-1 md:gap-1.5"
               >
                 <Users className="w-3 h-3 md:w-3.5 md:h-3.5" /> Add Driver
               </button>
             </div>
           </div>
+
           {renderContent()}
         </div>
       </main>
