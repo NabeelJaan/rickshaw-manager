@@ -20,10 +20,15 @@ function AppContent() {
   const [drivers, setDrivers] = useState<Driver[]>([]);
   const [selectedDriverId, setSelectedDriverId] = useState<string>('');
   const [showAddDriverForm, setShowAddDriverForm] = useState(false);
+  // Selected month for pending badges (defaults to current month)
+  const [selectedMonth, setSelectedMonth] = useState<string>(() => {
+    const now = new Date();
+    return now.toISOString().slice(0, 7); // YYYY-MM
+  });
 
   // Today's entry color: driverId -> 'income' | 'pending' | null
   const [todayEntryMap, setTodayEntryMap] = useState<Record<string, 'income' | 'pending' | null>>({});
-  // Current month pending balance per driver (from rent_pending transactions this month only)
+  // Selected month pending balance per driver (from rent_pending transactions in selected month)
   const [monthlyPendingMap, setMonthlyPendingMap] = useState<Record<string, number>>({});
   // True once today's fetch completed — prevents flashing red before data loads
   const [todayFetched, setTodayFetched] = useState(false);
@@ -41,16 +46,16 @@ function AppContent() {
       });
   };
 
-  // Fetch today's transactions (button color) + this month's pending transactions (badge)
+  // Fetch today's transactions (button color) + selected month's pending transactions (badge)
   const fetchTodayEntries = () => {
     const token = localStorage.getItem('auth_token');
     const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
     const today = new Date().toISOString().split('T')[0];
-    const currentMonth = today.slice(0, 7); // YYYY-MM
+    const monthToFetch = selectedMonth; // Use selected month instead of always current
 
     Promise.all([
       fetch(`/api/transactions?start_date=${today}&end_date=${today}`, { headers }).then(r => r.json()),
-      fetch(`/api/transactions?month=${currentMonth}`, { headers }).then(r => r.json()),
+      fetch(`/api/transactions?month=${monthToFetch}`, { headers }).then(r => r.json()),
     ]).then(([todayData, monthData]) => {
       // Today color map
       if (Array.isArray(todayData)) {
@@ -105,6 +110,13 @@ function AppContent() {
       fetchTodayEntries();
     }
   }, [isAuthenticated]);
+
+  // Refetch monthly pending data when selectedMonth changes
+  useEffect(() => {
+    if (isAuthenticated) {
+      fetchTodayEntries();
+    }
+  }, [selectedMonth]);
 
   // Refresh every 60s
   useEffect(() => {
@@ -162,7 +174,7 @@ function AppContent() {
 
   const renderContent = () => {
     switch (activeTab) {
-      case 'dashboard': return <Dashboard selectedDriverId={selectedDriverId} />;
+      case 'dashboard': return <Dashboard selectedDriverId={selectedDriverId} selectedMonth={selectedMonth} onMonthChange={setSelectedMonth} />;
       case 'rickshaws': return <Rickshaws selectedDriverId={selectedDriverId} />;
       case 'drivers': return <Drivers onDriverAdded={fetchDrivers} defaultShowForm={showAddDriverForm} />;
       case 'transactions': return <Transactions selectedDriverId={selectedDriverId} />;

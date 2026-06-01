@@ -7,7 +7,13 @@ import ExpenseModal from './ExpenseModal';
 import EditTransactionModal from './EditTransactionModal';
 import AddPendingBalanceModal from './AddPendingBalanceModal';
 
-export default function Dashboard({ selectedDriverId }: { selectedDriverId?: string }) {
+interface DashboardProps {
+  selectedDriverId?: string;
+  selectedMonth?: string;
+  onMonthChange?: (month: string) => void;
+}
+
+export default function Dashboard({ selectedDriverId, selectedMonth: propSelectedMonth, onMonthChange }: DashboardProps) {
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
@@ -20,10 +26,16 @@ export default function Dashboard({ selectedDriverId }: { selectedDriverId?: str
   const [currency, setCurrency] = useState('Rs.');
   const [showTransactionDropdown, setShowTransactionDropdown] = useState(false);
   const [txFilter, setTxFilter] = useState<'all' | 'income' | 'expense' | 'pending'>('all');
-  const [selectedMonth, setSelectedMonth] = useState<string>(() => {
+  // Use prop month if provided (controlled by parent), otherwise use local state
+  const [localSelectedMonth, setLocalSelectedMonth] = useState<string>(() => {
     const now = new Date();
     return now.toISOString().slice(0, 7); // Current month in YYYY-MM format
   });
+  const selectedMonth = propSelectedMonth ?? localSelectedMonth;
+  const setSelectedMonth = (month: string) => {
+    if (onMonthChange) onMonthChange(month);
+    setLocalSelectedMonth(month);
+  };
 
   // Load currency from settings
   useEffect(() => {
@@ -131,14 +143,16 @@ export default function Dashboard({ selectedDriverId }: { selectedDriverId?: str
   const remainingInvestment = Math.max(0, (stats.totalInvestment || 0) - cumulativeProfit);
   const isFullyRecovered = remainingInvestment === 0 && (stats.totalInvestment || 0) > 0;
   const totalProfit = cumulativeProfit - (stats.totalInvestment || 0);
-  const activeDrivers = stats.activeRickshaws || 1;
 
   // Monthly avg: always based on the selected month's data, never affected by All Time
+  // Use historical activeRickshaws count from that month if available
   const currentMonthData = (stats.monthlyData || []).find((d: any) => d.month === selectedMonth);
   const monthlyProfit = currentMonthData
     ? (currentMonthData.income || 0) - (currentMonthData.expense || 0)
     : (stats.profit || 0);
-  const monthlyAvg = Math.round((monthlyProfit + (stats.pendingBalance || 0)) / activeDrivers);
+  // Use the activeRickshaws count for that specific month (e.g., April had 7, May had 9)
+  const activeDriversForMonth = currentMonthData?.activeRickshaws ?? stats.activeRickshaws ?? 1;
+  const monthlyAvg = Math.round((monthlyProfit + (stats.pendingBalance || 0)) / activeDriversForMonth);
 
   const statCards = [
     { title: 'Revenue', value: stats.totalIncome || 0, icon: TrendingUp, color: 'text-emerald-500', bg: 'bg-emerald-50', prefix: currency + ' ', showOnMobile: true },

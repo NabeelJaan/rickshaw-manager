@@ -678,12 +678,41 @@ app.get('/api/stats', authenticate, async (req, res) => {
       ? await sql`SELECT COUNT(DISTINCT rk.id) as count FROM rickshaws rk JOIN rickshaw_assignments a ON rk.id=a.rickshaw_id WHERE a.driver_id=${driver_id as string}`
       : await sql`SELECT COUNT(id) as count FROM rickshaws`;
 
+    // Get monthly income/expense data
     const monR = await sql.query(`
       SELECT TO_CHAR(TO_DATE(date,'YYYY-MM-DD'),'YYYY-MM') as month,
         SUM(CASE WHEN type='income' AND category!='rent_pending' THEN amount ELSE 0 END) as income,
         SUM(CASE WHEN type='expense' AND category!='rent_pending' THEN amount ELSE 0 END) as expense
       FROM transactions WHERE 1=1 ${df} GROUP BY month ORDER BY month DESC LIMIT 12`, da);
     monR.rows.reverse();
+
+    // Calculate active rickshaws per month based on assignments
+    // Count assignments that were active during any part of each month
+    const monthlyActiveCounts: Record<string, number> = {};
+    for (const row of monR.rows) {
+      const monthStr = row.month as string; // YYYY-MM
+      const [year, month] = monthStr.split('-').map(Number);
+      const monthStart = `${monthStr}-01`;
+      const monthEnd = new Date(year, month, 0).toISOString().split('T')[0]; // Last day of month
+
+      // Count distinct rickshaws that had at least one driver transaction in this month
+      // OR had an active assignment during this month
+      const activeInMonth = await sql.query(`
+        SELECT COUNT(DISTINCT rickshaw_id) as count FROM (
+          -- Rickshaws with transactions this month
+          SELECT DISTINCT rickshaw_id FROM transactions
+          WHERE rickshaw_id IS NOT NULL
+            AND date >= '${monthStart}' AND date <= '${monthEnd}'
+            ${df}
+          UNION
+          -- Rickshaws with active assignments during this month
+          SELECT DISTINCT rickshaw_id FROM rickshaw_assignments
+          WHERE start_date <= '${monthEnd}'
+            AND (end_date IS NULL OR end_date >= '${monthStart}')
+            ${driver_id ? 'AND driver_id = $1' : ''}
+        )`, da);
+      monthlyActiveCounts[monthStr] = Number(activeInMonth.rows[0]?.count) || 1;
+    }
 
     const dayR = await sql.query(`
       SELECT date,
@@ -692,6 +721,12 @@ app.get('/api/stats', authenticate, async (req, res) => {
       FROM transactions
       WHERE date >= TO_CHAR(CURRENT_DATE - INTERVAL '30 days','YYYY-MM-DD') ${df}
       GROUP BY date ORDER BY date ASC`, da);
+
+    // Build monthly data with active rickshaw counts for historical accuracy
+    const monthlyDataWithActive = monR.rows.map((row: any) => ({
+      ...row,
+      activeRickshaws: monthlyActiveCounts[row.month] || Number(actR.rows[0]?.count) || 1
+    }));
 
     res.json({
       totalIncome:     Number(incR.rows[0]?.total) || 0,
@@ -705,7 +740,7 @@ app.get('/api/stats', authenticate, async (req, res) => {
       pendingBalance:  Number(pendR.rows[0]?.total) || 0,
       activeRickshaws: Number(actR.rows[0]?.count) || 0,
       totalRickshaws:  Number(totR.rows[0]?.count) || 0,
-      monthlyData: monR.rows,
+      monthlyData: monthlyDataWithActive,
       dailyData:   dayR.rows,
     });
   } catch (e: any) { res.status(500).json({ error: e.message }); }
