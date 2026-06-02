@@ -118,12 +118,12 @@ function AppContent() {
     }
   }, [selectedMonth]);
 
-  // Refresh every 60s
+  // Refresh every 60s - recreate interval when selectedMonth changes
   useEffect(() => {
     if (!isAuthenticated) return;
     const interval = setInterval(fetchTodayEntries, 60_000);
     return () => clearInterval(interval);
-  }, [isAuthenticated]);
+  }, [isAuthenticated, selectedMonth]);
 
   if (!isAuthenticated) return <LoginPage />;
 
