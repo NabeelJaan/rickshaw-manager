@@ -78,13 +78,42 @@ export default function Drivers({ onDriverAdded, defaultShowForm }: { onDriverAd
     if (Array.isArray(allTransactions)) {
       const oilChanges: Record<number, string> = {};
       // Sort by date descending to find most recent first
-      const sortedTx = [...allTransactions].sort((a: any, b: any) => 
+      const sortedTx = [...allTransactions].sort((a: any, b: any) =>
         new Date(b.date).getTime() - new Date(a.date).getTime()
       );
-      
+
+      // Build a map of rickshaw_id to driver_id from assignments
+      const rickshawToDriver: Record<number, number> = {};
+      if (Array.isArray(rickshawsData)) {
+        // Get active assignments
+        const assignmentsRes = await fetch('/api/assignments', { headers });
+        const assignments = await assignmentsRes.json();
+        if (Array.isArray(assignments)) {
+          assignments.forEach((a: any) => {
+            if (a.end_date === null && !rickshawToDriver[a.rickshaw_id]) {
+              rickshawToDriver[a.rickshaw_id] = a.driver_id;
+            }
+          });
+        }
+      }
+
       sortedTx.forEach((tx: any) => {
-        if (tx.category && tx.category.toLowerCase().includes('oil') && tx.driver_id && !oilChanges[tx.driver_id]) {
-          oilChanges[tx.driver_id] = tx.date;
+        // Check if transaction mentions oil in category or notes
+        const mentionsOil = (
+          (tx.category && tx.category.toLowerCase().includes('oil')) ||
+          (tx.notes && tx.notes.toLowerCase().includes('oil'))
+        );
+
+        if (mentionsOil) {
+          // Get driver_id from transaction or lookup via rickshaw
+          let driverId = tx.driver_id;
+          if (!driverId && tx.rickshaw_id && rickshawToDriver[tx.rickshaw_id]) {
+            driverId = rickshawToDriver[tx.rickshaw_id];
+          }
+
+          if (driverId && !oilChanges[driverId]) {
+            oilChanges[driverId] = tx.date;
+          }
         }
       });
       setLastOilChange(oilChanges);
