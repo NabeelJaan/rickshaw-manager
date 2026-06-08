@@ -155,7 +155,6 @@ export default function Dashboard({ selectedDriverId, selectedMonth: propSelecte
   const monthlyAvg = Math.round((monthlyProfit + (stats.pendingBalance || 0)) / activeDriversForMonth);
 
   const statCards = [
-    { title: "Today's Total", value: stats.todayTotal || 0, icon: TrendingUp, color: 'text-green-600', bg: 'bg-green-50', prefix: currency + ' ', showOnMobile: true },
     { title: 'Revenue', value: stats.totalIncome || 0, icon: TrendingUp, color: 'text-emerald-500', bg: 'bg-emerald-50', prefix: currency + ' ', showOnMobile: true },
     { title: 'Expense', value: stats.totalExpense || 0, icon: TrendingDown, color: 'text-rose-500', bg: 'bg-rose-50', prefix: currency + ' ', showOnMobile: true },
     { title: 'Net Profit', value: stats.profit || 0, icon: DollarSign, color: 'text-blue-500', bg: 'bg-blue-50', prefix: currency + ' ', showOnMobile: true },
@@ -249,19 +248,28 @@ export default function Dashboard({ selectedDriverId, selectedMonth: propSelecte
       {/* Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:justify-between sm:items-end">
         <div>
-          <h1 className="text-[18px] sm:text-[22px] md:text-[40px] font-semibold text-zinc-900 tracking-tight leading-tight break-words">
-            {selectedDriverId ? (
-              <>
-                {selectedMonth && selectedMonth !== 'all' ? (
-                  <>
-                    {new Date(selectedMonth + '-01').toLocaleDateString('en-US', { month: 'short', year: 'numeric' })} - {selectedDriverName}
-                  </>
-                ) : (
-                  selectedDriverName
-                )}
-              </>
-            ) : 'Overview'}
-          </h1>
+          <div className="flex items-center gap-3 flex-wrap">
+            <h1 className="text-[18px] sm:text-[22px] md:text-[40px] font-semibold text-zinc-900 tracking-tight leading-tight break-words">
+              {selectedDriverId ? (
+                <>
+                  {selectedMonth && selectedMonth !== 'all' ? (
+                    <>
+                      {new Date(selectedMonth + '-01').toLocaleDateString('en-US', { month: 'short', year: 'numeric' })} - {selectedDriverName}
+                    </>
+                  ) : (
+                    selectedDriverName
+                  )}
+                </>
+              ) : 'Overview'}
+            </h1>
+            {!selectedDriverId && (
+              <div className="flex items-center gap-2 px-3 py-1.5 md:px-4 md:py-2 bg-green-50 rounded-lg md:rounded-xl border border-green-100">
+                <TrendingUp className="w-3.5 h-3.5 md:w-4 md:h-4 text-green-600" />
+                <span className="text-[11px] md:text-[14px] font-medium text-green-700">Today:</span>
+                <span className="text-[13px] md:text-[18px] font-bold text-green-700 font-number">{currency} {stats.todayTotal?.toLocaleString() || 0}</span>
+              </div>
+            )}
+          </div>
           <p className="text-[12px] md:text-[14px] text-zinc-500 mt-0.5">
             {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
           </p>
