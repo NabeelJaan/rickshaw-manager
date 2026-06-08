@@ -8,6 +8,7 @@ export default function Drivers({ onDriverAdded, defaultShowForm }: { onDriverAd
   const [showForm, setShowForm] = useState(defaultShowForm || false);
   const [editingDriver, setEditingDriver] = useState<Driver | null>(null);
   const [currency, setCurrency] = useState('Rs.');
+  const [driversOnLeave, setDriversOnLeave] = useState<Set<number>>(new Set());
   
   const [formData, setFormData] = useState({ name: '', phone: '', join_date: new Date().toISOString().split('T')[0], rickshaw_id: '', daily_rent: '', pending_balance: '' });
   const [editFormData, setEditFormData] = useState({ name: '', phone: '', join_date: '', id: '', daily_rent: '', pending_balance: '' });
@@ -40,16 +41,34 @@ export default function Drivers({ onDriverAdded, defaultShowForm }: { onDriverAd
     setShowForm(defaultShowForm || false);
   }, [defaultShowForm]);
 
-  const fetchData = () => {
+  const fetchData = async () => {
     const token = localStorage.getItem('auth_token');
     const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
-    fetch('/api/drivers', { headers })
-      .then(res => res.json())
-      .then(data => { if (Array.isArray(data)) setDrivers(data); });
     
-    fetch('/api/rickshaws', { headers })
-      .then(res => res.json())
-      .then(data => { if (Array.isArray(data)) setRickshaws(data); });
+    // Fetch drivers
+    const driversRes = await fetch('/api/drivers', { headers });
+    const driversData = await driversRes.json();
+    if (Array.isArray(driversData)) setDrivers(driversData);
+    
+    // Fetch rickshaws
+    const rickshawsRes = await fetch('/api/rickshaws', { headers });
+    const rickshawsData = await rickshawsRes.json();
+    if (Array.isArray(rickshawsData)) setRickshaws(rickshawsData);
+    
+    // Check for drivers on leave today
+    const today = new Date().toISOString().split('T')[0];
+    const txRes = await fetch(`/api/transactions?start_date=${today}&end_date=${today}`, { headers });
+    const transactions = await txRes.json();
+    
+    if (Array.isArray(transactions)) {
+      const onLeaveToday = new Set<number>();
+      transactions.forEach((tx: any) => {
+        if (tx.notes && tx.notes.toLowerCase().includes('leave') && tx.driver_id) {
+          onLeaveToday.add(tx.driver_id);
+        }
+      });
+      setDriversOnLeave(onLeaveToday);
+    }
   };
 
   useEffect(() => {
@@ -283,13 +302,19 @@ export default function Drivers({ onDriverAdded, defaultShowForm }: { onDriverAd
                 <Users className="w-6 h-6" />
               </div>
               <div>
-                <h3 className="text-lg font-bold text-zinc-900 tracking-tight">{d.name}</h3>
+                <h3 className={`text-lg font-bold tracking-tight ${
+                  driversOnLeave.has(d.id) 
+                    ? 'text-rose-500' 
+                    : 'text-zinc-900'
+                }`}>{d.name}</h3>
                 <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-medium border ${
-                  d.assigned_rickshaw 
-                    ? 'bg-emerald-50 text-emerald-700 border-emerald-200/50' 
-                    : 'bg-zinc-50 text-zinc-600 border-zinc-200/50'
+                  driversOnLeave.has(d.id)
+                    ? 'bg-rose-50 text-rose-700 border-rose-200/50'
+                    : d.assigned_rickshaw 
+                      ? 'bg-emerald-50 text-emerald-700 border-emerald-200/50' 
+                      : 'bg-zinc-50 text-zinc-600 border-zinc-200/50'
                 }`}>
-                  {d.assigned_rickshaw ? 'Assigned' : 'Available'}
+                  {driversOnLeave.has(d.id) ? 'On Leave' : d.assigned_rickshaw ? 'Assigned' : 'Available'}
                 </span>
               </div>
             </div>
