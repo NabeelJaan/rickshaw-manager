@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Users, Phone, Calendar, Car, Edit, Trash2, DollarSign } from 'lucide-react';
+import { Plus, Users, Phone, Calendar, Car, Edit, Trash2, DollarSign, Droplets, Umbrella } from 'lucide-react';
 import { Driver, Rickshaw } from '../types';
 
 export default function Drivers({ onDriverAdded, defaultShowForm }: { onDriverAdded?: () => void, defaultShowForm?: boolean }) {
@@ -9,6 +9,7 @@ export default function Drivers({ onDriverAdded, defaultShowForm }: { onDriverAd
   const [editingDriver, setEditingDriver] = useState<Driver | null>(null);
   const [currency, setCurrency] = useState('Rs.');
   const [driversOnLeave, setDriversOnLeave] = useState<Set<number>>(new Set());
+  const [lastOilChange, setLastOilChange] = useState<Record<number, string>>({});
   
   const [formData, setFormData] = useState({ name: '', phone: '', join_date: new Date().toISOString().split('T')[0], rickshaw_id: '', daily_rent: '', pending_balance: '' });
   const [editFormData, setEditFormData] = useState({ name: '', phone: '', join_date: '', id: '', daily_rent: '', pending_balance: '' });
@@ -68,6 +69,25 @@ export default function Drivers({ onDriverAdded, defaultShowForm }: { onDriverAd
         }
       });
       setDriversOnLeave(onLeaveToday);
+    }
+    
+    // Fetch last oil change for all drivers
+    const allTxRes = await fetch('/api/transactions?limit=1000', { headers });
+    const allTransactions = await allTxRes.json();
+    
+    if (Array.isArray(allTransactions)) {
+      const oilChanges: Record<number, string> = {};
+      // Sort by date descending to find most recent first
+      const sortedTx = [...allTransactions].sort((a: any, b: any) => 
+        new Date(b.date).getTime() - new Date(a.date).getTime()
+      );
+      
+      sortedTx.forEach((tx: any) => {
+        if (tx.category && tx.category.toLowerCase().includes('oil') && tx.driver_id && !oilChanges[tx.driver_id]) {
+          oilChanges[tx.driver_id] = tx.date;
+        }
+      });
+      setLastOilChange(oilChanges);
     }
   };
 
@@ -319,6 +339,24 @@ export default function Drivers({ onDriverAdded, defaultShowForm }: { onDriverAd
               </div>
             </div>
             
+            {/* Leave and Oil Change - Left/Right on desktop, stacked on mobile */}
+            <div className="flex flex-col sm:flex-row sm:justify-between gap-2 mb-3 text-[11px]">
+              <div className={`flex items-center gap-1.5 px-2 py-1 rounded-md ${
+                driversOnLeave.has(d.id) ? 'bg-rose-50 text-rose-700' : 'bg-zinc-50 text-zinc-500'
+              }`}>
+                <Umbrella className="w-3 h-3" />
+                <span className="font-medium">{driversOnLeave.has(d.id) ? 'On Leave' : 'Working'}</span>
+              </div>
+              <div className={`flex items-center gap-1.5 px-2 py-1 rounded-md ${
+                lastOilChange[d.id] ? 'bg-blue-50 text-blue-700' : 'bg-zinc-50 text-zinc-500'
+              }`}>
+                <Droplets className="w-3 h-3" />
+                <span className="font-medium">
+                  {lastOilChange[d.id] ? `Oil: ${lastOilChange[d.id]}` : 'No oil change'}
+                </span>
+              </div>
+            </div>
+
             <div className="space-y-3.5 text-[13px] text-zinc-600">
               <div className="flex items-center gap-3">
                 <Phone className="w-4 h-4 text-zinc-400" />
