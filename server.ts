@@ -417,7 +417,7 @@ app.use(express.json());
 
   // Dashboard Stats
   app.get("/api/stats", (req, res) => {
-    const { driver_id } = req.query;
+    const { driver_id, month } = req.query;
     try {
       let driverFilter = "";
       let params: any[] = [];
@@ -426,8 +426,19 @@ app.use(express.json());
         params.push(driver_id);
       }
 
-      const totalIncome = db.prepare(`SELECT SUM(amount) as total FROM transactions WHERE type = 'income' AND category != 'rent_pending'${driverFilter}`).get(...params) as any;
-      const totalExpense = db.prepare(`SELECT SUM(amount) as total FROM transactions WHERE type = 'expense' AND category != 'rent_pending'${driverFilter}`).get(...params) as any;
+      // Month filter
+      let monthFilter = "";
+      if (month && month !== 'all') {
+        monthFilter = " AND strftime('%Y-%m', date) = ?";
+        params.push(month);
+      }
+
+      const totalIncome = db.prepare(`SELECT SUM(amount) as total FROM transactions WHERE type = 'income' AND category != 'rent_pending'${driverFilter}${monthFilter}`).get(...params) as any;
+      const totalExpense = db.prepare(`SELECT SUM(amount) as total FROM transactions WHERE type = 'expense' AND category != 'rent_pending'${driverFilter}${monthFilter}`).get(...params) as any;
+
+      // All-time stats (not filtered by month)
+      const allTimeIncome = db.prepare(`SELECT SUM(amount) as total FROM transactions WHERE type = 'income' AND category != 'rent_pending'${driverFilter}`).get(...params.slice(0, driver_id ? 1 : 0)) as any;
+      const allTimeExpense = db.prepare(`SELECT SUM(amount) as total FROM transactions WHERE type = 'expense' AND category != 'rent_pending'${driverFilter}`).get(...params.slice(0, driver_id ? 1 : 0)) as any;
       
       let totalInvestment = { total: 0 };
       if (driver_id) {
@@ -452,6 +463,31 @@ app.use(express.json());
         LIMIT 12
       `).all(...params).reverse();
 
+      // Add activeRickshaws count to each month in monthlyData
+      const monthlyDataWithActive = monthlyData.map((d: any) => {
+        const monthStart = d.month + '-01';
+        const monthEnd = new Date(parseInt(d.month.split('-')[0]), parseInt(d.month.split('-')[1]), 0).toISOString().split('T')[0];
+        
+        const activeInMonth = db.prepare(`
+          SELECT COUNT(DISTINCT rickshaw_id) as count FROM (
+            SELECT DISTINCT rickshaw_id FROM transactions
+            WHERE rickshaw_id IS NOT NULL
+              AND date >= ? AND date <= ?
+              ${driverFilter}
+            UNION
+            SELECT DISTINCT rickshaw_id FROM rickshaw_assignments
+            WHERE start_date <= ?
+              AND (end_date IS NULL OR end_date >= ?)
+              ${driver_id ? 'AND driver_id = ?' : ''}
+          )
+        `).get(monthStart, monthEnd, monthEnd, monthStart, ...(driver_id ? [driver_id] : [])) as any;
+        
+        return {
+          ...d,
+          activeRickshaws: activeInMonth?.count || activeRickshaws?.count || 1
+        };
+      });
+
       const dailyData = db.prepare(`
         SELECT date, 
                SUM(CASE WHEN type = 'income' AND category != 'rent_pending' THEN amount ELSE 0 END) as income,
@@ -461,6 +497,12 @@ app.use(express.json());
         GROUP BY date
         ORDER BY date ASC
       `).all(...params);
+
+      const todayTotal = db.prepare(`
+        SELECT SUM(CASE WHEN type = 'income' AND category != 'rent_pending' THEN amount ELSE 0 END) as total
+        FROM transactions
+        WHERE date = date('now') ${driverFilter}
+      `).get(...params) as any;
 
       let pendingBalance = { total: 0 };
       if (driver_id) {
@@ -501,11 +543,15 @@ app.use(express.json());
         totalExpense: totalExpense?.total || 0,
         totalInvestment: totalInvestment?.total || 0,
         profit: (totalIncome?.total || 0) - (totalExpense?.total || 0),
+        allTimeProfit: (allTimeIncome?.total || 0) - (allTimeExpense?.total || 0),
+        allTimeIncome: allTimeIncome?.total || 0,
+        allTimeExpense: allTimeExpense?.total || 0,
         pendingBalance: pendingBalance?.total || 0,
         activeRickshaws: activeRickshaws?.count || 0,
         totalRickshaws: totalRickshaws?.count || 0,
-        monthlyData,
-        dailyData
+        monthlyData: monthlyDataWithActive,
+        dailyData,
+        todayTotal: todayTotal?.total || 0
       });
     } catch (error: any) {
       res.status(500).json({ error: error.message });

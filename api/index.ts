@@ -722,6 +722,12 @@ app.get('/api/stats', authenticate, async (req, res) => {
       WHERE date >= TO_CHAR(CURRENT_DATE - INTERVAL '30 days','YYYY-MM-DD') ${df}
       GROUP BY date ORDER BY date ASC`, da);
 
+    // Today's total
+    const todayR = await sql.query(`
+      SELECT SUM(CASE WHEN type='income' AND category!='rent_pending' THEN amount ELSE 0 END) as total
+      FROM transactions
+      WHERE date = TO_CHAR(CURRENT_DATE,'YYYY-MM-DD') ${df}`, da);
+
     // Build monthly data with active rickshaw counts for historical accuracy
     const monthlyDataWithActive = monR.rows.map((row: any) => ({
       ...row,
@@ -742,6 +748,7 @@ app.get('/api/stats', authenticate, async (req, res) => {
       totalRickshaws:  Number(totR.rows[0]?.count) || 0,
       monthlyData: monthlyDataWithActive,
       dailyData:   dayR.rows,
+      todayTotal:  Number(todayR.rows[0]?.total) || 0,
     });
   } catch (e: any) { res.status(500).json({ error: e.message }); }
 });

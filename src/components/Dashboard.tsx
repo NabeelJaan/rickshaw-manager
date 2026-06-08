@@ -88,7 +88,7 @@ export default function Dashboard({ selectedDriverId, selectedMonth: propSelecte
     
     Promise.all([
       fetch(`/api/stats${query}`, { headers }).then(res => res.json()).catch(() => ({})),
-      fetch(`/api/transactions${query ? query + '&' : '?'}limit=20`, { headers }).then(res => res.json()).catch(() => [])
+      fetch(`/api/transactions${query ? query + '&' : '?'}limit=30`, { headers }).then(res => res.json()).catch(() => [])
     ]).then(([statsData, txData]) => {
       setStats(statsData || {});
       setTransactions(Array.isArray(txData) ? txData : []);
@@ -155,6 +155,7 @@ export default function Dashboard({ selectedDriverId, selectedMonth: propSelecte
   const monthlyAvg = Math.round((monthlyProfit + (stats.pendingBalance || 0)) / activeDriversForMonth);
 
   const statCards = [
+    { title: "Today's Total", value: stats.todayTotal || 0, icon: TrendingUp, color: 'text-green-600', bg: 'bg-green-50', prefix: currency + ' ', showOnMobile: true },
     { title: 'Revenue', value: stats.totalIncome || 0, icon: TrendingUp, color: 'text-emerald-500', bg: 'bg-emerald-50', prefix: currency + ' ', showOnMobile: true },
     { title: 'Expense', value: stats.totalExpense || 0, icon: TrendingDown, color: 'text-rose-500', bg: 'bg-rose-50', prefix: currency + ' ', showOnMobile: true },
     { title: 'Net Profit', value: stats.profit || 0, icon: DollarSign, color: 'text-blue-500', bg: 'bg-blue-50', prefix: currency + ' ', showOnMobile: true },
