@@ -20,20 +20,17 @@ function AppContent() {
   const [drivers, setDrivers] = useState<Driver[]>([]);
   const [selectedDriverId, setSelectedDriverId] = useState<string>('');
   const [showAddDriverForm, setShowAddDriverForm] = useState(false);
-  // Selected month for pending badges (defaults to current month)
   const [selectedMonth, setSelectedMonth] = useState<string>(() => {
     const now = new Date();
-    return now.toISOString().slice(0, 7); // YYYY-MM
+    return now.toISOString().slice(0, 7);
   });
 
-  // Today's entry color: driverId -> 'income' | 'pending' | null
   const [todayEntryMap, setTodayEntryMap] = useState<Record<string, 'income' | 'pending' | null>>({});
-  // Selected month pending balance per driver (from rent_pending transactions in selected month)
   const [monthlyPendingMap, setMonthlyPendingMap] = useState<Record<string, number>>({});
-  // True once today's fetch completed — prevents flashing red before data loads
   const [todayFetched, setTodayFetched] = useState(false);
-  // Driver id with highest profit this month
   const [topDriverId, setTopDriverId] = useState<string | null>(null);
+  // NEW: track which drivers are on leave today
+  const [driversOnLeave, setDriversOnLeave] = useState<Set<string>>(new Set());
 
   const fetchDrivers = () => {
     const token = localStorage.getItem('auth_token');
@@ -46,34 +43,42 @@ function AppContent() {
       });
   };
 
-  // Fetch today's transactions (button color) + selected month's pending transactions (badge)
   const fetchTodayEntries = () => {
     const token = localStorage.getItem('auth_token');
     const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
     const today = new Date().toISOString().split('T')[0];
-    const monthToFetch = selectedMonth; // Use selected month instead of always current
+    const monthToFetch = selectedMonth;
 
     Promise.all([
       fetch(`/api/transactions?start_date=${today}&end_date=${today}`, { headers }).then(r => r.json()),
       fetch(`/api/transactions?month=${monthToFetch}`, { headers }).then(r => r.json()),
     ]).then(([todayData, monthData]) => {
-      // Today color map
       if (Array.isArray(todayData)) {
         const map: Record<string, 'income' | 'pending' | null> = {};
+        // NEW: build leave set
+        const onLeave = new Set<string>();
+
         todayData.forEach((tx: any) => {
           if (!tx.driver_id) return;
           const id = tx.driver_id.toString();
+
+          // Check leave
+          if (tx.notes && tx.notes.toLowerCase().includes('leave')) {
+            onLeave.add(id);
+          }
+
           if (tx.category === 'rent_pending') {
             if (map[id] !== 'income') map[id] = 'pending';
           } else if (tx.type === 'income') {
             map[id] = 'income';
           }
         });
+
         setTodayEntryMap(map);
+        setDriversOnLeave(onLeave); // NEW
         setTodayFetched(true);
       }
 
-      // This month's pending balance per driver
       if (Array.isArray(monthData)) {
         const pendMap: Record<string, number> = {};
         monthData.forEach((tx: any) => {
@@ -83,7 +88,6 @@ function AppContent() {
         });
         setMonthlyPendingMap(pendMap);
 
-        // Compute each driver's profit this month: income - expense (excluding rent_pending)
         const profitMap: Record<string, number> = {};
         monthData.forEach((tx: any) => {
           if (!tx.driver_id || tx.category === 'rent_pending') return;
@@ -92,13 +96,11 @@ function AppContent() {
           if (tx.type === 'income') profitMap[id] += Number(tx.amount);
           else if (tx.type === 'expense') profitMap[id] -= Number(tx.amount);
         });
-        // Find driver with highest profit (must be > 0 and strictly the best)
         let bestId: string | null = null;
         let bestProfit = -Infinity;
         Object.entries(profitMap).forEach(([id, profit]) => {
           if (profit > bestProfit) { bestProfit = profit; bestId = id; }
         });
-        // Only crown if there's a clear winner with positive profit
         setTopDriverId(bestProfit > 0 ? bestId : null);
       }
     }).catch(() => {});
@@ -111,14 +113,12 @@ function AppContent() {
     }
   }, [isAuthenticated]);
 
-  // Refetch monthly pending data when selectedMonth changes
   useEffect(() => {
     if (isAuthenticated) {
       fetchTodayEntries();
     }
   }, [selectedMonth]);
 
-  // Refresh every 60s - recreate interval when selectedMonth changes
   useEffect(() => {
     if (!isAuthenticated) return;
     const interval = setInterval(fetchTodayEntries, 60_000);
@@ -127,7 +127,6 @@ function AppContent() {
 
   if (!isAuthenticated) return <LoginPage />;
 
-  // Sort: Zain & Hassan always last
   const isPinnedLast = (name: string) =>
     PINNED_LAST_NAMES.some(p => name.toLowerCase().includes(p));
 
@@ -139,7 +138,6 @@ function AppContent() {
     return 0;
   });
 
-  // Driver button background based on today's entry status
   const getDriverButtonClasses = (driverId: string, isSelected: boolean) => {
     const entry = todayEntryMap[driverId];
     const noEntry = todayFetched && !entry;
@@ -155,7 +153,6 @@ function AppContent() {
     return 'bg-white text-zinc-600 hover:bg-zinc-50 border border-zinc-200';
   };
 
-  // Format pending badge: 1000->1, 2700->2.7, 7000->7
   const formatPendingBadge = (amount: number): string | null => {
     if (!amount || amount <= 0) return null;
     const val = amount / 1000;
@@ -297,12 +294,12 @@ function AppContent() {
                 All Drivers
               </button>
 
-              {/* Individual drivers — Zain & Hassan pinned last */}
+              {/* Individual drivers */}
               {sortedDrivers.map(d => {
                 const dId = d.id.toString();
                 const isSelected = selectedDriverId === dId;
                 const isTop = topDriverId === dId;
-                // Badge uses current month's pending only
+                const isOnLeave = driversOnLeave.has(dId); // NEW
                 const monthPending = monthlyPendingMap[dId] || 0;
                 const pendingLabel = formatPendingBadge(monthPending);
                 return (
@@ -311,7 +308,17 @@ function AppContent() {
                       onClick={() => { setSelectedDriverId(dId); setShowAddDriverForm(false); setIsMobileMenuOpen(false); }}
                       className={`px-3 md:px-4 py-1.5 md:py-2 rounded-lg md:rounded-xl text-xs md:text-sm font-medium transition-all ${getDriverButtonClasses(dId, isSelected)}`}
                     >
-                      {isTop && <span className="mr-1 text-[11px]">⭐</span>}{d.name}
+                      {isTop && <span className="mr-1 text-[11px]">⭐</span>}
+                      {/* NEW: name turns rose/red when on leave */}
+                      <span className={
+                        isOnLeave
+                          ? isSelected
+                            ? 'text-white opacity-75 line-through'
+                            : 'text-rose-500'
+                          : ''
+                      }>
+                        {d.name}
+                      </span>
                     </button>
                     {pendingLabel && (
                       <span className="absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] px-1 flex items-center justify-center rounded-full bg-amber-500 text-white text-[9px] font-bold leading-none shadow-md shadow-amber-500/40 pointer-events-none">
