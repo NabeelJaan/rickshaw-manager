@@ -155,7 +155,7 @@ function AppContent() {
     if (isOnLeave) {
       return isSelected
         ? 'bg-orange-500 text-white shadow-lg shadow-orange-500/20'
-        : 'bg-orange-50 text-orange-700 border border-orange-300 hover:bg-orange-100';
+        : 'bg-orange-100 text-orange-800 border border-orange-400 hover:bg-orange-200';
     }
     const entry = todayEntryMap[driverId];
     const noEntry = todayFetched && !entry;
