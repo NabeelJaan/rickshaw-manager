@@ -153,21 +153,19 @@ function AppContent() {
   // Driver button background based on today's entry status (leave takes priority)
   const getDriverButtonClasses = (driverId: string, isSelected: boolean, isOnLeave: boolean) => {
     if (isOnLeave) {
-      return isSelected
-        ? 'bg-purple-500 text-white shadow-lg shadow-purple-500/20'
-        : 'bg-purple-50 text-purple-700 border border-purple-300 hover:bg-purple-100';
+      return 'bg-red-500 text-white shadow-lg shadow-red-500/20';
     }
     const entry = todayEntryMap[driverId];
     const noEntry = todayFetched && !entry;
     if (isSelected) {
       if (entry === 'income') return 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/20';
       if (entry === 'pending') return 'bg-amber-500 text-white shadow-lg shadow-amber-500/20';
-      if (noEntry) return 'bg-rose-500 text-white shadow-lg shadow-rose-500/20';
+      if (noEntry) return 'bg-zinc-800 text-white shadow-lg shadow-zinc-800/20';
       return 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/20';
     }
     if (entry === 'income') return 'bg-emerald-50 text-emerald-700 border border-emerald-300 hover:bg-emerald-100';
     if (entry === 'pending') return 'bg-amber-50 text-amber-700 border border-amber-300 hover:bg-amber-100';
-    if (noEntry) return 'bg-rose-50 text-rose-700 border border-rose-300 hover:bg-rose-100';
+    if (noEntry) return 'bg-zinc-800 text-white hover:bg-zinc-900';
     return 'bg-white text-zinc-600 hover:bg-zinc-50 border border-zinc-200';
   };
 
