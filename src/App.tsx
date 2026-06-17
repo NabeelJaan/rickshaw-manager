@@ -154,8 +154,8 @@ function AppContent() {
   const getDriverButtonClasses = (driverId: string, isSelected: boolean, isOnLeave: boolean) => {
     if (isOnLeave) {
       return isSelected
-        ? 'bg-orange-500 text-white shadow-lg shadow-orange-500/20'
-        : 'bg-orange-100 text-orange-800 border border-orange-400 hover:bg-orange-200';
+        ? 'bg-purple-500 text-white shadow-lg shadow-purple-500/20'
+        : 'bg-purple-50 text-purple-700 border border-purple-300 hover:bg-purple-100';
     }
     const entry = todayEntryMap[driverId];
     const noEntry = todayFetched && !entry;
