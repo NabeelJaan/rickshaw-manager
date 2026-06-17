@@ -165,7 +165,7 @@ function AppContent() {
     }
     if (entry === 'income') return 'bg-emerald-50 text-emerald-700 border border-emerald-300 hover:bg-emerald-100';
     if (entry === 'pending') return 'bg-amber-50 text-amber-700 border border-amber-300 hover:bg-amber-100';
-    if (noEntry) return 'bg-zinc-50 text-zinc-700 border border-zinc-300 hover:bg-zinc-100';
+    if (noEntry) return 'text-zinc-700 border border-zinc-300 hover:bg-zinc-100';
     return 'bg-white text-zinc-600 hover:bg-zinc-50 border border-zinc-200';
   };
 
