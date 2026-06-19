@@ -443,7 +443,64 @@ export default function Transactions({ selectedDriverId }: { selectedDriverId?: 
       </div>
 
       <div className="bg-white rounded-2xl shadow-sm border border-zinc-200/60 overflow-hidden">
-        <div className="overflow-x-auto">
+        {/* Mobile card view */}
+        <div className="block md:hidden">
+          {filteredTransactions.map(t => {
+            const isPending = t.category === 'rent_pending' || t.type === 'pending';
+            return (
+              <div key={t.id} className="px-3 py-2.5 border-b border-zinc-100 last:border-0">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex items-start gap-2.5 flex-1 min-w-0">
+                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${
+                      isPending ? 'bg-amber-50' : t.type === 'income' ? 'bg-emerald-50' : 'bg-rose-50'
+                    }`}>
+                      {isPending ? <DollarSign className="w-4 h-4 text-amber-600" />
+                        : t.type === 'income' ? <TrendingUp className="w-4 h-4 text-emerald-600" />
+                        : <TrendingDown className="w-4 h-4 text-rose-600" />}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-[12px] font-semibold text-zinc-900 capitalize">{t.category.replace('_', ' ')}</p>
+                      <p className="text-[10px] text-zinc-500 mt-0.5 font-number">{t.date}</p>
+                      <div className="flex items-center gap-1 mt-1 flex-wrap">
+                        {t.rickshaw_number && (
+                          <span className="text-[9px] text-zinc-500 bg-zinc-100 px-1.5 py-0.5 rounded">{t.rickshaw_number}</span>
+                        )}
+                        {t.driver_name && (
+                          <span className="text-[9px] text-zinc-500 bg-zinc-100 px-1.5 py-0.5 rounded">{t.driver_name}</span>
+                        )}
+                      </div>
+                      {t.notes && <p className="text-[9px] text-zinc-500 mt-1 italic truncate">{t.notes}</p>}
+                    </div>
+                  </div>
+                  <div className="text-right shrink-0">
+                    <p className={`text-[13px] font-bold font-number ${
+                      isPending ? 'text-amber-600' : t.type === 'income' ? 'text-emerald-600' : 'text-rose-600'
+                    }`}>
+                      {isPending ? '' : t.type === 'income' ? '+' : '-'}{currency} {t.amount.toLocaleString()}
+                    </p>
+                    <div className="flex items-center gap-2 mt-1.5 justify-end">
+                      <button onClick={() => setEditTransaction(t)} className="text-zinc-400 hover:text-emerald-500">
+                        <Edit className="w-4 h-4" />
+                      </button>
+                      <button onClick={() => handleDelete(t.id)} className="text-zinc-400 hover:text-rose-500">
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+          {filteredTransactions.length === 0 && (
+            <div className="p-10 text-center text-zinc-500">
+              <Receipt className="w-8 h-8 text-zinc-300 mx-auto mb-3" />
+              No transactions found.
+            </div>
+          )}
+        </div>
+
+        {/* Desktop table view */}
+        <div className="hidden md:block overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="bg-zinc-50/50 border-b border-zinc-200/60 text-[11px] font-semibold text-zinc-500 uppercase tracking-wider">

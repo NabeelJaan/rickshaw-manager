@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { LayoutDashboard, Users, Car, Receipt, Settings, Menu, X, LogOut, FileText } from 'lucide-react';
+import { LayoutDashboard, Users, Car, Receipt, Settings, Menu, X, LogOut, FileText, Calculator } from 'lucide-react';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import LoginPage from './components/LoginPage';
 import Dashboard from './components/Dashboard';
@@ -7,6 +7,7 @@ import Rickshaws from './components/Rickshaws';
 import Drivers from './components/Drivers';
 import Transactions from './components/Transactions';
 import Reports from './components/Reports';
+import NetProfit from './components/NetProfit';
 import SettingsPage from './components/Settings';
 import { Driver } from './types';
 
@@ -183,6 +184,7 @@ function AppContent() {
     { id: 'drivers', label: 'Drivers', icon: Users },
     { id: 'transactions', label: 'Transactions', icon: Receipt },
     { id: 'reports', label: 'Reports', icon: FileText },
+    { id: 'netprofit', label: 'Net Profit', icon: Calculator },
     { id: 'settings', label: 'Settings', icon: Settings },
   ];
 
@@ -193,6 +195,7 @@ function AppContent() {
       case 'drivers': return <Drivers onDriverAdded={fetchDrivers} defaultShowForm={showAddDriverForm} />;
       case 'transactions': return <Transactions selectedDriverId={selectedDriverId} />;
       case 'reports': return <Reports selectedDriverId={selectedDriverId} />;
+      case 'netprofit': return <NetProfit />;
       case 'settings': return <SettingsPage />;
       default: return <Dashboard selectedDriverId={selectedDriverId} />;
     }

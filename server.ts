@@ -484,7 +484,7 @@ app.use(express.json());
         
         return {
           ...d,
-          activeRickshaws: activeInMonth?.count || activeRickshaws?.count || 1
+          activeRickshaws: activeInMonth?.count || 1
         };
       });
 
