@@ -15,7 +15,8 @@ export default function NetProfit() {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(false);
   const [currency, setCurrency] = useState('Rs.');
-  const [period, setPeriod] = useState<string>('all');
+  // Selected month in YYYY-MM, or 'all' for all-time
+  const [month, setMonth] = useState<string>(() => new Date().toISOString().slice(0, 7));
 
   useEffect(() => {
     const savedCurrency = localStorage.getItem('currency');
@@ -38,23 +39,10 @@ export default function NetProfit() {
       const headers: Record<string, string> = { 'Cache-Control': 'no-cache', 'Pragma': 'no-cache' };
       if (token) headers['Authorization'] = `Bearer ${token}`;
 
-      const endDate = new Date();
-      const startDate = new Date();
-      switch (period) {
-        case '1month': startDate.setMonth(startDate.getMonth() - 1); break;
-        case '3months': startDate.setMonth(startDate.getMonth() - 3); break;
-        case '6months': startDate.setMonth(startDate.getMonth() - 6); break;
-        case '1year': startDate.setFullYear(startDate.getFullYear() - 1); break;
-        case 'all': startDate.setFullYear(2000); break;
-      }
-
-      const query = new URLSearchParams({
-        start_date: startDate.toISOString().split('T')[0],
-        end_date: endDate.toISOString().split('T')[0],
-      }).toString();
+      const query = month && month !== 'all' ? `month=${month}` : '';
 
       try {
-        const res = await fetch(`/api/transactions?${query}`, { headers });
+        const res = await fetch(`/api/transactions${query ? `?${query}` : ''}`, { headers });
         const data = await res.json();
         if (Array.isArray(data)) setTransactions(data);
       } catch (e) {
@@ -64,7 +52,7 @@ export default function NetProfit() {
       }
     };
     fetchData();
-  }, [period]);
+  }, [month]);
 
   // Build per-driver totals
   const rows: DriverProfit[] = drivers.map(d => {
@@ -95,15 +83,19 @@ export default function NetProfit() {
           <div className="flex items-center gap-1.5">
             <Calendar className="w-3.5 h-3.5 text-zinc-400" />
             <select
-              value={period}
-              onChange={(e) => setPeriod(e.target.value)}
+              value={month}
+              onChange={(e) => setMonth(e.target.value)}
               className="bg-white/10 text-white text-[11px] md:text-xs px-2.5 py-1.5 rounded-lg border border-white/10 focus:outline-none"
             >
               <option className="text-zinc-900" value="all">All Time</option>
-              <option className="text-zinc-900" value="1month">Last 1 Month</option>
-              <option className="text-zinc-900" value="3months">Last 3 Months</option>
-              <option className="text-zinc-900" value="6months">Last 6 Months</option>
-              <option className="text-zinc-900" value="1year">Last 1 Year</option>
+              {Array.from({ length: 12 }, (_, i) => {
+                const d = new Date();
+                d.setDate(1);
+                d.setMonth(d.getMonth() - i);
+                const value = d.toISOString().slice(0, 7);
+                const label = d.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+                return <option key={value} className="text-zinc-900" value={value}>{label}</option>;
+              })}
             </select>
           </div>
         </div>
