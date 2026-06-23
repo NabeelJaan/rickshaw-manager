@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import ReactApexChart from 'react-apexcharts';
-import { TrendingUp, TrendingDown, DollarSign, Car, Plus, Edit, ChevronDown, Trash2, Users } from 'lucide-react';
+import { TrendingUp, TrendingDown, DollarSign, Car, Plus, Edit, ChevronDown, Trash2, Users, Percent } from 'lucide-react';
 import { DashboardStats, Transaction, Driver } from '../types';
 import LogRentModal from './LogRentModal';
 import ExpenseModal from './ExpenseModal';
@@ -143,6 +143,10 @@ export default function Dashboard({ selectedDriverId, selectedMonth: propSelecte
   const remainingInvestment = Math.max(0, (stats.totalInvestment || 0) - cumulativeProfit);
   const isFullyRecovered = remainingInvestment === 0 && (stats.totalInvestment || 0) > 0;
   const totalProfit = cumulativeProfit - (stats.totalInvestment || 0);
+  // ROI = profit returned relative to the investment (cumulative profit up to selected month)
+  const roi = (stats.totalInvestment || 0) > 0
+    ? (cumulativeProfit / (stats.totalInvestment || 1)) * 100
+    : 0;
 
   // Monthly avg: always based on the selected month's data, never affected by All Time
   // Use historical activeRickshaws count from that month if available
@@ -174,6 +178,7 @@ export default function Dashboard({ selectedDriverId, selectedMonth: propSelecte
       showOnMobile: true
     },
     { title: 'Rickshaws', value: `${stats.activeRickshaws || 0}/${stats.totalRickshaws || 0}`, icon: Car, color: 'text-zinc-500', bg: 'bg-zinc-50', prefix: '', hideOnDriver: true, showOnMobile: false },
+    { title: 'ROI', value: `${roi.toFixed(1)}%`, icon: Percent, color: roi >= 0 ? 'text-emerald-500' : 'text-rose-500', bg: roi >= 0 ? 'bg-emerald-50' : 'bg-rose-50', prefix: '', showOnMobile: true },
   ];
 
   const filteredStatCards = selectedDriverId 
