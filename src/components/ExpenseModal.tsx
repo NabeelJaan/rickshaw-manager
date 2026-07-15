@@ -23,10 +23,13 @@ export default function ExpenseModal({ isOpen, onClose, onSuccess, driverId, dri
     notes: ''
   });
   const [categories, setCategories] = useState<Category[]>([]);
+  // Rickshaw currently assigned to this driver — so expenses are tagged to the rickshaw
+  const [assignedRickshawId, setAssignedRickshawId] = useState<string>('');
 
   useEffect(() => {
     if (isOpen) {
       fetchCategories();
+      fetchAssignedRickshaw();
       setFormData({
         date: new Date().toISOString().split('T')[0],
         category: 'fuel',
@@ -34,7 +37,29 @@ export default function ExpenseModal({ isOpen, onClose, onSuccess, driverId, dri
         notes: ''
       });
     }
-  }, [isOpen]);
+  }, [isOpen, driverId]);
+
+  const fetchAssignedRickshaw = async () => {
+    setAssignedRickshawId('');
+    if (!driverId) return;
+    try {
+      const token = localStorage.getItem('auth_token');
+      const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+      const response = await fetch('/api/assignments', { headers });
+      if (response.ok) {
+        const data = await response.json();
+        if (Array.isArray(data)) {
+          // Active assignment = no end_date, matching this driver
+          const active = data.find((a: any) =>
+            String(a.driver_id) === String(driverId) && !a.end_date
+          );
+          if (active) setAssignedRickshawId(String(active.rickshaw_id));
+        }
+      }
+    } catch (error) {
+      console.error('Failed to fetch assigned rickshaw:', error);
+    }
+  };
 
   const fetchCategories = async () => {
     try {
@@ -66,6 +91,7 @@ export default function ExpenseModal({ isOpen, onClose, onSuccess, driverId, dri
         category: formData.category,
         amount: formData.amount === '' ? 0 : parseFloat(formData.amount),
         driver_id: driverId,
+        rickshaw_id: assignedRickshawId || null,
         notes: formData.notes
       }),
     });

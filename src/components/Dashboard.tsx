@@ -167,9 +167,9 @@ export default function Dashboard({ selectedDriverId, selectedMonth: propSelecte
     { title: 'Profit + Pending', value: (stats.profit || 0) + (stats.pendingBalance || 0), icon: DollarSign, color: 'text-indigo-500', bg: 'bg-indigo-50', prefix: currency + ' ', showOnMobile: true },
     { title: 'Investment', value: stats.totalInvestment || 0, icon: Car, color: 'text-purple-500', bg: 'bg-purple-50', prefix: currency + ' ', showOnMobile: false },
     { title: 'Monthly Avg', value: monthlyAvg, icon: DollarSign, color: 'text-cyan-500', bg: 'bg-cyan-50', prefix: currency + ' ', showOnMobile: false, hideOnDriver: true },
-    { 
-      title: isFullyRecovered ? 'Net Profit' : 'Remaining', 
-      value: isFullyRecovered ? totalProfit : remainingInvestment, 
+    {
+      title: isFullyRecovered ? 'Profit After Investment' : 'Remaining',
+      value: isFullyRecovered ? totalProfit : remainingInvestment,
       icon: isFullyRecovered ? TrendingUp : TrendingDown, 
       color: isFullyRecovered ? 'text-emerald-500' : 'text-orange-500', 
       bg: isFullyRecovered ? 'bg-emerald-50' : 'bg-orange-50', 

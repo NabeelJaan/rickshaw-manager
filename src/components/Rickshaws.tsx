@@ -112,13 +112,13 @@ export default function Rickshaws({ selectedDriverId }: { selectedDriverId?: str
 
       if (t.rickshaw_id == null && t.driver_id != null) {
         const txDriverId = Number(t.driver_id);
-        const wasAssigned = assignments.some(a => {
-          if (Number(a.rickshaw_id) !== rid || Number(a.driver_id) !== txDriverId) return false;
-          const start = new Date(a.start_date);
-          const end = a.end_date ? new Date(a.end_date) : null;
-          return txDate >= start && (end === null || txDate <= end);
-        });
-        if (wasAssigned) return true;
+        // Attribute to this rickshaw if the driver is (or ever was) assigned to it.
+        // Expenses are logged against the driver without a rickshaw_id, so relying on
+        // the exact assignment date-window would drop expenses logged outside it.
+        const everAssigned = assignments.some(a =>
+          Number(a.rickshaw_id) === rid && Number(a.driver_id) === txDriverId
+        );
+        if (everAssigned) return true;
       }
 
       return false;
