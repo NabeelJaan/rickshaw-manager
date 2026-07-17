@@ -127,6 +127,17 @@ async function logActivity(
   }
 }
 
+// Build a " — Rickshaw X, Driver Y" suffix for a transaction's parties (best-effort).
+async function txParties(rickshawId: any, driverId: any): Promise<string> {
+  try {
+    let rk: string | null = null, drv: string | null = null;
+    if (rickshawId) rk = (await sql`SELECT number FROM rickshaws WHERE id=${rickshawId}`).rows[0]?.number ?? null;
+    if (driverId) drv = (await sql`SELECT name FROM drivers WHERE id=${driverId}`).rows[0]?.name ?? null;
+    const parts = [rk ? `Rickshaw ${rk}` : null, drv ? `Driver ${drv}` : null].filter(Boolean);
+    return parts.length ? ` — ${parts.join(', ')}` : '';
+  } catch { return ''; }
+}
+
 // ─── EMERGENCY RESET (one-time use — DELETE THIS AFTER USE) ───────────────────
 // Visit: /api/auth/emergency-reset?secret=RESET_SECRET_2026
 // This clears all users so you can re-register from scratch
@@ -578,7 +589,7 @@ app.put('/api/transactions/:id', authenticate, async (req, res) => {
         await sql`UPDATE drivers SET pending_balance=pending_balance-${fa} WHERE id=${driver_id}`;
     }
     await logActivity('transaction', id, 'update',
-      `Transaction #${id} updated (${category}, ${fa})`, old, r.rows[0], req.user?.username ?? null);
+      `Transaction #${id} updated (${category}, ${fa})${await txParties(rickshaw_id, driver_id)}`, old, r.rows[0], req.user?.username ?? null);
     res.json(r.rows[0]);
   } catch (e: any) { res.status(400).json({ error: e.message }); }
 });
@@ -600,7 +611,7 @@ app.delete('/api/transactions/:id', authenticate, async (req, res) => {
     }
     await sql`DELETE FROM transactions WHERE id=${id}`;
     if (tx) await logActivity('transaction', id, 'delete',
-      `Transaction #${id} deleted (${tx.category}, ${tx.amount})`, tx, null, req.user?.username ?? null);
+      `Transaction #${id} deleted (${tx.category}, ${tx.amount})${await txParties(tx.rickshaw_id, tx.driver_id)}`, tx, null, req.user?.username ?? null);
     res.json({ success: true });
   } catch (e: any) { res.status(400).json({ error: e.message }); }
 });

@@ -28,6 +28,15 @@ function logActivity(entityType: string, entityId: any, action: 'update' | 'dele
   } catch (e) { console.error('logActivity error:', e); }
 }
 
+function txParties(rickshawId: any, driverId: any): string {
+  try {
+    const rk = rickshawId ? (db.prepare("SELECT number FROM rickshaws WHERE id = ?").get(rickshawId) as any)?.number : null;
+    const drv = driverId ? (db.prepare("SELECT name FROM drivers WHERE id = ?").get(driverId) as any)?.name : null;
+    const parts = [rk ? `Rickshaw ${rk}` : null, drv ? `Driver ${drv}` : null].filter(Boolean);
+    return parts.length ? ` — ${parts.join(', ')}` : '';
+  } catch { return ''; }
+}
+
 // --- API Routes ---
 
   // Activity History
@@ -322,7 +331,7 @@ function logActivity(entityType: string, entityId: any, action: 'update' | 'dele
           }
         }
 
-        logActivity('transaction', id, 'update', `Transaction #${id} updated (${category}, ${finalAmount})`, oldTx, { id, date, type, category, amount: finalAmount, rickshaw_id, driver_id, notes });
+        logActivity('transaction', id, 'update', `Transaction #${id} updated (${category}, ${finalAmount})${txParties(rickshaw_id, driver_id)}`, oldTx, { id, date, type, category, amount: finalAmount, rickshaw_id, driver_id, notes });
         res.json({ id, date, type, category, amount: finalAmount, rickshaw_id, driver_id, notes });
       })();
     } catch (error: any) {
@@ -352,7 +361,7 @@ function logActivity(entityType: string, entityId: any, action: 'update' | 'dele
           }
         }
         db.prepare("DELETE FROM transactions WHERE id = ?").run(req.params.id);
-        if (tx) logActivity('transaction', req.params.id, 'delete', `Transaction #${req.params.id} deleted (${tx.category}, ${tx.amount})`, tx, null);
+        if (tx) logActivity('transaction', req.params.id, 'delete', `Transaction #${req.params.id} deleted (${tx.category}, ${tx.amount})${txParties(tx.rickshaw_id, tx.driver_id)}`, tx, null);
         res.json({ success: true });
       })();
     } catch (error: any) {

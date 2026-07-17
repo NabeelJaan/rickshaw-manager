@@ -254,13 +254,14 @@ export default function Rickshaws({ selectedDriverId }: { selectedDriverId?: str
                   const stats = calculateRickshawStats(r.id, r.purchase_date);
                   const { income, expense, pending, netIncome, effectiveTotal } = stats;
 
-                  // Recovery is based on net income + pending vs investment
+                  // Recovery is based on NET PROFIT (income - expense), excluding pending,
+                  // to stay consistent with the Dashboard's "Profit After Investment".
                   const progressPct = r.investment_cost > 0
-                    ? Math.min(100, Math.max(0, (effectiveTotal / r.investment_cost) * 100))
+                    ? Math.min(100, Math.max(0, (netIncome / r.investment_cost) * 100))
                     : 100;
-                  const isFullyRecovered = effectiveTotal >= r.investment_cost;
-                  const remainingInvestment = Math.max(0, r.investment_cost - effectiveTotal);
-                  const profitAfterInvestment = isFullyRecovered ? effectiveTotal - r.investment_cost : 0;
+                  const isFullyRecovered = netIncome >= r.investment_cost;
+                  const remainingInvestment = Math.max(0, r.investment_cost - netIncome);
+                  const profitAfterInvestment = isFullyRecovered ? netIncome - r.investment_cost : 0;
 
                   return (
                     <>
