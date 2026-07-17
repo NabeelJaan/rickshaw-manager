@@ -7,7 +7,45 @@ const PORT = 3000;
 
 app.use(express.json());
 
+// Audit log table + helper (mirrors api/index.ts for local dev parity)
+db.prepare(`CREATE TABLE IF NOT EXISTS activity_log (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  entity_type TEXT NOT NULL,
+  entity_id TEXT,
+  action TEXT NOT NULL,
+  description TEXT,
+  old_data TEXT,
+  new_data TEXT,
+  username TEXT,
+  created_at TEXT DEFAULT CURRENT_TIMESTAMP
+)`).run();
+
+function logActivity(entityType: string, entityId: any, action: 'update' | 'delete', description: string, oldData: any, newData: any, username: string | null = null) {
+  try {
+    db.prepare(`INSERT INTO activity_log (entity_type,entity_id,action,description,old_data,new_data,username) VALUES (?,?,?,?,?,?,?)`)
+      .run(entityType, entityId != null ? String(entityId) : null, action, description,
+        oldData ? JSON.stringify(oldData) : null, newData ? JSON.stringify(newData) : null, username);
+  } catch (e) { console.error('logActivity error:', e); }
+}
+
 // --- API Routes ---
+
+  // Activity History
+  app.get("/api/history", (req, res) => {
+    const { entity_type, action, limit } = req.query;
+    let query = "SELECT * FROM activity_log WHERE 1=1";
+    const params: any[] = [];
+    if (entity_type && entity_type !== 'all') { query += " AND entity_type = ?"; params.push(entity_type); }
+    if (action && action !== 'all') { query += " AND action = ?"; params.push(action); }
+    query += " ORDER BY id DESC LIMIT ?";
+    params.push(Math.min(parseInt((limit as string) || '500') || 500, 1000));
+    res.json(db.prepare(query).all(...params));
+  });
+
+  app.delete("/api/history", (req, res) => {
+    db.prepare("DELETE FROM activity_log").run();
+    res.json({ success: true });
+  });
 
   // Rickshaws
   app.get("/api/rickshaws", (req, res) => {
@@ -36,11 +74,13 @@ app.use(express.json());
     const { id } = req.params;
     const { number, purchase_date, investment_cost } = req.body;
     try {
+      const oldRickshaw = db.prepare("SELECT * FROM rickshaws WHERE id = ?").get(id);
       const stmt = db.prepare("UPDATE rickshaws SET number = ?, purchase_date = ?, investment_cost = ? WHERE id = ?");
       const info = stmt.run(number, purchase_date, investment_cost, id);
       if (info.changes === 0) {
         return res.status(404).json({ error: "Rickshaw not found" });
       }
+      logActivity('rickshaw', id, 'update', `Rickshaw "${(oldRickshaw as any)?.number ?? number}" updated`, oldRickshaw, { id, number, purchase_date, investment_cost });
       res.json({ id, number, purchase_date, investment_cost });
     } catch (error: any) {
       res.status(400).json({ error: error.message });
@@ -50,6 +90,8 @@ app.use(express.json());
   app.delete("/api/rickshaws/:id", (req, res) => {
     const { id } = req.params;
     try {
+      const oldRickshaw = db.prepare("SELECT * FROM rickshaws WHERE id = ?").get(id) as any;
+      const rtxCount = (db.prepare("SELECT COUNT(*) as c FROM transactions WHERE rickshaw_id = ?").get(id) as any)?.c ?? 0;
       db.transaction(() => {
         // Delete related assignments
         db.prepare("DELETE FROM rickshaw_assignments WHERE rickshaw_id = ?").run(id);
@@ -61,6 +103,7 @@ app.use(express.json());
           throw new Error("Rickshaw not found");
         }
       })();
+      if (oldRickshaw) logActivity('rickshaw', id, 'delete', `Rickshaw "${oldRickshaw.number}" deleted (with ${rtxCount} transaction(s))`, oldRickshaw, null);
       res.json({ success: true });
     } catch (error: any) {
       res.status(400).json({ error: error.message });
@@ -94,11 +137,13 @@ app.use(express.json());
     const { id } = req.params;
     const { name, phone, join_date } = req.body;
     try {
+      const oldDriver = db.prepare("SELECT * FROM drivers WHERE id = ?").get(id);
       const stmt = db.prepare("UPDATE drivers SET name = ?, phone = ?, join_date = ? WHERE id = ?");
       const info = stmt.run(name, phone, join_date, id);
       if (info.changes === 0) {
         return res.status(404).json({ error: "Driver not found" });
       }
+      logActivity('driver', id, 'update', `Driver "${(oldDriver as any)?.name ?? name}" updated`, oldDriver, { id, name, phone, join_date });
       res.json({ id, name, phone, join_date });
     } catch (error: any) {
       res.status(400).json({ error: error.message });
@@ -108,6 +153,8 @@ app.use(express.json());
   app.delete("/api/drivers/:id", (req, res) => {
     const { id } = req.params;
     try {
+      const oldDriver = db.prepare("SELECT * FROM drivers WHERE id = ?").get(id) as any;
+      const dtxCount = (db.prepare("SELECT COUNT(*) as c FROM transactions WHERE driver_id = ?").get(id) as any)?.c ?? 0;
       db.transaction(() => {
         // Delete related assignments
         db.prepare("DELETE FROM rickshaw_assignments WHERE driver_id = ?").run(id);
@@ -119,6 +166,7 @@ app.use(express.json());
           throw new Error("Driver not found");
         }
       })();
+      if (oldDriver) logActivity('driver', id, 'delete', `Driver "${oldDriver.name}" deleted (with ${dtxCount} transaction(s))`, oldDriver, null);
       res.json({ success: true });
     } catch (error: any) {
       res.status(400).json({ error: error.message });
@@ -264,7 +312,7 @@ app.use(express.json());
         if (info.changes === 0) {
           throw new Error("Transaction not found");
         }
-        
+
         // Update pending balance for new transaction
         if (driver_id) {
           if (category === 'rent_pending' || type === 'pending') {
@@ -273,7 +321,8 @@ app.use(express.json());
             db.prepare("UPDATE drivers SET pending_balance = pending_balance - ? WHERE id = ?").run(finalAmount, driver_id);
           }
         }
-        
+
+        logActivity('transaction', id, 'update', `Transaction #${id} updated (${category}, ${finalAmount})`, oldTx, { id, date, type, category, amount: finalAmount, rickshaw_id, driver_id, notes });
         res.json({ id, date, type, category, amount: finalAmount, rickshaw_id, driver_id, notes });
       })();
     } catch (error: any) {
@@ -303,6 +352,7 @@ app.use(express.json());
           }
         }
         db.prepare("DELETE FROM transactions WHERE id = ?").run(req.params.id);
+        if (tx) logActivity('transaction', req.params.id, 'delete', `Transaction #${req.params.id} deleted (${tx.category}, ${tx.amount})`, tx, null);
         res.json({ success: true });
       })();
     } catch (error: any) {

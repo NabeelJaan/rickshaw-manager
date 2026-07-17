@@ -94,7 +94,37 @@ async function ensureDb() {
   for (const [n, t] of defaults) {
     await sql`INSERT INTO categories (name,type,is_default) VALUES (${n},${t},1) ON CONFLICT (name,type) DO NOTHING`;
   }
+  await sql`CREATE TABLE IF NOT EXISTS activity_log (
+    id SERIAL PRIMARY KEY,
+    entity_type TEXT NOT NULL,
+    entity_id TEXT,
+    action TEXT NOT NULL,
+    description TEXT,
+    old_data TEXT,
+    new_data TEXT,
+    username TEXT,
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP
+  )`;
   dbReady = true;
+}
+
+// Record an update/delete so it shows up in the History tab. Never throws (audit is best-effort).
+async function logActivity(
+  entityType: string,
+  entityId: string | number | null,
+  action: 'update' | 'delete',
+  description: string,
+  oldData: any,
+  newData: any,
+  username: string | null,
+) {
+  try {
+    await sql`INSERT INTO activity_log (entity_type,entity_id,action,description,old_data,new_data,username)
+      VALUES (${entityType},${entityId != null ? String(entityId) : null},${action},${description},
+              ${oldData ? JSON.stringify(oldData) : null},${newData ? JSON.stringify(newData) : null},${username})`;
+  } catch (e) {
+    console.error('logActivity error:', e);
+  }
 }
 
 // ─── EMERGENCY RESET (one-time use — DELETE THIS AFTER USE) ───────────────────
@@ -346,8 +376,11 @@ app.put('/api/rickshaws/:id', authenticate, async (req, res) => {
   try {
     await ensureDb();
     const { number, purchase_date, investment_cost } = req.body;
+    const oldRickshaw = (await sql`SELECT * FROM rickshaws WHERE id=${req.params.id}`).rows[0] as any;
     const r = await sql`UPDATE rickshaws SET number=${number},purchase_date=${purchase_date},investment_cost=${investment_cost} WHERE id=${req.params.id} RETURNING *`;
     if (r.rowCount === 0) return res.status(404).json({ error: 'Not found' });
+    await logActivity('rickshaw', req.params.id, 'update',
+      `Rickshaw "${oldRickshaw?.number ?? number}" updated`, oldRickshaw, r.rows[0], req.user?.username ?? null);
     res.json(r.rows[0]);
   } catch (e: any) { res.status(400).json({ error: e.message }); }
 });
@@ -356,9 +389,13 @@ app.delete('/api/rickshaws/:id', authenticate, async (req, res) => {
   try {
     await ensureDb();
     const id = req.params.id;
+    const oldRickshaw = (await sql`SELECT * FROM rickshaws WHERE id=${id}`).rows[0] as any;
+    const txCount = (await sql`SELECT COUNT(*) as c FROM transactions WHERE rickshaw_id=${id}`).rows[0]?.c ?? 0;
     await sql`DELETE FROM rickshaw_assignments WHERE rickshaw_id=${id}`;
     await sql`DELETE FROM transactions WHERE rickshaw_id=${id}`;
     await sql`DELETE FROM rickshaws WHERE id=${id}`;
+    if (oldRickshaw) await logActivity('rickshaw', id, 'delete',
+      `Rickshaw "${oldRickshaw.number}" deleted (with ${txCount} transaction(s))`, oldRickshaw, null, req.user?.username ?? null);
     res.json({ success: true });
   } catch (e: any) { res.status(400).json({ error: e.message }); }
 });
@@ -395,8 +432,11 @@ app.put('/api/drivers/:id', authenticate, async (req, res) => {
   try {
     await ensureDb();
     const { name, phone, join_date } = req.body;
+    const oldDriver = (await sql`SELECT * FROM drivers WHERE id=${req.params.id}`).rows[0] as any;
     const r = await sql`UPDATE drivers SET name=${name},phone=${phone??null},join_date=${join_date} WHERE id=${req.params.id} RETURNING *`;
     if (r.rowCount === 0) return res.status(404).json({ error: 'Not found' });
+    await logActivity('driver', req.params.id, 'update',
+      `Driver "${oldDriver?.name ?? name}" updated`, oldDriver, r.rows[0], req.user?.username ?? null);
     res.json(r.rows[0]);
   } catch (e: any) { res.status(400).json({ error: e.message }); }
 });
@@ -405,9 +445,13 @@ app.delete('/api/drivers/:id', authenticate, async (req, res) => {
   try {
     await ensureDb();
     const id = req.params.id;
+    const oldDriver = (await sql`SELECT * FROM drivers WHERE id=${id}`).rows[0] as any;
+    const txCount = (await sql`SELECT COUNT(*) as c FROM transactions WHERE driver_id=${id}`).rows[0]?.c ?? 0;
     await sql`DELETE FROM rickshaw_assignments WHERE driver_id=${id}`;
     await sql`DELETE FROM transactions WHERE driver_id=${id}`;
     await sql`DELETE FROM drivers WHERE id=${id}`;
+    if (oldDriver) await logActivity('driver', id, 'delete',
+      `Driver "${oldDriver.name}" deleted (with ${txCount} transaction(s))`, oldDriver, null, req.user?.username ?? null);
     res.json({ success: true });
   } catch (e: any) { res.status(400).json({ error: e.message }); }
 });
@@ -533,6 +577,8 @@ app.put('/api/transactions/:id', authenticate, async (req, res) => {
       else if (category==='rent_recovery')
         await sql`UPDATE drivers SET pending_balance=pending_balance-${fa} WHERE id=${driver_id}`;
     }
+    await logActivity('transaction', id, 'update',
+      `Transaction #${id} updated (${category}, ${fa})`, old, r.rows[0], req.user?.username ?? null);
     res.json(r.rows[0]);
   } catch (e: any) { res.status(400).json({ error: e.message }); }
 });
@@ -553,6 +599,35 @@ app.delete('/api/transactions/:id', authenticate, async (req, res) => {
         await sql`UPDATE drivers SET pending_balance=pending_balance+${fa} WHERE id=${tx.driver_id}`;
     }
     await sql`DELETE FROM transactions WHERE id=${id}`;
+    if (tx) await logActivity('transaction', id, 'delete',
+      `Transaction #${id} deleted (${tx.category}, ${tx.amount})`, tx, null, req.user?.username ?? null);
+    res.json({ success: true });
+  } catch (e: any) { res.status(400).json({ error: e.message }); }
+});
+
+// ─── Activity History ─────────────────────────────────────────────────────────
+app.get('/api/history', authenticate, async (req, res) => {
+  try {
+    await ensureDb();
+    const { entity_type, action, limit } = req.query;
+    const lim = Math.min(parseInt((limit as string) || '500') || 500, 1000);
+    const conds: string[] = ['1=1']; const args: any[] = []; let i = 1;
+    if (entity_type && entity_type !== 'all') { conds.push(`entity_type = $${i++}`); args.push(entity_type); }
+    if (action && action !== 'all') { conds.push(`action = $${i++}`); args.push(action); }
+    args.push(lim);
+    const { rows } = await sql.query(
+      `SELECT * FROM activity_log WHERE ${conds.join(' AND ')} ORDER BY id DESC LIMIT $${i}`, args);
+    res.json(Array.isArray(rows) ? rows : []);
+  } catch (e: any) {
+    console.error('History API error:', e);
+    res.json([]);
+  }
+});
+
+app.delete('/api/history', authenticate, async (req, res) => {
+  try {
+    await ensureDb();
+    await sql`DELETE FROM activity_log`;
     res.json({ success: true });
   } catch (e: any) { res.status(400).json({ error: e.message }); }
 });
