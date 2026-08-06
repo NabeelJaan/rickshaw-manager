@@ -39,6 +39,49 @@ function txParties(rickshawId: any, driverId: any): string {
 
 // --- API Routes ---
 
+  // Maintenance: link old transactions to rickshaws (mirrors api/index.ts)
+  app.post("/api/admin/backfill-rickshaw-ids", (req, res) => {
+    try {
+      const before = (db.prepare("SELECT COUNT(*) as c FROM transactions WHERE rickshaw_id IS NULL AND driver_id IS NOT NULL").get() as any)?.c ?? 0;
+
+      const p1 = db.prepare(`UPDATE transactions SET rickshaw_id = (
+          SELECT a.rickshaw_id FROM rickshaw_assignments a
+          WHERE a.driver_id = transactions.driver_id
+            AND a.start_date <= transactions.date AND (a.end_date IS NULL OR a.end_date >= transactions.date)
+          ORDER BY a.start_date DESC, a.id DESC LIMIT 1)
+        WHERE rickshaw_id IS NULL AND driver_id IS NOT NULL
+          AND EXISTS (SELECT 1 FROM rickshaw_assignments a
+            WHERE a.driver_id = transactions.driver_id
+              AND a.start_date <= transactions.date AND (a.end_date IS NULL OR a.end_date >= transactions.date))`).run();
+
+      const p2 = db.prepare(`UPDATE transactions SET rickshaw_id = (
+          SELECT a.rickshaw_id FROM rickshaw_assignments a
+          WHERE a.driver_id = transactions.driver_id AND a.end_date IS NULL
+          ORDER BY a.start_date DESC, a.id DESC LIMIT 1)
+        WHERE rickshaw_id IS NULL AND driver_id IS NOT NULL
+          AND EXISTS (SELECT 1 FROM rickshaw_assignments a
+            WHERE a.driver_id = transactions.driver_id AND a.end_date IS NULL)`).run();
+
+      const p3 = db.prepare(`UPDATE transactions SET rickshaw_id = (
+          SELECT a.rickshaw_id FROM rickshaw_assignments a
+          WHERE a.driver_id = transactions.driver_id
+          ORDER BY a.start_date DESC, a.id DESC LIMIT 1)
+        WHERE rickshaw_id IS NULL AND driver_id IS NOT NULL
+          AND EXISTS (SELECT 1 FROM rickshaw_assignments a WHERE a.driver_id = transactions.driver_id)`).run();
+
+      const remaining = (db.prepare("SELECT COUNT(*) as c FROM transactions WHERE rickshaw_id IS NULL AND driver_id IS NOT NULL").get() as any)?.c ?? 0;
+      res.json({
+        success: true,
+        untagged_before: before,
+        updated_by_date_window: p1.changes,
+        updated_by_current_assignment: p2.changes,
+        updated_by_latest_assignment: p3.changes,
+        total_updated: p1.changes + p2.changes + p3.changes,
+        still_untagged: remaining,
+      });
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
+  });
+
   // Activity History
   app.get("/api/history", (req, res) => {
     const { entity_type, action, limit } = req.query;

@@ -100,25 +100,38 @@ export default function Rickshaws({ selectedDriverId }: { selectedDriverId?: str
     return activeAssignment ? activeAssignment.driver_name : 'Unassigned';
   };
 
-  const calculateRickshawStats = (rickshawId: number, purchaseDate: string) => {
+  // For a legacy transaction with no rickshaw_id, resolve the ONE rickshaw it belongs
+  // to (same rule as the backfill endpoint): assignment covering the transaction date,
+  // else the driver's open assignment, else their most recent assignment.
+  const resolveRickshawForTx = (txDriverId: number, txDate: Date): number | null => {
+    const mine = assignments.filter(a => Number(a.driver_id) === txDriverId);
+    if (mine.length === 0) return null;
+    // Deterministic tie-break by id so this matches the backfill SQL (ORDER BY start_date DESC, id DESC)
+    const byStartDesc = (x: Assignment, y: Assignment) =>
+      new Date(y.start_date).getTime() - new Date(x.start_date).getTime() || Number(y.id) - Number(x.id);
+    const covering = mine
+      .filter(a => new Date(a.start_date) <= txDate && (!a.end_date || new Date(a.end_date) >= txDate))
+      .sort(byStartDesc)[0];
+    if (covering) return Number(covering.rickshaw_id);
+    const open = mine.filter(a => !a.end_date).sort(byStartDesc)[0];
+    if (open) return Number(open.rickshaw_id);
+    const latest = [...mine].sort(byStartDesc)[0];
+    return latest ? Number(latest.rickshaw_id) : null;
+  };
+
+  const calculateRickshawStats = (rickshawId: number, _purchaseDate: string) => {
     const rid = Number(rickshawId);
 
+    // Note: no purchase-date guard here. A transaction that is tagged to (or resolved
+    // for) this rickshaw must always count, otherwise it would vanish from every card
+    // while still appearing in dashboard totals (the backfill has no such guard either).
     const rickshawTransactions = transactions.filter(t => {
-      const txDate = new Date(t.date);
-      const purchase = new Date(purchaseDate);
-      if (txDate < purchase) return false;
-
+      // Primary: transaction is tagged to this rickshaw (rickshaw-centric tracking)
       if (t.rickshaw_id != null && Number(t.rickshaw_id) === rid) return true;
 
+      // Legacy fallback: untagged transaction — attribute to exactly one rickshaw
       if (t.rickshaw_id == null && t.driver_id != null) {
-        const txDriverId = Number(t.driver_id);
-        // Attribute to this rickshaw if the driver is (or ever was) assigned to it.
-        // Expenses are logged against the driver without a rickshaw_id, so relying on
-        // the exact assignment date-window would drop expenses logged outside it.
-        const everAssigned = assignments.some(a =>
-          Number(a.rickshaw_id) === rid && Number(a.driver_id) === txDriverId
-        );
-        if (everAssigned) return true;
+        return resolveRickshawForTx(Number(t.driver_id), new Date(t.date)) === rid;
       }
 
       return false;
@@ -143,7 +156,17 @@ export default function Rickshaws({ selectedDriverId }: { selectedDriverId?: str
     // Effective value towards recovering investment = net income + pending
     const effectiveTotal = netIncome + pending;
 
-    return { income, expense, pending, netIncome, effectiveTotal };
+    // Breakdown of who contributed to this rickshaw's totals (reveals stray/duplicate drivers)
+    const byDriver: Record<string, { name: string; income: number; expense: number }> = {};
+    rickshawTransactions.forEach(t => {
+      const key = t.driver_name || '— (no driver)';
+      if (!byDriver[key]) byDriver[key] = { name: key, income: 0, expense: 0 };
+      if (t.type === 'income' && t.category !== 'rent_pending') byDriver[key].income += t.amount;
+      else if (t.type === 'expense' && t.category !== 'rent_pending') byDriver[key].expense += t.amount;
+    });
+    const contributors = Object.values(byDriver).sort((a, b) => b.income - a.income);
+
+    return { income, expense, pending, netIncome, effectiveTotal, contributors };
   };
 
   const filteredRickshaws = selectedDriverId 
@@ -252,7 +275,7 @@ export default function Rickshaws({ selectedDriverId }: { selectedDriverId?: str
               <div className="pt-3 pb-1">
                 {(() => {
                   const stats = calculateRickshawStats(r.id, r.purchase_date);
-                  const { income, expense, pending, netIncome, effectiveTotal } = stats;
+                  const { income, expense, pending, netIncome, effectiveTotal, contributors } = stats;
 
                   // Recovery is based on NET PROFIT (income - expense), excluding pending,
                   // to stay consistent with the Dashboard's "Profit After Investment".
@@ -333,6 +356,24 @@ export default function Rickshaws({ selectedDriverId }: { selectedDriverId?: str
                             </>
                           )}
                         </div>
+
+                        {/* Contributors breakdown — only shown when more than one driver contributed */}
+                        {contributors.length > 1 && (
+                          <div className="mt-1 pt-1 border-t border-emerald-200/60">
+                            <p className="text-[9px] font-semibold text-zinc-500 uppercase tracking-wider mb-1">Contributing Drivers</p>
+                            <div className="space-y-0.5">
+                              {contributors.map(c => (
+                                <div key={c.name} className="flex justify-between text-[10px] font-number">
+                                  <span className="text-zinc-600 font-medium truncate max-w-[55%]">{c.name}</span>
+                                  <span className="text-zinc-500">
+                                    <span className="text-emerald-600">+{c.income.toLocaleString()}</span>
+                                    {c.expense > 0 && <span className="text-rose-500"> / -{c.expense.toLocaleString()}</span>}
+                                  </span>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
 
                         {/* Status pill */}
                         {isFullyRecovered ? (

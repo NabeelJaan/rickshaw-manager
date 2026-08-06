@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { DollarSign, X } from 'lucide-react';
 
 interface ExpenseModalProps {
@@ -23,12 +23,17 @@ export default function ExpenseModal({ isOpen, onClose, onSuccess, driverId, dri
     notes: ''
   });
   const [categories, setCategories] = useState<Category[]>([]);
-  // Rickshaw currently assigned to this driver — so expenses are tagged to the rickshaw
+  // Expenses are rickshaw-centric (drivers can switch rickshaws), so every expense
+  // must be tagged to a rickshaw. Pre-filled from the driver's active assignment.
   const [assignedRickshawId, setAssignedRickshawId] = useState<string>('');
+  const [rickshaws, setRickshaws] = useState<{ id: number; number: string }[]>([]);
+  // Guards against out-of-order responses when the modal reopens for a different driver
+  const assignReqRef = useRef(0);
 
   useEffect(() => {
     if (isOpen) {
       fetchCategories();
+      fetchRickshaws();
       fetchAssignedRickshaw();
       setFormData({
         date: new Date().toISOString().split('T')[0],
@@ -39,19 +44,38 @@ export default function ExpenseModal({ isOpen, onClose, onSuccess, driverId, dri
     }
   }, [isOpen, driverId]);
 
+  const fetchRickshaws = async () => {
+    try {
+      const token = localStorage.getItem('auth_token');
+      const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+      const response = await fetch('/api/rickshaws', { headers });
+      if (response.ok) {
+        const data = await response.json();
+        if (Array.isArray(data)) setRickshaws(data);
+      }
+    } catch (error) {
+      console.error('Failed to fetch rickshaws:', error);
+    }
+  };
+
   const fetchAssignedRickshaw = async () => {
+    const reqId = ++assignReqRef.current;
+    const forDriver = driverId;
     setAssignedRickshawId('');
-    if (!driverId) return;
+    if (!forDriver) return;
     try {
       const token = localStorage.getItem('auth_token');
       const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
       const response = await fetch('/api/assignments', { headers });
+      // Ignore if a newer request (e.g. modal reopened for another driver) superseded this one
+      if (reqId !== assignReqRef.current) return;
       if (response.ok) {
         const data = await response.json();
+        if (reqId !== assignReqRef.current) return;
         if (Array.isArray(data)) {
           // Active assignment = no end_date, matching this driver
           const active = data.find((a: any) =>
-            String(a.driver_id) === String(driverId) && !a.end_date
+            String(a.driver_id) === String(forDriver) && !a.end_date
           );
           if (active) setAssignedRickshawId(String(active.rickshaw_id));
         }
@@ -156,6 +180,24 @@ export default function ExpenseModal({ isOpen, onClose, onSuccess, driverId, dri
                 </option>
               ))}
             </select>
+          </div>
+
+          <div>
+            <label className="block text-[13px] font-medium text-zinc-700 mb-1.5">Rickshaw</label>
+            <select
+              required
+              className="w-full px-4 py-2.5 bg-zinc-50 border border-zinc-200 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all text-sm"
+              value={assignedRickshawId}
+              onChange={e => setAssignedRickshawId(e.target.value)}
+            >
+              <option value="">Select rickshaw...</option>
+              {rickshaws.map(r => (
+                <option key={r.id} value={String(r.id)}>{r.number}</option>
+              ))}
+            </select>
+            <p className="mt-1 text-[11px] text-zinc-400">
+              Expenses are tracked per rickshaw (drivers can switch).
+            </p>
           </div>
 
           <div>

@@ -36,6 +36,26 @@ export default function Settings() {
   const [tempSettings, setTempSettings] = useState<AppSettings>(defaultSettings);
   const [hasChanges, setHasChanges] = useState(false);
   const [isResetting, setIsResetting] = useState(false);
+  const [isBackfilling, setIsBackfilling] = useState(false);
+
+  // One-time maintenance: tag legacy transactions (saved with only a driver) with the
+  // rickshaw the driver was assigned to — expenses are tracked per rickshaw.
+  const backfillRickshawIds = async () => {
+    if (!confirm('Link all old transactions to their rickshaws based on driver assignments? This is safe — it only fills in missing rickshaw links, amounts are not changed.')) return;
+    setIsBackfilling(true);
+    try {
+      const token = localStorage.getItem('auth_token');
+      const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+      const res = await fetch('/api/admin/backfill-rickshaw-ids', { method: 'POST', headers });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Request failed');
+      alert(`Done!\n\nUntagged before: ${data.untagged_before}\nLinked: ${data.total_updated}\nStill untagged: ${data.still_untagged}${data.still_untagged > 0 ? '\n\n(Remaining ones have drivers with no assignment history.)' : ''}`);
+    } catch (e: any) {
+      alert(`Error: ${e.message}`);
+    } finally {
+      setIsBackfilling(false);
+    }
+  };
 
   useEffect(() => {
     fetchCategories();
@@ -810,6 +830,24 @@ export default function Settings() {
                 className="px-6 py-3 bg-zinc-900 text-white rounded-xl hover:bg-zinc-800 transition-colors flex items-center gap-2 text-sm font-medium"
               >
                 <Download className="w-4 h-4" /> Export All Data
+              </button>
+            </div>
+
+            {/* Maintenance */}
+            <div className="mb-8">
+              <h4 className="text-base font-medium text-zinc-900 mb-3">Maintenance</h4>
+              <button
+                onClick={backfillRickshawIds}
+                disabled={isBackfilling}
+                className="p-4 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded-xl transition-colors text-left disabled:opacity-50 disabled:cursor-not-allowed w-full md:w-auto"
+              >
+                <div className="flex items-center gap-3 mb-2">
+                  <RefreshCw className={`w-5 h-5 text-blue-600 ${isBackfilling ? 'animate-spin' : ''}`} />
+                  <span className="text-sm font-semibold text-blue-700">Link Expenses to Rickshaws</span>
+                </div>
+                <p className="text-xs text-blue-600">
+                  Tags old transactions (saved with only a driver) with the correct rickshaw, so rickshaw stats stay accurate when drivers switch. Safe to run — no amounts change.
+                </p>
               </button>
             </div>
 

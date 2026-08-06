@@ -616,6 +616,56 @@ app.delete('/api/transactions/:id', authenticate, async (req, res) => {
   } catch (e: any) { res.status(400).json({ error: e.message }); }
 });
 
+// ─── Maintenance: link old transactions to rickshaws ──────────────────────────
+// Expenses are rickshaw-centric (drivers switch rickshaws), so every transaction
+// should carry a rickshaw_id. This backfills legacy rows that only have a driver_id:
+//   pass 1: assignment covering the transaction date
+//   pass 2: driver's current (open) assignment
+//   pass 3: driver's most recent assignment of any kind
+app.post('/api/admin/backfill-rickshaw-ids', authenticate, async (req, res) => {
+  try {
+    await ensureDb();
+    const before = (await sql`SELECT COUNT(*) as c FROM transactions WHERE rickshaw_id IS NULL AND driver_id IS NOT NULL`).rows[0]?.c ?? 0;
+
+    const p1 = await sql`UPDATE transactions t SET rickshaw_id = (
+        SELECT a.rickshaw_id FROM rickshaw_assignments a
+        WHERE a.driver_id = t.driver_id
+          AND a.start_date <= t.date AND (a.end_date IS NULL OR a.end_date >= t.date)
+        ORDER BY a.start_date DESC, a.id DESC LIMIT 1)
+      WHERE t.rickshaw_id IS NULL AND t.driver_id IS NOT NULL
+        AND EXISTS (SELECT 1 FROM rickshaw_assignments a
+          WHERE a.driver_id = t.driver_id
+            AND a.start_date <= t.date AND (a.end_date IS NULL OR a.end_date >= t.date))`;
+
+    const p2 = await sql`UPDATE transactions t SET rickshaw_id = (
+        SELECT a.rickshaw_id FROM rickshaw_assignments a
+        WHERE a.driver_id = t.driver_id AND a.end_date IS NULL
+        ORDER BY a.start_date DESC, a.id DESC LIMIT 1)
+      WHERE t.rickshaw_id IS NULL AND t.driver_id IS NOT NULL
+        AND EXISTS (SELECT 1 FROM rickshaw_assignments a
+          WHERE a.driver_id = t.driver_id AND a.end_date IS NULL)`;
+
+    const p3 = await sql`UPDATE transactions t SET rickshaw_id = (
+        SELECT a.rickshaw_id FROM rickshaw_assignments a
+        WHERE a.driver_id = t.driver_id
+        ORDER BY a.start_date DESC, a.id DESC LIMIT 1)
+      WHERE t.rickshaw_id IS NULL AND t.driver_id IS NOT NULL
+        AND EXISTS (SELECT 1 FROM rickshaw_assignments a WHERE a.driver_id = t.driver_id)`;
+
+    const remaining = (await sql`SELECT COUNT(*) as c FROM transactions WHERE rickshaw_id IS NULL AND driver_id IS NOT NULL`).rows[0]?.c ?? 0;
+    const updated = (p1.rowCount ?? 0) + (p2.rowCount ?? 0) + (p3.rowCount ?? 0);
+    res.json({
+      success: true,
+      untagged_before: Number(before),
+      updated_by_date_window: p1.rowCount ?? 0,
+      updated_by_current_assignment: p2.rowCount ?? 0,
+      updated_by_latest_assignment: p3.rowCount ?? 0,
+      total_updated: updated,
+      still_untagged: Number(remaining),
+    });
+  } catch (e: any) { res.status(500).json({ error: e.message }); }
+});
+
 // ─── Activity History ─────────────────────────────────────────────────────────
 app.get('/api/history', authenticate, async (req, res) => {
   try {
