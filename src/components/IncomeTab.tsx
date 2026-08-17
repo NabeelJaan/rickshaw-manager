@@ -1,11 +1,13 @@
 import { useState, useEffect } from 'react';
 import { CalendarDays, Calendar, ChevronLeft, ChevronRight, Check, AlertCircle } from 'lucide-react';
 import { Transaction, Driver } from '../types';
+import { todayYMD, shiftYMD, formatDate } from '../utils/date';
 
 interface DiaryRow {
   key: string;
   name: string;
   income: number;
+  pending: number;
   expense: number;
   paid: boolean;
   isDriver: boolean;
@@ -23,7 +25,7 @@ export default function IncomeTab() {
   const [drivers, setDrivers] = useState<Driver[]>([]);
   const [loading, setLoading] = useState(false);
   const [currency, setCurrency] = useState('Rs.');
-  const [date, setDate] = useState<string>(() => new Date().toISOString().split('T')[0]);
+  const [date, setDate] = useState<string>(() => todayYMD());
 
   useEffect(() => {
     const saved = localStorage.getItem('currency');
@@ -48,28 +50,29 @@ export default function IncomeTab() {
       .finally(() => setLoading(false));
   }, [date]);
 
-  const shiftDay = (delta: number) => {
-    const d = new Date(date + 'T00:00:00');
-    d.setDate(d.getDate() + delta);
-    setDate(d.toISOString().split('T')[0]);
-  };
+  const shiftDay = (delta: number) => setDate(shiftYMD(date, delta));
 
-  const isToday = date === new Date().toISOString().split('T')[0];
+  const isToday = date === todayYMD();
 
-  // Sum income/expense per driver id for the selected date (excludes pending)
+  // Sum income / pending / expense per driver id for the selected date
   const incomeById: Record<string, number> = {};
+  const pendingById: Record<string, number> = {};
   const expenseById: Record<string, number> = {};
-  let noDriverIncome = 0, noDriverExpense = 0;
+  let noDriverIncome = 0, noDriverPending = 0, noDriverExpense = 0;
   transactions.forEach(t => {
-    const isIncome = t.type === 'income' && t.category !== 'rent_pending';
-    const isExpense = t.type === 'expense' && t.category !== 'rent_pending';
-    if (!isIncome && !isExpense) return;
+    const isPending = t.category === 'rent_pending';
+    const isIncome = t.type === 'income' && !isPending;
+    const isExpense = t.type === 'expense' && !isPending;
+    if (!isIncome && !isExpense && !isPending) return;
     if (t.driver_id == null) {
-      if (isIncome) noDriverIncome += t.amount; else noDriverExpense += t.amount;
+      if (isPending) noDriverPending += t.amount;
+      else if (isIncome) noDriverIncome += t.amount;
+      else noDriverExpense += t.amount;
       return;
     }
     const id = String(t.driver_id);
-    if (isIncome) incomeById[id] = (incomeById[id] || 0) + t.amount;
+    if (isPending) pendingById[id] = (pendingById[id] || 0) + t.amount;
+    else if (isIncome) incomeById[id] = (incomeById[id] || 0) + t.amount;
     else expenseById[id] = (expenseById[id] || 0) + t.amount;
   });
 
@@ -77,8 +80,9 @@ export default function IncomeTab() {
   const allRows: DiaryRow[] = drivers.map(d => {
     const id = String(d.id);
     const income = incomeById[id] || 0;
+    const pending = pendingById[id] || 0;
     const expense = expenseById[id] || 0;
-    return { key: id, name: d.name, income, expense, paid: income > 0, isDriver: true };
+    return { key: id, name: d.name, income, pending, expense, paid: income > 0, isDriver: true };
   });
 
   const sortRows = (rows: DiaryRow[]) =>
@@ -87,8 +91,8 @@ export default function IncomeTab() {
   // Split into the two groups
   const group1 = sortRows(allRows.filter(r => isGroup1(r.name)));
   const others = sortRows(allRows.filter(r => !isGroup1(r.name)));
-  if (noDriverIncome > 0 || noDriverExpense > 0) {
-    others.push({ key: 'none', name: '— (no driver)', income: noDriverIncome, expense: noDriverExpense, paid: noDriverIncome > 0, isDriver: false });
+  if (noDriverIncome > 0 || noDriverExpense > 0 || noDriverPending > 0) {
+    others.push({ key: 'none', name: '— (no driver)', income: noDriverIncome, pending: noDriverPending, expense: noDriverExpense, paid: noDriverIncome > 0, isDriver: false });
   }
 
   const grandIncome = allRows.reduce((s, r) => s + r.income, 0) + noDriverIncome;
@@ -96,6 +100,7 @@ export default function IncomeTab() {
 
   const DiaryTable = ({ title, rows }: { title: string; rows: DiaryRow[] }) => {
     const totalIncome = rows.reduce((s, r) => s + r.income, 0);
+    const totalPending = rows.reduce((s, r) => s + r.pending, 0);
     const totalExpense = rows.reduce((s, r) => s + r.expense, 0);
     const driverRows = rows.filter(r => r.isDriver);
     const paidCount = driverRows.filter(r => r.paid).length;
@@ -124,14 +129,15 @@ export default function IncomeTab() {
               <tr>
                 <th className="px-3 md:px-4 py-2 md:py-2.5 text-left text-[10px] md:text-xs font-semibold text-zinc-500 uppercase tracking-wider">Name</th>
                 <th className="px-3 md:px-4 py-2 md:py-2.5 text-right text-[10px] md:text-xs font-semibold text-zinc-500 uppercase tracking-wider">Income</th>
+                <th className="px-3 md:px-4 py-2 md:py-2.5 text-right text-[10px] md:text-xs font-semibold text-zinc-500 uppercase tracking-wider">Pending</th>
                 <th className="px-3 md:px-4 py-2 md:py-2.5 text-right text-[10px] md:text-xs font-semibold text-zinc-500 uppercase tracking-wider">Expense</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-zinc-100">
               {loading ? (
-                <tr><td colSpan={3} className="px-4 py-8 text-center text-xs md:text-sm text-zinc-500">Loading...</td></tr>
+                <tr><td colSpan={4} className="px-4 py-8 text-center text-xs md:text-sm text-zinc-500">Loading...</td></tr>
               ) : rows.length === 0 ? (
-                <tr><td colSpan={3} className="px-4 py-8 text-center text-xs md:text-sm text-zinc-500">No drivers</td></tr>
+                <tr><td colSpan={4} className="px-4 py-8 text-center text-xs md:text-sm text-zinc-500">No drivers</td></tr>
               ) : (
                 rows.map(r => (
                   <tr key={r.key} className={`transition-colors ${r.isDriver && !r.paid ? 'bg-amber-50/40 hover:bg-amber-50/70' : 'hover:bg-zinc-50/50'}`}>
@@ -149,6 +155,9 @@ export default function IncomeTab() {
                     <td className={`px-3 md:px-4 py-2.5 md:py-3 text-right text-[12px] md:text-sm font-semibold font-number ${r.income > 0 ? 'text-emerald-600' : 'text-zinc-300'}`}>
                       {r.income > 0 ? `${currency} ${r.income.toLocaleString()}` : '—'}
                     </td>
+                    <td className={`px-3 md:px-4 py-2.5 md:py-3 text-right text-[12px] md:text-sm font-semibold font-number ${r.pending > 0 ? 'text-amber-600' : 'text-zinc-300'}`}>
+                      {r.pending > 0 ? `${currency} ${r.pending.toLocaleString()}` : '—'}
+                    </td>
                     <td className={`px-3 md:px-4 py-2.5 md:py-3 text-right text-[12px] md:text-sm font-semibold font-number ${r.expense > 0 ? 'text-rose-600' : 'text-zinc-300'}`}>
                       {r.expense > 0 ? `${currency} ${r.expense.toLocaleString()}` : '—'}
                     </td>
@@ -161,6 +170,7 @@ export default function IncomeTab() {
                 <tr>
                   <td className="px-3 md:px-4 py-2.5 md:py-3 text-[12px] md:text-sm font-bold text-zinc-900">Total</td>
                   <td className="px-3 md:px-4 py-2.5 md:py-3 text-right text-[12px] md:text-sm font-bold text-emerald-700 font-number">{currency} {totalIncome.toLocaleString()}</td>
+                  <td className="px-3 md:px-4 py-2.5 md:py-3 text-right text-[12px] md:text-sm font-bold text-amber-700 font-number">{totalPending > 0 ? `${currency} ${totalPending.toLocaleString()}` : '—'}</td>
                   <td className="px-3 md:px-4 py-2.5 md:py-3 text-right text-[12px] md:text-sm font-bold text-rose-700 font-number">{currency} {totalExpense.toLocaleString()}</td>
                 </tr>
               </tfoot>
@@ -190,7 +200,7 @@ export default function IncomeTab() {
               <input
                 type="date"
                 value={date}
-                max={new Date().toISOString().split('T')[0]}
+                max={todayYMD()}
                 onChange={e => e.target.value && setDate(e.target.value)}
                 className="w-full bg-white/10 text-white text-[12px] md:text-sm pl-8 pr-2.5 py-1.5 rounded-lg border border-white/10 focus:outline-none [color-scheme:dark]"
               />
@@ -206,7 +216,7 @@ export default function IncomeTab() {
       {/* Date label + grand total */}
       <div className="flex items-center justify-between gap-2 px-1 flex-wrap">
         <p className="text-[12px] md:text-sm text-zinc-500">
-          {new Date(date + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}
+          {formatDate(date, { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}
           {isToday && <span className="ml-2 text-emerald-600 font-medium">Today</span>}
         </p>
         {!loading && (

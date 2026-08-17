@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { X, DollarSign, User, Eye, EyeOff } from 'lucide-react';
 import { Driver, Transaction } from '../types';
+import { todayYMD, formatDate } from '../utils/date';
 
 interface AddPendingBalanceModalProps {
   isOpen: boolean;
@@ -76,7 +77,7 @@ export default function AddPendingBalanceModal({ isOpen, onClose, onSuccess, sel
         method: 'POST',
         headers,
         body: JSON.stringify({
-          date: new Date().toISOString().split('T')[0],
+          date: todayYMD(),
           amount: formData.amount === '' ? 0 : parseFloat(formData.amount),
           type: 'income',
           category: 'rent_pending',
@@ -200,7 +201,7 @@ export default function AddPendingBalanceModal({ isOpen, onClose, onSuccess, sel
                 {pendingTransactions.map((t) => (
                   <div key={t.id} className="flex justify-between items-center p-3 bg-amber-50 rounded-lg">
                     <div>
-                      <p className="text-xs font-medium text-zinc-700">{new Date(t.date).toLocaleDateString()}</p>
+                      <p className="text-xs font-medium text-zinc-700">{formatDate(t.date)}</p>
                       {t.notes && <p className="text-xs text-zinc-500">{t.notes}</p>}
                     </div>
                     <span className="text-sm font-bold text-amber-600">{currency}{t.amount.toLocaleString()}</span>

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
+import { formatDate } from '../utils/date';
 import {
   Users, Plus, Trash2, Shield, User as UserIcon,
   AlertCircle, Eye, EyeOff, X, Check, KeyRound, RefreshCw
@@ -329,7 +330,7 @@ export default function UserManagement({ onClose, inline = false }: UserManageme
                       </span>
                       {user.created_at && (
                         <span className="text-zinc-600 text-xs">
-                          · Joined {new Date(user.created_at).toLocaleDateString()}
+                          · Joined {formatDate(user.created_at)}
                         </span>
                       )}
                     </div>

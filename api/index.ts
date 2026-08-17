@@ -855,14 +855,14 @@ app.get('/api/stats', authenticate, async (req, res) => {
         SUM(CASE WHEN type='income' AND category!='rent_pending' THEN amount ELSE 0 END) as income,
         SUM(CASE WHEN type='expense' AND category!='rent_pending' THEN amount ELSE 0 END) as expense
       FROM transactions
-      WHERE date >= TO_CHAR(CURRENT_DATE - INTERVAL '30 days','YYYY-MM-DD') ${df}
+      WHERE date >= TO_CHAR((CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Karachi')::date - INTERVAL '30 days','YYYY-MM-DD') ${df}
       GROUP BY date ORDER BY date ASC`, da);
 
     // Today's total
     const todayR = await sql.query(`
       SELECT SUM(CASE WHEN type='income' AND category!='rent_pending' THEN amount ELSE 0 END) as total
       FROM transactions
-      WHERE date = TO_CHAR(CURRENT_DATE,'YYYY-MM-DD') ${df}`, da);
+      WHERE date = TO_CHAR((CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Karachi')::date,'YYYY-MM-DD') ${df}`, da);
 
     // Build monthly data with active rickshaw counts for historical accuracy
     const monthlyDataWithActive = monR.rows.map((row: any) => ({

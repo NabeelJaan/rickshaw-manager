@@ -595,7 +595,7 @@ function txParties(rickshawId: any, driverId: any): string {
                SUM(CASE WHEN type = 'income' AND category != 'rent_pending' THEN amount ELSE 0 END) as income,
                SUM(CASE WHEN type = 'expense' AND category != 'rent_pending' THEN amount ELSE 0 END) as expense
         FROM transactions
-        WHERE date >= date('now', '-30 days') ${driverFilter}
+        WHERE date >= date('now', '+5 hours', '-30 days') ${driverFilter}
         GROUP BY date
         ORDER BY date ASC
       `).all(...params);
@@ -603,7 +603,7 @@ function txParties(rickshawId: any, driverId: any): string {
       const todayTotal = db.prepare(`
         SELECT SUM(CASE WHEN type = 'income' AND category != 'rent_pending' THEN amount ELSE 0 END) as total
         FROM transactions
-        WHERE date = date('now') ${driverFilter}
+        WHERE date = date('now', '+5 hours') ${driverFilter}
       `).get(...params) as any;
 
       let pendingBalance = { total: 0 };

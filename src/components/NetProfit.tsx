@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Calculator, Calendar, TrendingUp, TrendingDown, DollarSign } from 'lucide-react';
 import { Driver, Transaction } from '../types';
+import { currentMonth, recentMonths } from '../utils/date';
 
 interface DriverProfit {
   id: string;
@@ -18,7 +19,7 @@ export default function NetProfit() {
   const [loading, setLoading] = useState(false);
   const [currency, setCurrency] = useState('Rs.');
   // Selected month in YYYY-MM, or 'all' for all-time
-  const [month, setMonth] = useState<string>(() => new Date().toISOString().slice(0, 7));
+  const [month, setMonth] = useState<string>(() => currentMonth());
 
   useEffect(() => {
     const savedCurrency = localStorage.getItem('currency');
@@ -100,14 +101,9 @@ export default function NetProfit() {
               className="bg-white/10 text-white text-[11px] md:text-xs px-2.5 py-1.5 rounded-lg border border-white/10 focus:outline-none"
             >
               <option className="text-zinc-900" value="all">All Time</option>
-              {Array.from({ length: 12 }, (_, i) => {
-                const d = new Date();
-                d.setDate(1);
-                d.setMonth(d.getMonth() - i);
-                const value = d.toISOString().slice(0, 7);
-                const label = d.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
-                return <option key={value} className="text-zinc-900" value={value}>{label}</option>;
-              })}
+              {recentMonths(12).map(({ value, label }) => (
+                <option key={value} className="text-zinc-900" value={value}>{label}</option>
+              ))}
             </select>
           </div>
         </div>

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Plus, Users, Phone, Calendar, Car, Edit, Trash2, DollarSign, Droplets, Umbrella } from 'lucide-react';
 import { Driver, Rickshaw } from '../types';
+import { todayYMD } from '../utils/date';
 
 export default function Drivers({ onDriverAdded, defaultShowForm }: { onDriverAdded?: () => void, defaultShowForm?: boolean }) {
   const [drivers, setDrivers] = useState<Driver[]>([]);
@@ -11,7 +12,7 @@ export default function Drivers({ onDriverAdded, defaultShowForm }: { onDriverAd
   const [driversOnLeave, setDriversOnLeave] = useState<Set<number>>(new Set());
   const [lastOilChange, setLastOilChange] = useState<Record<number, string>>({});
   
-  const [formData, setFormData] = useState({ name: '', phone: '', join_date: new Date().toISOString().split('T')[0], rickshaw_id: '', daily_rent: '', pending_balance: '' });
+  const [formData, setFormData] = useState({ name: '', phone: '', join_date: todayYMD(), rickshaw_id: '', daily_rent: '', pending_balance: '' });
   const [editFormData, setEditFormData] = useState({ name: '', phone: '', join_date: '', id: '', daily_rent: '', pending_balance: '' });
 
   // Load currency from settings
@@ -57,7 +58,7 @@ export default function Drivers({ onDriverAdded, defaultShowForm }: { onDriverAd
     if (Array.isArray(rickshawsData)) setRickshaws(rickshawsData);
     
     // Check for drivers on leave today
-    const today = new Date().toISOString().split('T')[0];
+    const today = todayYMD();
     const txRes = await fetch(`/api/transactions?start_date=${today}&end_date=${today}`, { headers });
     const transactions = await txRes.json();
     
@@ -168,7 +169,7 @@ export default function Drivers({ onDriverAdded, defaultShowForm }: { onDriverAd
     }
     
     setShowForm(false);
-    setFormData({ name: '', phone: '', join_date: new Date().toISOString().split('T')[0], rickshaw_id: '' });
+    setFormData({ name: '', phone: '', join_date: todayYMD(), rickshaw_id: '' });
     fetchData();
     if (onDriverAdded) onDriverAdded();
   };

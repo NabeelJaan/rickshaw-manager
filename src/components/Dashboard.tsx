@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import ReactApexChart from 'react-apexcharts';
 import { TrendingUp, TrendingDown, DollarSign, Car, Plus, Edit, ChevronDown, Trash2, Users, Percent } from 'lucide-react';
 import { DashboardStats, Transaction, Driver } from '../types';
+import { currentMonth, recentMonths, formatDate } from '../utils/date';
 import LogRentModal from './LogRentModal';
 import ExpenseModal from './ExpenseModal';
 import EditTransactionModal from './EditTransactionModal';
@@ -27,10 +28,7 @@ export default function Dashboard({ selectedDriverId, selectedMonth: propSelecte
   const [showTransactionDropdown, setShowTransactionDropdown] = useState(false);
   const [txFilter, setTxFilter] = useState<'all' | 'income' | 'expense' | 'pending'>('all');
   // Use prop month if provided (controlled by parent), otherwise use local state
-  const [localSelectedMonth, setLocalSelectedMonth] = useState<string>(() => {
-    const now = new Date();
-    return now.toISOString().slice(0, 7); // Current month in YYYY-MM format
-  });
+  const [localSelectedMonth, setLocalSelectedMonth] = useState<string>(() => currentMonth());
   const selectedMonth = propSelectedMonth ?? localSelectedMonth;
   const setSelectedMonth = (month: string) => {
     if (onMonthChange) onMonthChange(month);
@@ -259,7 +257,7 @@ export default function Dashboard({ selectedDriverId, selectedMonth: propSelecte
                 <>
                   {selectedMonth && selectedMonth !== 'all' ? (
                     <>
-                      {new Date(selectedMonth + '-01').toLocaleDateString('en-US', { month: 'short', year: 'numeric' })} - {selectedDriverName}
+                      {formatDate(selectedMonth + '-01', { month: 'short', year: 'numeric' })} - {selectedDriverName}
                     </>
                   ) : (
                     selectedDriverName
@@ -276,7 +274,7 @@ export default function Dashboard({ selectedDriverId, selectedMonth: propSelecte
             )}
           </div>
           <p className="text-[12px] md:text-[14px] text-zinc-500 mt-0.5">
-            {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
+            {formatDate(new Date(), { weekday: 'long', month: 'long', day: 'numeric' })}
           </p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
@@ -286,14 +284,9 @@ export default function Dashboard({ selectedDriverId, selectedMonth: propSelecte
             className="h-9 px-3 md:h-11 md:px-4 bg-zinc-100 border-0 rounded-lg md:rounded-xl text-[12px] md:text-[14px] text-zinc-700 font-medium hover:bg-zinc-200 transition-colors cursor-pointer focus:ring-2 focus:ring-zinc-300 outline-none max-w-[120px] sm:max-w-none"
           >
             <option value="all">All Time</option>
-            {Array.from({ length: 12 }, (_, i) => {
-              const date = new Date();
-              date.setDate(1);
-              date.setMonth(date.getMonth() - i);
-              const monthStr = date.toISOString().slice(0, 7);
-              const monthName = date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
-              return <option key={monthStr} value={monthStr}>{monthName}</option>;
-            })}
+            {recentMonths(12).map(({ value, label }) => (
+              <option key={value} value={value}>{label}</option>
+            ))}
           </select>
           {selectedDriverId && (
             <button 
@@ -389,7 +382,7 @@ export default function Dashboard({ selectedDriverId, selectedMonth: propSelecte
                   <div key={t.id} className="flex items-center gap-1.5 p-1.5 md:p-3 bg-zinc-50 rounded-lg md:rounded-xl">
                     <div className="w-1.5 h-1.5 md:w-2 md:h-2 rounded-full bg-amber-400"></div>
                     <p className="text-[10px] md:text-[13px] font-medium text-zinc-700">
-                      {new Date(t.date).toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}
+                      {formatDate(t.date, { weekday: 'long', month: 'short', day: 'numeric' })}
                     </p>
                   </div>
                 ))}
@@ -415,7 +408,7 @@ export default function Dashboard({ selectedDriverId, selectedMonth: propSelecte
                         <p className="text-[10px] md:text-[13px] font-semibold text-zinc-900">Rickshaw {t.rickshaw_number}</p>
                       )}
                       <p className="text-[9px] md:text-[12px] text-zinc-500 mt-0.5">
-                        {new Date(t.date).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
+                        {formatDate(t.date, { weekday: 'short', month: 'short', day: 'numeric' })}
                       </p>
                       {t.notes && (
                         <p className="text-[9px] md:text-[12px] text-zinc-600 mt-1 md:mt-1.5 italic">{t.notes}</p>
@@ -505,7 +498,7 @@ export default function Dashboard({ selectedDriverId, selectedMonth: propSelecte
                   <div className="flex-1 min-w-0">
                     <p className="text-[11px] font-semibold text-zinc-900 capitalize">{t.category.replace('_', ' ')}</p>
                     <p className="text-[10px] text-zinc-500 mt-0.5">
-                      {new Date(t.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                      {formatDate(t.date, { month: 'short', day: 'numeric' })}
                     </p>
                     <div className="flex items-center gap-1 mt-1">
                       {t.rickshaw_number && (
@@ -577,7 +570,7 @@ export default function Dashboard({ selectedDriverId, selectedMonth: propSelecte
                             ? 'w-2 h-2 rounded-full bg-amber-500' 
                             : 'w-2 h-2 rounded-full bg-rose-500'
                       }></div>
-                      {new Date(t.date).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
+                      {formatDate(t.date, { weekday: 'short', month: 'short', day: 'numeric' })}
                     </div>
                   </td>
                   <td className="p-4">

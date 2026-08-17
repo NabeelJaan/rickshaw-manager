@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Settings as SettingsIcon, Plus, Trash2, Edit, Save, Download, FileText, AlertTriangle, RefreshCw, Users, TrendingUp, TrendingDown } from 'lucide-react';
 import UserManagement from './UserManagement';
 import { useAuth } from '../contexts/AuthContext';
+import { todayYMD } from '../utils/date';
 
 interface Category {
   id: string;
@@ -255,7 +256,7 @@ export default function Settings() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `rickshaw-manager-backup-${new Date().toISOString().split('T')[0]}.json`;
+    a.download = `rickshaw-manager-backup-${todayYMD()}.json`;
     a.click();
     URL.revokeObjectURL(url);
   };

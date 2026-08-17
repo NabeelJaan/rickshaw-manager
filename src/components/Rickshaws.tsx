@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Plus, Car, Calendar, DollarSign, UserPlus, Users, TrendingUp, TrendingDown, Edit, Trash2 } from 'lucide-react';
 import { Rickshaw, Driver, Assignment, Transaction } from '../types';
+import { todayYMD } from '../utils/date';
 
 export default function Rickshaws({ selectedDriverId }: { selectedDriverId?: string }) {
   const [rickshaws, setRickshaws] = useState<Rickshaw[]>([]);
@@ -13,7 +14,7 @@ export default function Rickshaws({ selectedDriverId }: { selectedDriverId?: str
   const [currency, setCurrency] = useState('Rs.');
   
   const [formData, setFormData] = useState({ number: '', purchase_date: '', investment_cost: '' });
-  const [assignData, setAssignData] = useState({ rickshaw_id: '', driver_id: '', start_date: new Date().toISOString().split('T')[0] });
+  const [assignData, setAssignData] = useState({ rickshaw_id: '', driver_id: '', start_date: todayYMD() });
   const [editFormData, setEditFormData] = useState({ number: '', purchase_date: '', investment_cost: '', id: '' });
 
   useEffect(() => {
@@ -63,7 +64,7 @@ export default function Rickshaws({ selectedDriverId }: { selectedDriverId?: str
     const res = await fetch('/api/assignments', { method: 'POST', headers, body: JSON.stringify(assignData) });
     if (!res.ok) { const error = await res.json(); alert(`Error assigning driver: ${error.error}`); return; }
     setShowAssignForm(null);
-    setAssignData({ rickshaw_id: '', driver_id: '', start_date: new Date().toISOString().split('T')[0] });
+    setAssignData({ rickshaw_id: '', driver_id: '', start_date: todayYMD() });
     fetchData();
   };
 

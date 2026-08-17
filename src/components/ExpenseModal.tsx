@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { DollarSign, X } from 'lucide-react';
+import { todayYMD } from '../utils/date';
 
 interface ExpenseModalProps {
   isOpen: boolean;
@@ -17,7 +18,7 @@ interface Category {
 
 export default function ExpenseModal({ isOpen, onClose, onSuccess, driverId, driverName }: ExpenseModalProps) {
   const [formData, setFormData] = useState({
-    date: new Date().toISOString().split('T')[0],
+    date: todayYMD(),
     category: 'fuel',
     amount: '',
     notes: ''
@@ -36,7 +37,7 @@ export default function ExpenseModal({ isOpen, onClose, onSuccess, driverId, dri
       fetchRickshaws();
       fetchAssignedRickshaw();
       setFormData({
-        date: new Date().toISOString().split('T')[0],
+        date: todayYMD(),
         category: 'fuel',
         amount: '',
         notes: ''
@@ -129,7 +130,7 @@ export default function ExpenseModal({ isOpen, onClose, onSuccess, driverId, dri
     onSuccess();
     onClose();
     setFormData({
-      date: new Date().toISOString().split('T')[0],
+      date: todayYMD(),
       category: 'fuel',
       amount: '',
       notes: ''

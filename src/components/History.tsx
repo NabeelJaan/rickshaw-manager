@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { History as HistoryIcon, Trash2, Edit, RefreshCw, Filter, Receipt, Users, Car } from 'lucide-react';
+import { formatDateTime } from '../utils/date';
 
 interface ActivityRow {
   id: number;
@@ -149,7 +150,7 @@ export default function History() {
                       </div>
                       <p className="text-[12px] md:text-sm font-medium text-zinc-900 mt-1">{row.description}</p>
                       <p className="text-[10px] text-zinc-400 mt-0.5">
-                        {new Date(row.created_at).toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' })}
+                        {formatDateTime(row.created_at)}
                         {row.username ? ` · by ${row.username}` : ''}
                       </p>
                     </div>

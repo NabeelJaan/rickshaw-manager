@@ -1,5 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { Upload, Download, FileText, AlertCircle, CheckCircle } from 'lucide-react';
+import { todayYMD } from '../utils/date';
 
 interface ImportData {
   drivers?: Array<{name: string; phone: string; join_date: string}>;
@@ -115,7 +116,7 @@ export default function GoogleSheetsImport() {
       mappedData.drivers = data.map(row => ({
         name: row.name || row.driver_name || row.driver || '',
         phone: row.phone || '',
-        join_date: row.join_date || row.date || new Date().toISOString().split('T')[0]
+        join_date: row.join_date || row.date || todayYMD()
       })).filter(d => d.name);
     }
 
@@ -123,7 +124,7 @@ export default function GoogleSheetsImport() {
       // Map as rickshaws data
       mappedData.rickshaws = data.map(row => ({
         number: row.number || row.rickshaw_number || row.rickshaw || '',
-        purchase_date: row.purchase_date || row.date || new Date().toISOString().split('T')[0],
+        purchase_date: row.purchase_date || row.date || todayYMD(),
         investment_cost: parseFloat(row.investment_cost || row.cost || row.amount || '0')
       })).filter(r => r.number);
     }
@@ -131,7 +132,7 @@ export default function GoogleSheetsImport() {
     if (hasTransactionFields) {
       // Map as transactions data
       mappedData.transactions = data.map(row => ({
-        date: row.date || new Date().toISOString().split('T')[0],
+        date: row.date || todayYMD(),
         type: (row.type?.toLowerCase() === 'expense' || row.category?.toLowerCase().includes('fuel') || row.category?.toLowerCase().includes('maintenance') ? 'expense' : 
                (row.type?.toLowerCase() === 'pending' || row.category?.toLowerCase().includes('pending')) ? 'pending' : 'income') as 'income' | 'expense' | 'pending',
         category: row.category || 'other',

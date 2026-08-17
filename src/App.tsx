@@ -12,6 +12,7 @@ import HistoryPage from './components/History';
 import IncomeTab from './components/IncomeTab';
 import SettingsPage from './components/Settings';
 import { Driver } from './types';
+import { todayYMD, currentMonth } from './utils/date';
 
 // Names to always show last in the driver list (case-insensitive substring match)
 const PINNED_LAST_NAMES = ['zain', 'hassan'];
@@ -24,10 +25,7 @@ function AppContent() {
   const [selectedDriverId, setSelectedDriverId] = useState<string>('');
   const [showAddDriverForm, setShowAddDriverForm] = useState(false);
   // Selected month for pending badges (defaults to current month)
-  const [selectedMonth, setSelectedMonth] = useState<string>(() => {
-    const now = new Date();
-    return now.toISOString().slice(0, 7); // YYYY-MM
-  });
+  const [selectedMonth, setSelectedMonth] = useState<string>(() => currentMonth());
 
   // Today's entry color: driverId -> 'income' | 'pending' | null
   const [todayEntryMap, setTodayEntryMap] = useState<Record<string, 'income' | 'pending' | null>>({});
@@ -55,7 +53,7 @@ function AppContent() {
   const fetchTodayEntries = () => {
     const token = localStorage.getItem('auth_token');
     const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
-    const today = new Date().toISOString().split('T')[0];
+    const today = todayYMD();
     const monthToFetch = selectedMonth; // Use selected month instead of always current
 
     Promise.all([

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Upload, Download, FileText, CheckCircle, AlertCircle } from 'lucide-react';
+import { currentMonth } from '../utils/date';
 
 interface ImportData {
   drivers?: Array<{name: string; phone: string; join_date: string}>;
@@ -22,12 +23,7 @@ export default function SimpleImport() {
   const [availableDrivers, setAvailableDrivers] = useState<Array<{id: string, name: string}>>([]);
   const [currency, setCurrency] = useState('Rs.'); // Added this line
 
-  const getCurrentMonthYear = () => {
-    const now = new Date();
-    const year = now.getFullYear();
-    const month = String(now.getMonth() + 1).padStart(2, '0');
-    return `${year}-${month}`;
-  };
+  const getCurrentMonthYear = () => currentMonth();
 
   // Load available drivers when component mounts
   React.useEffect(() => {

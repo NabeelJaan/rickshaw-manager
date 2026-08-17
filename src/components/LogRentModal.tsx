@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { X, DollarSign, Calendar, User } from 'lucide-react';
 import { Driver, Rickshaw } from '../types';
+import { todayYMD } from '../utils/date';
 
 interface Category {
   id: number;
@@ -23,7 +24,7 @@ export default function LogRentModal({ isOpen, onClose, onSubmit, onSuccess, sel
   const [loading, setLoading] = useState(false);
   const [currency, setCurrency] = useState('Rs.');
   const [formData, setFormData] = useState({
-    date: new Date().toISOString().split('T')[0],
+    date: todayYMD(),
     amount: '',
     driver_id: selectedDriverId || '',
     rickshaw_id: '',
@@ -38,7 +39,7 @@ export default function LogRentModal({ isOpen, onClose, onSubmit, onSuccess, sel
       fetchCategories();
       setFormData(prev => ({
         ...prev,
-        date: new Date().toISOString().split('T')[0],
+        date: todayYMD(),
         amount: '',
         driver_id: selectedDriverId || '',
         rickshaw_id: '',

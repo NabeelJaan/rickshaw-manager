@@ -1,14 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { FileText, Calendar, Download, TrendingUp, TrendingDown, DollarSign, Car, Users, Filter, AlertCircle, Star } from 'lucide-react';
 import { Driver, Transaction } from '../types';
+import { todayYMD, toYMD, formatDate } from '../utils/date';
 
 export default function Reports({ selectedDriverId }: { selectedDriverId?: string }) {
   const [drivers, setDrivers] = useState<Driver[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [selectedReportDriver, setSelectedReportDriver] = useState<string>(selectedDriverId || '');
   const [reportPeriod, setReportPeriod] = useState<string>('1month');
-  const [selectedMonth, setSelectedMonth] = useState<string>(String(new Date().getMonth() + 1));
-  const [selectedYear, setSelectedYear] = useState<string>(new Date().getFullYear().toString());
+  const [selectedMonth, setSelectedMonth] = useState<string>(String(Number(todayYMD().slice(5, 7))));
+  const [selectedYear, setSelectedYear] = useState<string>(todayYMD().slice(0, 4));
   const [loading, setLoading] = useState(false);
   const [currency, setCurrency] = useState('Rs.');
 
@@ -37,10 +38,13 @@ export default function Reports({ selectedDriverId }: { selectedDriverId?: strin
     const token = localStorage.getItem('auth_token');
     const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
     
-    // Calculate date range based on period or month selection
+    // Calculate date range based on period or month selection.
+    // Anchor at midday so formatting to a PKT calendar day never drifts across midnight.
     const endDate = new Date();
     const startDate = new Date();
-    
+    startDate.setHours(12, 0, 0, 0);
+    endDate.setHours(12, 0, 0, 0);
+
     if (selectedMonth && selectedYear) {
       // If specific month is selected
       const monthIndex = parseInt(selectedMonth) - 1;
@@ -68,8 +72,8 @@ export default function Reports({ selectedDriverId }: { selectedDriverId?: strin
     }
 
     const query = new URLSearchParams({
-      start_date: startDate.toISOString().split('T')[0],
-      end_date: endDate.toISOString().split('T')[0],
+      start_date: toYMD(startDate),
+      end_date: toYMD(endDate),
       driver_id: selectedReportDriver
     }).toString();
 
@@ -140,16 +144,21 @@ export default function Reports({ selectedDriverId }: { selectedDriverId?: strin
 
   const exportReport = (format: 'json' | 'csv' | 'excel') => {
     const driverName = selectedReportDriver ? drivers.find(d => d.id === selectedReportDriver)?.name : 'All Drivers';
-    const periodLabel = selectedMonth && selectedYear 
-      ? `${new Date(parseInt(selectedYear), parseInt(selectedMonth) - 1).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}`
+    const mm = String(parseInt(selectedMonth)).padStart(2, '0');
+    const lastDay = String(new Date(parseInt(selectedYear), parseInt(selectedMonth), 0).getDate()).padStart(2, '0');
+    const periodLabel = selectedMonth && selectedYear
+      ? formatDate(`${selectedYear}-${mm}-01`, { month: 'long', year: 'numeric' })
       : reportPeriod === '1month' ? '1 Month' : reportPeriod === '2months' ? '2 Months' : reportPeriod === '6months' ? '6 Months' : reportPeriod === '1year' ? '1 Year' : 'All Time';
-    
+
+    const periodStart = new Date();
+    periodStart.setHours(12, 0, 0, 0);
+    periodStart.setMonth(periodStart.getMonth() - (reportPeriod === '1month' ? 1 : reportPeriod === '2months' ? 2 : reportPeriod === '6months' ? 6 : reportPeriod === '1year' ? 12 : 300));
     const startDate = selectedMonth && selectedYear
-      ? new Date(parseInt(selectedYear), parseInt(selectedMonth) - 1, 1).toISOString().split('T')[0]
-      : new Date(new Date().setMonth(new Date().getMonth() - (reportPeriod === '1month' ? 1 : reportPeriod === '2months' ? 2 : reportPeriod === '6months' ? 6 : reportPeriod === '1year' ? 12 : 300))).toISOString().split('T')[0];
+      ? `${selectedYear}-${mm}-01`
+      : toYMD(periodStart);
     const endDate = selectedMonth && selectedYear
-      ? new Date(parseInt(selectedYear), parseInt(selectedMonth), 0).toISOString().split('T')[0]
-      : new Date().toISOString().split('T')[0];
+      ? `${selectedYear}-${mm}-${lastDay}`
+      : todayYMD();
 
     if (format === 'json') {
       const reportData = {
@@ -166,7 +175,7 @@ export default function Reports({ selectedDriverId }: { selectedDriverId?: strin
       const url = URL.createObjectURL(dataBlob);
       const link = document.createElement('a');
       link.href = url;
-      link.download = `report_${selectedReportDriver || 'all'}_${selectedMonth || reportPeriod}_${new Date().toISOString().split('T')[0]}.json`;
+      link.download = `report_${selectedReportDriver || 'all'}_${selectedMonth || reportPeriod}_${todayYMD()}.json`;
       link.click();
     } else if (format === 'csv' || format === 'excel') {
       const headers = ['Date', 'Type', 'Category', 'Amount', 'Driver', 'Rickshaw', 'Notes'];
@@ -194,7 +203,7 @@ export default function Reports({ selectedDriverId }: { selectedDriverId?: strin
 
           // Add transactions for this driver
           const transactionRows = driverTransactions.map(t => [
-            new Date(t.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+            formatDate(t.date, { month: 'short', day: 'numeric', year: 'numeric' }),
             t.type,
             t.category.replace('_', ' '),
             `${t.type === 'income' ? '+' : '-'}${currency}${t.amount.toLocaleString()}`,
@@ -248,7 +257,7 @@ export default function Reports({ selectedDriverId }: { selectedDriverId?: strin
         ];
 
         const transactionRows = transactions.map(t => [
-          new Date(t.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+          formatDate(t.date, { month: 'short', day: 'numeric', year: 'numeric' }),
           t.type,
           t.category.replace('_', ' '),
           `${t.type === 'income' ? '+' : '-'}${currency}${t.amount.toLocaleString()}`,
@@ -275,7 +284,7 @@ export default function Reports({ selectedDriverId }: { selectedDriverId?: strin
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
-      link.download = `report_${selectedReportDriver || 'all'}_${selectedMonth || reportPeriod}_${new Date().toISOString().split('T')[0]}.csv`;
+      link.download = `report_${selectedReportDriver || 'all'}_${selectedMonth || reportPeriod}_${todayYMD()}.csv`;
       link.click();
     }
   };
@@ -390,7 +399,7 @@ export default function Reports({ selectedDriverId }: { selectedDriverId?: strin
                   value={selectedYear}
                   onChange={(e) => setSelectedYear(e.target.value)}
                 >
-                  {Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - i).map(year => (
+                  {Array.from({ length: 5 }, (_, i) => Number(todayYMD().slice(0, 4)) - i).map(year => (
                     <option key={year} value={year}>{year}</option>
                   ))}
                 </select>
@@ -534,7 +543,7 @@ export default function Reports({ selectedDriverId }: { selectedDriverId?: strin
                       : 'hover:bg-zinc-50/50'
                   }`}>
                     <td className="px-3 md:px-4 py-2 md:py-3 text-[11px] md:text-sm text-zinc-900">
-                      {new Date(t.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                      {formatDate(t.date, { month: 'short', day: 'numeric', year: 'numeric' })}
                     </td>
                     <td className="px-3 md:px-4 py-2 md:py-3">
                       <span className={`inline-flex items-center px-1.5 md:px-2 py-0.5 md:py-1 rounded-md text-[10px] md:text-xs font-medium ${

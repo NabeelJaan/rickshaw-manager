@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Plus, Receipt, Trash2, Filter, DollarSign, Edit, TrendingDown, TrendingUp, Calendar, Search } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell } from 'recharts';
 import { Transaction, Rickshaw, Driver } from '../types';
+import { todayYMD, toYMD } from '../utils/date';
 import LogRentModal from './LogRentModal';
 import EditTransactionModal from './EditTransactionModal';
 
@@ -17,7 +18,7 @@ export default function Transactions({ selectedDriverId }: { selectedDriverId?: 
   const [loading, setLoading] = useState(false);
   
   const [formData, setFormData] = useState({
-    date: new Date().toISOString().split('T')[0],
+    date: todayYMD(),
     type: 'income',
     category: 'rent',
     amount: '',
@@ -159,8 +160,8 @@ export default function Transactions({ selectedDriverId }: { selectedDriverId?: 
     
     setFilters({
       ...filters,
-      start_date: startDate.toISOString().split('T')[0],
-      end_date: endDate.toISOString().split('T')[0],
+      start_date: toYMD(startDate),
+      end_date: toYMD(endDate),
       rickshaw_id: '',
       driver_id: selectedDriverId || ''
     });
