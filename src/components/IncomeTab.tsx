@@ -17,7 +17,7 @@ interface DiaryRow {
 // Group-1 gets its own table, matched by RICKSHAW NUMBER (digits) — driver names can
 // change over time, but the rickshaw's number stays the same. Substring match handles
 // numbers embedded in labels like "BAB - 2023" or "BJK 6020".
-const GROUP1_RICKSHAWS = ['2023', '6020', '5184', '1536'];
+const GROUP1_RICKSHAWS = ['2023', '6020', '5184'];
 const isGroup1 = (rickshawNo: string) =>
   GROUP1_RICKSHAWS.some(n => (rickshawNo || '').includes(n));
 
