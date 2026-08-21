@@ -74,11 +74,16 @@ export default function Dashboard({ selectedDriverId, selectedMonth: propSelecte
     }
   };
 
+  // A selection is 'all', a year ('YYYY'), or a month ('YYYY-MM')
+  const isYear = /^\d{4}$/.test(selectedMonth);
+  const isMonth = /^\d{4}-\d{2}$/.test(selectedMonth);
+
   const fetchData = () => {
     setLoading(true);
     const queryParts = [];
     if (selectedDriverId) queryParts.push(`driver_id=${selectedDriverId}`);
-    if (selectedMonth) queryParts.push(`month=${selectedMonth}`);
+    if (isYear) queryParts.push(`start_date=${selectedMonth}-01-01&end_date=${selectedMonth}-12-31`);
+    else if (isMonth) queryParts.push(`month=${selectedMonth}`);
     const query = queryParts.length > 0 ? `?${queryParts.join('&')}` : '';
     const token = localStorage.getItem('auth_token');
     const headers: Record<string, string> = { 'Cache-Control': 'no-cache', 'Pragma': 'no-cache' };
@@ -127,13 +132,16 @@ export default function Dashboard({ selectedDriverId, selectedMonth: propSelecte
   const calculateCumulativeProfit = () => {
     if (!selectedMonth || selectedMonth === 'all') return stats.allTimeProfit ?? stats.profit ?? 0;
     if (!stats.monthlyData || !Array.isArray(stats.monthlyData)) return stats.profit ?? 0;
-    
-    const hasSelectedMonth = stats.monthlyData.some((d: any) => d.month === selectedMonth);
-    if (!hasSelectedMonth) return stats.profit ?? 0;
-    
+
+    // For a year selection, accumulate profit through the end of that year (YYYY-12).
+    const cutoff = isYear ? `${selectedMonth}-12` : selectedMonth;
+
+    const hasData = stats.monthlyData.some((d: any) => d.month <= cutoff);
+    if (!hasData) return stats.profit ?? 0;
+
     return [...stats.monthlyData]
       .sort((a: any, b: any) => a.month.localeCompare(b.month))
-      .filter((d: any) => d.month <= selectedMonth)
+      .filter((d: any) => d.month <= cutoff)
       .reduce((sum: number, d: any) => sum + ((d.income || 0) - (d.expense || 0)), 0);
   };
 
@@ -257,7 +265,7 @@ export default function Dashboard({ selectedDriverId, selectedMonth: propSelecte
                 <>
                   {selectedMonth && selectedMonth !== 'all' ? (
                     <>
-                      {formatDate(selectedMonth + '-01', { month: 'short', year: 'numeric' })} - {selectedDriverName}
+                      {isYear ? selectedMonth : formatDate(selectedMonth + '-01', { month: 'short', year: 'numeric' })} - {selectedDriverName}
                     </>
                   ) : (
                     selectedDriverName
@@ -284,9 +292,16 @@ export default function Dashboard({ selectedDriverId, selectedMonth: propSelecte
             className="h-9 px-3 md:h-11 md:px-4 bg-zinc-100 border-0 rounded-lg md:rounded-xl text-[12px] md:text-[14px] text-zinc-700 font-medium hover:bg-zinc-200 transition-colors cursor-pointer focus:ring-2 focus:ring-zinc-300 outline-none max-w-[120px] sm:max-w-none"
           >
             <option value="all">All Time</option>
-            {recentMonths(12).map(({ value, label }) => (
-              <option key={value} value={value}>{label}</option>
-            ))}
+            <optgroup label="Year">
+              {Array.from({ length: 4 }, (_, i) => String(Number(currentMonth().slice(0, 4)) - i)).map(y => (
+                <option key={y} value={y}>{y}</option>
+              ))}
+            </optgroup>
+            <optgroup label="Month">
+              {recentMonths(12).map(({ value, label }) => (
+                <option key={value} value={value}>{label}</option>
+              ))}
+            </optgroup>
           </select>
           {selectedDriverId && (
             <button 

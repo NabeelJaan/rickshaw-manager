@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react';
-import { CalendarDays, Calendar, ChevronLeft, ChevronRight, Check, AlertCircle } from 'lucide-react';
+import { CalendarDays, Calendar, ChevronLeft, ChevronRight, Check } from 'lucide-react';
 import { Transaction, Driver } from '../types';
 import { todayYMD, shiftYMD, formatDate } from '../utils/date';
 
 interface DiaryRow {
   key: string;
   name: string;
+  rickshaw: string;
   income: number;
   pending: number;
   expense: number;
@@ -13,12 +14,12 @@ interface DiaryRow {
   isDriver: boolean;
 }
 
-// Group-1 drivers get their own table (matched case-insensitively by name token)
-const GROUP1_MATCHERS = ['chand', 'raza', 'shahzad', 'riaz'];
-const isGroup1 = (name: string) => {
-  const n = name.toLowerCase();
-  return GROUP1_MATCHERS.some(m => n.includes(m));
-};
+// Group-1 gets its own table, matched by RICKSHAW NUMBER (digits) — driver names can
+// change over time, but the rickshaw's number stays the same. Substring match handles
+// numbers embedded in labels like "BAB - 2023" or "BJK 6020".
+const GROUP1_RICKSHAWS = ['2023', '6020', '5184', '1536'];
+const isGroup1 = (rickshawNo: string) =>
+  GROUP1_RICKSHAWS.some(n => (rickshawNo || '').includes(n));
 
 export default function IncomeTab() {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
@@ -82,17 +83,17 @@ export default function IncomeTab() {
     const income = incomeById[id] || 0;
     const pending = pendingById[id] || 0;
     const expense = expenseById[id] || 0;
-    return { key: id, name: d.name, income, pending, expense, paid: income > 0, isDriver: true };
+    return { key: id, name: d.name, rickshaw: d.assigned_rickshaw || '', income, pending, expense, paid: income > 0, isDriver: true };
   });
 
   const sortRows = (rows: DiaryRow[]) =>
     [...rows].sort((a, b) => (b.paid ? 1 : 0) - (a.paid ? 1 : 0) || b.income - a.income);
 
-  // Split into the two groups
-  const group1 = sortRows(allRows.filter(r => isGroup1(r.name)));
-  const others = sortRows(allRows.filter(r => !isGroup1(r.name)));
+  // Split into the two groups by rickshaw number
+  const group1 = sortRows(allRows.filter(r => isGroup1(r.rickshaw)));
+  const others = sortRows(allRows.filter(r => !isGroup1(r.rickshaw)));
   if (noDriverIncome > 0 || noDriverExpense > 0 || noDriverPending > 0) {
-    others.push({ key: 'none', name: '— (no driver)', income: noDriverIncome, pending: noDriverPending, expense: noDriverExpense, paid: noDriverIncome > 0, isDriver: false });
+    others.push({ key: 'none', name: '— (no driver)', rickshaw: '', income: noDriverIncome, pending: noDriverPending, expense: noDriverExpense, paid: noDriverIncome > 0, isDriver: false });
   }
 
   const grandIncome = allRows.reduce((s, r) => s + r.income, 0) + noDriverIncome;
@@ -104,23 +105,15 @@ export default function IncomeTab() {
     const totalExpense = rows.reduce((s, r) => s + r.expense, 0);
     const driverRows = rows.filter(r => r.isDriver);
     const paidCount = driverRows.filter(r => r.paid).length;
-    const unpaidCount = driverRows.length - paidCount;
 
     return (
       <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-sm border border-zinc-200/60 overflow-hidden">
         <div className="px-3 md:px-4 py-2.5 md:py-3 border-b border-zinc-100 flex items-center justify-between gap-2 flex-wrap">
           <h3 className="text-[13px] md:text-base font-semibold text-zinc-900">{title}</h3>
           {!loading && driverRows.length > 0 && (
-            <div className="flex items-center gap-1.5 text-[10px] md:text-xs">
-              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 font-medium">
-                <Check className="w-3 h-3" /> {paidCount} paid
-              </span>
-              {unpaidCount > 0 && (
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 font-medium">
-                  <AlertCircle className="w-3 h-3" /> {unpaidCount} not paid
-                </span>
-              )}
-            </div>
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 font-medium text-[10px] md:text-xs">
+              <Check className="w-3 h-3" /> {paidCount}/{driverRows.length} paid
+            </span>
           )}
         </div>
         <div className="overflow-x-auto">
@@ -140,15 +133,15 @@ export default function IncomeTab() {
                 <tr><td colSpan={4} className="px-4 py-8 text-center text-xs md:text-sm text-zinc-500">No drivers</td></tr>
               ) : (
                 rows.map(r => (
-                  <tr key={r.key} className={`transition-colors ${r.isDriver && !r.paid ? 'bg-amber-50/40 hover:bg-amber-50/70' : 'hover:bg-zinc-50/50'}`}>
+                  <tr key={r.key} className="transition-colors hover:bg-zinc-50/50">
                     <td className="px-3 md:px-4 py-2.5 md:py-3">
                       <div className="flex items-center gap-2">
                         {r.isDriver && (
-                          <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${r.paid ? 'bg-emerald-500' : 'bg-amber-400'}`} />
+                          <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${r.paid ? 'bg-emerald-500' : 'bg-zinc-300'}`} />
                         )}
                         <span className="text-[12px] md:text-sm font-medium text-zinc-900">{r.name}</span>
-                        {r.isDriver && !r.paid && (
-                          <span className="text-[9px] font-semibold uppercase text-amber-600 bg-amber-100 px-1.5 py-0.5 rounded">Not paid</span>
+                        {r.rickshaw && (
+                          <span className="text-[9px] text-zinc-500 bg-zinc-100 px-1.5 py-0.5 rounded shrink-0">{r.rickshaw}</span>
                         )}
                       </div>
                     </td>
