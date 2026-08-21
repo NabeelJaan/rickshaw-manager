@@ -14,12 +14,15 @@ interface DiaryRow {
   isDriver: boolean;
 }
 
-// Group-1 gets its own table, matched by RICKSHAW NUMBER (digits) — driver names can
-// change over time, but the rickshaw's number stays the same. Substring match handles
-// numbers embedded in labels like "BAB - 2023" or "BJK 6020".
+// Group-1 gets its own table, matched primarily by RICKSHAW NUMBER (digits) — driver
+// names can change over time, but the rickshaw's number stays the same. Substring match
+// handles numbers embedded in labels like "BAB - 2023" or "BJK 6020".
 const GROUP1_RICKSHAWS = ['2023', '6020', '5184'];
-const isGroup1 = (rickshawNo: string) =>
-  GROUP1_RICKSHAWS.some(n => (rickshawNo || '').includes(n));
+// Extra name matches (case-insensitive substring) for drivers to keep in group 1.
+const GROUP1_NAMES = ['shah'];
+const isGroup1 = (rickshawNo: string, name: string) =>
+  GROUP1_RICKSHAWS.some(n => (rickshawNo || '').includes(n)) ||
+  GROUP1_NAMES.some(nm => (name || '').toLowerCase().includes(nm));
 
 export default function IncomeTab() {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
@@ -90,8 +93,8 @@ export default function IncomeTab() {
     [...rows].sort((a, b) => (b.paid ? 1 : 0) - (a.paid ? 1 : 0) || b.income - a.income);
 
   // Split into the two groups by rickshaw number
-  const group1 = sortRows(allRows.filter(r => isGroup1(r.rickshaw)));
-  const others = sortRows(allRows.filter(r => !isGroup1(r.rickshaw)));
+  const group1 = sortRows(allRows.filter(r => isGroup1(r.rickshaw, r.name)));
+  const others = sortRows(allRows.filter(r => !isGroup1(r.rickshaw, r.name)));
   if (noDriverIncome > 0 || noDriverExpense > 0 || noDriverPending > 0) {
     others.push({ key: 'none', name: '— (no driver)', rickshaw: '', income: noDriverIncome, pending: noDriverPending, expense: noDriverExpense, paid: noDriverIncome > 0, isDriver: false });
   }
