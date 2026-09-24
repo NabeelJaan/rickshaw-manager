@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Users, Phone, Calendar, Car, Edit, Trash2, DollarSign, Droplets, Umbrella } from 'lucide-react';
+import { Plus, Users, Phone, Calendar, Car, Edit, Trash2, DollarSign, Droplets, Umbrella, X } from 'lucide-react';
 import { Driver, Rickshaw } from '../types';
-import { todayYMD, toYMD, formatDate } from '../utils/date';
+import { todayYMD, toYMD, formatDate, currentMonth } from '../utils/date';
 
 const ymdOf = (d: any) => (typeof d === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(d) ? d : toYMD(d));
 const oilDate = (d: any) => formatDate(ymdOf(d), { day: 'numeric', month: 'short', year: 'numeric' }).replace(/^(\w+) (\d+), (\d+)$/, '$2 $1 $3');
@@ -18,7 +18,7 @@ export default function Drivers({ onDriverAdded, defaultShowForm }: { onDriverAd
   const [oilChangeList, setOilChangeList] = useState<any[]>([]);
   const [view, setView] = useState<'drivers' | 'oil'>('drivers');
   const [oilDriverFilter, setOilDriverFilter] = useState('');
-  const [oilMonthFilter, setOilMonthFilter] = useState('');
+  const [oilMonthFilter, setOilMonthFilter] = useState(currentMonth());
   
   const [formData, setFormData] = useState({ name: '', phone: '', join_date: todayYMD(), rickshaw_id: '', daily_rent: '', pending_balance: '' });
   const [editFormData, setEditFormData] = useState({ name: '', phone: '', join_date: '', id: '', daily_rent: '', pending_balance: '' });
@@ -111,7 +111,7 @@ export default function Drivers({ onDriverAdded, defaultShowForm }: { onDriverAd
         // Check if transaction mentions oil in category or notes
         const mentionsOil = (
           (tx.category && tx.category.toLowerCase().includes('oil')) ||
-          (tx.notes && tx.notes.toLowerCase().includes('oil'))
+          (tx.notes && /\boil\b/i.test(tx.notes))
         );
 
         if (mentionsOil) {
@@ -276,7 +276,7 @@ export default function Drivers({ onDriverAdded, defaultShowForm }: { onDriverAd
 
       {view === 'oil' && (() => {
         const driverName = (tx: any) => tx.driver_name || drivers.find(d => d.id === tx.resolved_driver_id)?.name || '-';
-        const months = Array.from(new Set(oilChangeList.map(tx => ymdOf(tx.date).slice(0, 7)))).sort().reverse();
+        const months = Array.from(new Set([currentMonth(), ...oilChangeList.map(tx => ymdOf(tx.date).slice(0, 7))])).sort().reverse();
         const rows = oilChangeList.filter(tx =>
           (!oilDriverFilter || String(tx.resolved_driver_id) === oilDriverFilter) &&
           (!oilMonthFilter || ymdOf(tx.date).startsWith(oilMonthFilter))
@@ -400,53 +400,52 @@ export default function Drivers({ onDriverAdded, defaultShowForm }: { onDriverAd
         </form>
       )}
 
-      {view === 'drivers' && editingDriver && (
-        <form onSubmit={handleUpdate} className="bg-amber-50 p-6 rounded-2xl shadow-sm border border-amber-200/60 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
-          <div>
-            <label className="block text-[13px] font-medium text-zinc-700 mb-1.5">Driver Name</label>
-            <input 
-              type="text" required 
-              className="w-full px-4 py-2.5 bg-white border border-amber-200 rounded-xl focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 transition-all text-sm"
-              value={editFormData.name} 
-              onChange={e => setEditFormData({...editFormData, name: e.target.value})}
-              placeholder="e.g. John Doe"
-            />
+      {editingDriver && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50" onClick={() => setEditingDriver(null)}>
+          <div className="bg-white rounded-2xl shadow-xl max-w-md w-full p-6" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-xl font-bold text-zinc-900">Edit Driver</h3>
+              <button type="button" onClick={() => setEditingDriver(null)} className="text-zinc-400 hover:text-zinc-600 transition-colors">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <form onSubmit={handleUpdate} className="space-y-4">
+              <div>
+                <label className="block text-[13px] font-medium text-zinc-700 mb-1.5">Driver Name</label>
+                <input
+                  type="text" required
+                  className="w-full px-4 py-2.5 bg-zinc-50 border border-zinc-200 rounded-xl focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 transition-all text-sm"
+                  value={editFormData.name}
+                  onChange={e => setEditFormData({...editFormData, name: e.target.value})}
+                  placeholder="e.g. John Doe"
+                />
+              </div>
+              <div>
+                <label className="block text-[13px] font-medium text-zinc-700 mb-1.5">Phone Number</label>
+                <input
+                  type="tel" required
+                  className="w-full px-4 py-2.5 bg-zinc-50 border border-zinc-200 rounded-xl focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 transition-all text-sm font-number"
+                  value={editFormData.phone}
+                  onChange={e => setEditFormData({...editFormData, phone: e.target.value})}
+                  placeholder="e.g. 0300-1234567"
+                />
+              </div>
+              <div>
+                <label className="block text-[13px] font-medium text-zinc-700 mb-1.5">Join Date</label>
+                <input
+                  type="date" required
+                  className="w-full px-4 py-2.5 bg-zinc-50 border border-zinc-200 rounded-xl focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 transition-all text-sm"
+                  value={editFormData.join_date}
+                  onChange={e => setEditFormData({...editFormData, join_date: e.target.value})}
+                />
+              </div>
+              <div className="flex gap-3 pt-2">
+                <button type="button" onClick={() => setEditingDriver(null)} className="flex-1 py-3 text-sm font-medium text-zinc-700 bg-zinc-100 hover:bg-zinc-200 rounded-xl transition-colors">Cancel</button>
+                <button type="submit" className="flex-1 py-3 text-sm font-medium bg-amber-500 text-white rounded-xl hover:bg-amber-600 transition-colors shadow-sm">Update Driver</button>
+              </div>
+            </form>
           </div>
-          <div>
-            <label className="block text-[13px] font-medium text-zinc-700 mb-1.5">Phone Number</label>
-            <input 
-              type="tel" required 
-              className="w-full px-4 py-2.5 bg-white border border-amber-200 rounded-xl focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 transition-all text-sm font-number"
-              value={editFormData.phone} 
-              onChange={e => setEditFormData({...editFormData, phone: e.target.value})}
-              placeholder="e.g. 0300-1234567"
-            />
-          </div>
-          <div>
-            <label className="block text-[13px] font-medium text-zinc-700 mb-1.5">Join Date</label>
-            <input 
-              type="date" required 
-              className="w-full px-4 py-2.5 bg-white border border-amber-200 rounded-xl focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 transition-all text-sm"
-              value={editFormData.join_date} 
-              onChange={e => setEditFormData({...editFormData, join_date: e.target.value})}
-            />
-          </div>
-          <div className="lg:col-span-4 flex justify-end gap-3 mt-2">
-            <button 
-              type="button" 
-              onClick={() => setEditingDriver(null)} 
-              className="px-4 py-2 text-sm font-medium text-zinc-600 hover:bg-zinc-100 rounded-xl transition-colors"
-            >
-              Cancel
-            </button>
-            <button 
-              type="submit" 
-              className="px-5 py-2 text-sm font-medium bg-amber-500 text-white rounded-xl hover:bg-amber-600 transition-colors shadow-sm"
-            >
-              Update Driver
-            </button>
-          </div>
-        </form>
+        </div>
       )}
 
       {view === 'drivers' && <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-5">

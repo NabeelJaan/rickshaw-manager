@@ -18,6 +18,7 @@ export default function AddPendingBalanceModal({ isOpen, onClose, onSuccess, sel
   const [pendingTransactions, setPendingTransactions] = useState<Transaction[]>([]);
   const [formData, setFormData] = useState({
     driver_id: selectedDriverId || '',
+    date: todayYMD(),
     amount: '',
     notes: ''
   });
@@ -27,6 +28,7 @@ export default function AddPendingBalanceModal({ isOpen, onClose, onSuccess, sel
       fetchDrivers();
       setFormData({
         driver_id: selectedDriverId || '',
+        date: todayYMD(),
         amount: '',
         notes: ''
       });
@@ -40,10 +42,11 @@ export default function AddPendingBalanceModal({ isOpen, onClose, onSuccess, sel
     const token = localStorage.getItem('auth_token');
     const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
     try {
-      const res = await fetch(`/api/transactions?driver_id=${driverId}&category=rent_pending&limit=20`, { headers });
+      const res = await fetch(`/api/transactions?driver_id=${driverId}&limit=200`, { headers });
       const data = await res.json();
       if (Array.isArray(data)) {
-        setPendingTransactions(data);
+        // API doesn't filter by category, so keep only pending entries
+        setPendingTransactions(data.filter((t: any) => t.category === 'rent_pending'));
       }
     } catch (error) {
       console.error('Error fetching pending data:', error);
@@ -77,7 +80,7 @@ export default function AddPendingBalanceModal({ isOpen, onClose, onSuccess, sel
         method: 'POST',
         headers,
         body: JSON.stringify({
-          date: todayYMD(),
+          date: formData.date || todayYMD(),
           amount: formData.amount === '' ? 0 : parseFloat(formData.amount),
           type: 'income',
           category: 'rent_pending',
@@ -136,6 +139,17 @@ export default function AddPendingBalanceModal({ isOpen, onClose, onSuccess, sel
                 <option key={driver.id} value={driver.id}>{driver.name}</option>
               ))}
             </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-zinc-700 mb-1.5">Date</label>
+            <input
+              type="date"
+              required
+              value={formData.date}
+              onChange={(e) => setFormData({ ...formData, date: e.target.value })}
+              className="w-full px-4 py-2.5 bg-zinc-50 border border-zinc-200 rounded-xl focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 transition-all"
+            />
           </div>
 
           <div>

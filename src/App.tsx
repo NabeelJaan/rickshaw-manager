@@ -206,7 +206,7 @@ function AppContent() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-zinc-50 via-white to-zinc-100 flex flex-col md:flex-row font-sans">
+    <div className="min-h-screen md:h-screen md:overflow-hidden bg-gradient-to-br from-zinc-50 via-white to-zinc-100 flex flex-col md:flex-row font-sans">
       {/* Mobile Header */}
       <div className="md:hidden bg-gradient-to-r from-zinc-950 to-zinc-900 text-white p-4 flex justify-between items-center border-b border-zinc-800 shadow-lg">
         <h1 className="text-xl font-bold flex items-center gap-2 tracking-tight">
@@ -295,7 +295,7 @@ function AppContent() {
       </div>
 
       {/* Main Content */}
-      <main className="flex-1 p-3 md:p-8 lg:p-10 overflow-y-auto min-h-screen">
+      <main className="flex-1 min-w-0 p-3 md:p-8 lg:p-10 overflow-y-auto min-h-screen md:min-h-0 md:h-screen">
         <div className="max-w-7xl mx-auto">
 
           {/* Driver Filter Tabs */}
