@@ -58,21 +58,26 @@ export default function NetProfit() {
   }, [month]);
 
   // Build per-driver totals
-  const rows: DriverProfit[] = drivers.map(d => {
-    const dId = String(d.id);
-    const driverTx = transactions.filter(t => String(t.driver_id) === dId);
+  const knownDriverIds = new Set(drivers.map(d => String(d.id)));
+  const buildRow = (dId: string, name: string, driverTx: Transaction[]): DriverProfit => {
     const earning = driverTx
       .filter(t => t.type === 'income' && t.category !== 'rent_pending')
-      .reduce((s, t) => s + t.amount, 0);
+      .reduce((s, t) => s + (Number(t.amount) || 0), 0);
     const expense = driverTx
       .filter(t => t.type === 'expense' && t.category !== 'rent_pending')
-      .reduce((s, t) => s + t.amount, 0);
+      .reduce((s, t) => s + (Number(t.amount) || 0), 0);
     const pending = driverTx
       .filter(t => t.category === 'rent_pending')
-      .reduce((s, t) => s + t.amount, 0);
+      .reduce((s, t) => s + (Number(t.amount) || 0), 0);
     const net = earning - expense;
-    return { id: dId, name: d.name, earning, expense, net, pending, actual: net + pending };
-  }).sort((a, b) => b.actual - a.actual);
+    return { id: dId, name, earning, expense, net, pending, actual: net + pending };
+  };
+  const rows: DriverProfit[] = drivers
+    .map(d => buildRow(String(d.id), d.name, transactions.filter(t => String(t.driver_id) === String(d.id))))
+    .sort((a, b) => b.actual - a.actual);
+  // Transactions with no driver (e.g. rickshaw repairs) still count toward the totals
+  const unassignedTx = transactions.filter(t => !t.driver_id || !knownDriverIds.has(String(t.driver_id)));
+  if (unassignedTx.length > 0) rows.push(buildRow('none', 'No driver (rickshaw expenses)', unassignedTx));
 
   const totals = rows.reduce(
     (acc, r) => ({

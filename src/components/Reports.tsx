@@ -96,11 +96,9 @@ export default function Reports({ selectedDriverId }: { selectedDriverId?: strin
 
   const calculateStats = () => {
     const income = transactions.filter(t => t.type === 'income' && t.category !== 'rent_pending').reduce((sum, t) => sum + t.amount, 0);
-    const expense = transactions.filter(t => t.type === 'expense').reduce((sum, t) => sum + t.amount, 0);
-    // Pending uses driver's pending_balance (cumulative, only increases when entries added)
-    const pending = selectedReportDriver
-      ? (drivers.find(d => String(d.id) === String(selectedReportDriver))?.pending_balance || 0)
-      : drivers.reduce((sum, d) => sum + (d.pending_balance || 0), 0);
+    const expense = transactions.filter(t => t.type === 'expense' && t.category !== 'rent_pending').reduce((sum, t) => sum + t.amount, 0);
+    // Pending for the selected report period (rent_pending entries are not real expenses)
+    const pending = transactions.filter(t => t.category === 'rent_pending').reduce((sum, t) => sum + t.amount, 0);
     const profit = income - expense;
 
     return { income, expense, pending, profit };
@@ -120,7 +118,7 @@ export default function Reports({ selectedDriverId }: { selectedDriverId?: strin
       
       if (t.type === 'income' && t.category !== 'rent_pending') {
         existing.income += t.amount;
-      } else if (t.type === 'expense') {
+      } else if (t.type === 'expense' && t.category !== 'rent_pending') {
         existing.expense += t.amount;
       }
       existing.profit = existing.income - existing.expense;
@@ -188,7 +186,7 @@ export default function Reports({ selectedDriverId }: { selectedDriverId?: strin
         driversWithData.forEach((driverName, index) => {
           const driverTransactions = transactions.filter(t => t.driver_name === driverName);
           const driverIncome = driverTransactions.filter(t => t.type === 'income' && t.category !== 'rent_pending').reduce((sum, t) => sum + t.amount, 0);
-          const driverExpense = driverTransactions.filter(t => t.type === 'expense').reduce((sum, t) => sum + t.amount, 0);
+          const driverExpense = driverTransactions.filter(t => t.type === 'expense' && t.category !== 'rent_pending').reduce((sum, t) => sum + t.amount, 0);
           const driverProfit = driverIncome - driverExpense;
 
           // Add driver section

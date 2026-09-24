@@ -131,18 +131,20 @@ export default function Dashboard({ selectedDriverId, selectedMonth: propSelecte
 
   const calculateCumulativeProfit = () => {
     if (!selectedMonth || selectedMonth === 'all') return stats.allTimeProfit ?? stats.profit ?? 0;
-    if (!stats.monthlyData || !Array.isArray(stats.monthlyData)) return stats.profit ?? 0;
+    // Use full history (not just the 12 chart months) so older profit isn't dropped.
+    const history = Array.isArray(stats.allMonthlyData) ? stats.allMonthlyData : stats.monthlyData;
+    if (!history || !Array.isArray(history)) return stats.profit ?? 0;
 
     // For a year selection, accumulate profit through the end of that year (YYYY-12).
     const cutoff = isYear ? `${selectedMonth}-12` : selectedMonth;
 
-    const hasData = stats.monthlyData.some((d: any) => d.month <= cutoff);
+    const hasData = history.some((d: any) => d.month <= cutoff);
     if (!hasData) return stats.profit ?? 0;
 
-    return [...stats.monthlyData]
+    return [...history]
       .sort((a: any, b: any) => a.month.localeCompare(b.month))
       .filter((d: any) => d.month <= cutoff)
-      .reduce((sum: number, d: any) => sum + ((d.income || 0) - (d.expense || 0)), 0);
+      .reduce((sum: number, d: any) => sum + ((Number(d.income) || 0) - (Number(d.expense) || 0)), 0);
   };
 
   const cumulativeProfit = calculateCumulativeProfit();

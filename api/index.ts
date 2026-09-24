@@ -363,8 +363,8 @@ app.get('/api/rickshaws', authenticate, async (req, res) => {
     await ensureDb();
     const r = await sql`
       SELECT r.*,
-        COALESCE((SELECT SUM(amount) FROM transactions WHERE rickshaw_id=r.id AND type='income' AND category!='rent_pending'),0) -
-        COALESCE((SELECT SUM(amount) FROM transactions WHERE rickshaw_id=r.id AND type='expense' AND category!='rent_pending'),0) as recovered_cost
+        COALESCE((SELECT SUM(amount::float8) FROM transactions WHERE rickshaw_id=r.id AND type='income' AND category!='rent_pending'),0) -
+        COALESCE((SELECT SUM(amount::float8) FROM transactions WHERE rickshaw_id=r.id AND type='expense' AND category!='rent_pending'),0) as recovered_cost
       FROM rickshaws r ORDER BY r.id DESC`;
     console.log('Rickshaws API returning:', r.rows.length, 'rickshaws');
     res.json(Array.isArray(r.rows) ? r.rows : []);
@@ -417,7 +417,8 @@ app.get('/api/drivers', authenticate, async (req, res) => {
     await ensureDb();
     const r = await sql`
       SELECT d.*, rk.number as assigned_rickshaw,
-        COALESCE((SELECT SUM(amount) FROM transactions WHERE driver_id=d.id AND category='rent_pending'),0) as pending_balance
+        COALESCE((SELECT SUM(amount::float8) FROM transactions WHERE driver_id=d.id AND category='rent_pending'),0) -
+        COALESCE((SELECT SUM(amount::float8) FROM transactions WHERE driver_id=d.id AND category='rent_recovery'),0) as pending_balance
       FROM drivers d
       LEFT JOIN rickshaw_assignments a ON d.id=a.driver_id AND a.end_date IS NULL
       LEFT JOIN rickshaws rk ON a.rickshaw_id=rk.id
@@ -764,12 +765,16 @@ app.get('/api/stats', authenticate, async (req, res) => {
   try {
     await ensureDb();
     const { driver_id, month, rickshaw_id, start_date, end_date } = req.query;
-    const df = driver_id ? 'AND driver_id = $1' : '';
-    const rf = rickshaw_id ? (Array.isArray(rickshaw_id)
-      ? `AND rickshaw_id = ANY($2)`
-      : 'AND rickshaw_id = $2')
+    // Build placeholders dynamically so the SQL always matches the args it is sent.
+    const da: any[] = [];
+    const df = driver_id ? (da.push(driver_id), `AND driver_id = $${da.length}`) : '';
+    const rf = rickshaw_id ? (da.push(rickshaw_id), Array.isArray(rickshaw_id)
+      ? `AND rickshaw_id = ANY($${da.length})`
+      : `AND rickshaw_id = $${da.length}`)
       : '';
-    const da = driver_id ? (rickshaw_id ? [driver_id, rickshaw_id] : [driver_id]) : (rickshaw_id ? [rickshaw_id] : []);
+    // Queries that only use the driver filter get only the driver arg.
+    const dOnly = driver_id ? [driver_id] : [];
+    const dfOnly = driver_id ? 'AND driver_id = $1' : '';
 
     // Calculate stats for specified month or all time
     const monthFilter = month
@@ -784,27 +789,27 @@ app.get('/api/stats', authenticate, async (req, res) => {
     console.log('Stats API called with:', { driver_id, month, rickshaw_id, start_date, end_date, monthFilter, dateFilter });
 
     const [incR, expR] = await Promise.all([
-      sql.query(`SELECT SUM(amount) as total FROM transactions WHERE type='income' AND category!='rent_pending' ${monthFilter} ${dateFilter} ${df} ${rf}`, da),
-      sql.query(`SELECT SUM(amount) as total FROM transactions WHERE type='expense' AND category!='rent_pending' ${monthFilter} ${dateFilter} ${df} ${rf}`, da),
+      sql.query(`SELECT SUM(amount::float8) as total FROM transactions WHERE type='income' AND category!='rent_pending' ${monthFilter} ${dateFilter} ${df} ${rf}`, da),
+      sql.query(`SELECT SUM(amount::float8) as total FROM transactions WHERE type='expense' AND category!='rent_pending' ${monthFilter} ${dateFilter} ${df} ${rf}`, da),
     ]);
 
     // Calculate profit including pending (for "total profit before excluding pending")
     const [incWithPendingR, expWithPendingR] = await Promise.all([
-      sql.query(`SELECT SUM(amount) as total FROM transactions WHERE type='income' ${monthFilter} ${dateFilter} ${df} ${rf}`, da),
-      sql.query(`SELECT SUM(amount) as total FROM transactions WHERE type='expense' ${monthFilter} ${dateFilter} ${df} ${rf}`, da),
+      sql.query(`SELECT SUM(amount::float8) as total FROM transactions WHERE type='income' ${monthFilter} ${dateFilter} ${df} ${rf}`, da),
+      sql.query(`SELECT SUM(amount::float8) as total FROM transactions WHERE type='expense' ${monthFilter} ${dateFilter} ${df} ${rf}`, da),
     ]);
 
     // Calculate all-time profit for remaining investment (not filtered by month)
     const [allTimeIncR, allTimeExpR] = await Promise.all([
-      sql.query(`SELECT SUM(amount) as total FROM transactions WHERE type='income' AND category!='rent_pending' ${df} ${rf}`, da),
-      sql.query(`SELECT SUM(amount) as total FROM transactions WHERE type='expense' AND category!='rent_pending' ${df} ${rf}`, da),
+      sql.query(`SELECT SUM(amount::float8) as total FROM transactions WHERE type='income' AND category!='rent_pending' ${df} ${rf}`, da),
+      sql.query(`SELECT SUM(amount::float8) as total FROM transactions WHERE type='expense' AND category!='rent_pending' ${df} ${rf}`, da),
     ]);
 
-    const pendR = await sql.query(`SELECT SUM(amount) as total FROM transactions WHERE category='rent_pending' ${monthFilter} ${dateFilter} ${df} ${rf}`, da);
+    const pendR = await sql.query(`SELECT SUM(amount::float8) as total FROM transactions WHERE category='rent_pending' ${monthFilter} ${dateFilter} ${df} ${rf}`, da);
 
     const invR = driver_id
-      ? await sql`SELECT SUM(rk.investment_cost) as total FROM rickshaws rk JOIN rickshaw_assignments a ON rk.id=a.rickshaw_id WHERE a.driver_id=${driver_id as string} AND a.end_date IS NULL`
-      : await sql`SELECT SUM(investment_cost) as total FROM rickshaws`;
+      ? await sql`SELECT SUM(rk.investment_cost::float8) as total FROM rickshaws rk JOIN rickshaw_assignments a ON rk.id=a.rickshaw_id WHERE a.driver_id=${driver_id as string} AND a.end_date IS NULL`
+      : await sql`SELECT SUM(investment_cost::float8) as total FROM rickshaws`;
 
     const actR = driver_id
       ? await sql`SELECT COUNT(DISTINCT rk.id) as count FROM rickshaws rk JOIN rickshaw_assignments a ON rk.id=a.rickshaw_id WHERE a.driver_id=${driver_id as string} AND a.end_date IS NULL`
@@ -817,10 +822,12 @@ app.get('/api/stats', authenticate, async (req, res) => {
     // Get monthly income/expense data
     const monR = await sql.query(`
       SELECT TO_CHAR(TO_DATE(date,'YYYY-MM-DD'),'YYYY-MM') as month,
-        SUM(CASE WHEN type='income' AND category!='rent_pending' THEN amount ELSE 0 END) as income,
-        SUM(CASE WHEN type='expense' AND category!='rent_pending' THEN amount ELSE 0 END) as expense
-      FROM transactions WHERE 1=1 ${df} GROUP BY month ORDER BY month DESC LIMIT 12`, da);
-    monR.rows.reverse();
+        SUM(CASE WHEN type='income' AND category!='rent_pending' THEN amount::float8 ELSE 0 END) as income,
+        SUM(CASE WHEN type='expense' AND category!='rent_pending' THEN amount::float8 ELSE 0 END) as expense
+      FROM transactions WHERE 1=1 ${dfOnly} GROUP BY month ORDER BY month ASC`, dOnly);
+    // Full history (used for cumulative profit / remaining investment); charts get the last 12 months.
+    const allMonthly = monR.rows.map((r: any) => ({ month: r.month, income: Number(r.income) || 0, expense: Number(r.expense) || 0 }));
+    monR.rows = monR.rows.slice(-12);
 
     // Calculate active rickshaws per month based on assignments
     // Count assignments that were active during any part of each month
@@ -839,34 +846,36 @@ app.get('/api/stats', authenticate, async (req, res) => {
           SELECT DISTINCT rickshaw_id FROM transactions
           WHERE rickshaw_id IS NOT NULL
             AND date >= '${monthStart}' AND date <= '${monthEnd}'
-            ${df}
+            ${dfOnly}
           UNION
           -- Rickshaws with active assignments during this month
           SELECT DISTINCT rickshaw_id FROM rickshaw_assignments
           WHERE start_date <= '${monthEnd}'
             AND (end_date IS NULL OR end_date >= '${monthStart}')
-            ${driver_id ? 'AND driver_id = $1' : ''}
-        )`, da);
+            ${dfOnly}
+        ) x`, dOnly);
       monthlyActiveCounts[monthStr] = Number(activeInMonth.rows[0]?.count) || 1;
     }
 
     const dayR = await sql.query(`
       SELECT date,
-        SUM(CASE WHEN type='income' AND category!='rent_pending' THEN amount ELSE 0 END) as income,
-        SUM(CASE WHEN type='expense' AND category!='rent_pending' THEN amount ELSE 0 END) as expense
+        SUM(CASE WHEN type='income' AND category!='rent_pending' THEN amount::float8 ELSE 0 END) as income,
+        SUM(CASE WHEN type='expense' AND category!='rent_pending' THEN amount::float8 ELSE 0 END) as expense
       FROM transactions
-      WHERE date >= TO_CHAR((CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Karachi')::date - INTERVAL '30 days','YYYY-MM-DD') ${df}
-      GROUP BY date ORDER BY date ASC`, da);
+      WHERE date >= TO_CHAR((CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Karachi')::date - INTERVAL '30 days','YYYY-MM-DD') ${dfOnly}
+      GROUP BY date ORDER BY date ASC`, dOnly);
 
     // Today's total
     const todayR = await sql.query(`
-      SELECT SUM(CASE WHEN type='income' AND category!='rent_pending' THEN amount ELSE 0 END) as total
+      SELECT SUM(CASE WHEN type='income' AND category!='rent_pending' THEN amount::float8 ELSE 0 END) as total
       FROM transactions
-      WHERE date = TO_CHAR((CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Karachi')::date,'YYYY-MM-DD') ${df}`, da);
+      WHERE date = TO_CHAR((CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Karachi')::date,'YYYY-MM-DD') ${dfOnly}`, dOnly);
 
     // Build monthly data with active rickshaw counts for historical accuracy
     const monthlyDataWithActive = monR.rows.map((row: any) => ({
       ...row,
+      income: Number(row.income) || 0,
+      expense: Number(row.expense) || 0,
       activeRickshaws: monthlyActiveCounts[row.month] || Number(actR.rows[0]?.count) || 1
     }));
 
@@ -883,6 +892,7 @@ app.get('/api/stats', authenticate, async (req, res) => {
       activeRickshaws: Number(actR.rows[0]?.count) || 0,
       totalRickshaws:  Number(totR.rows[0]?.count) || 0,
       monthlyData: monthlyDataWithActive,
+      allMonthlyData: allMonthly,
       dailyData:   dayR.rows,
       todayTotal:  Number(todayR.rows[0]?.total) || 0,
     });
