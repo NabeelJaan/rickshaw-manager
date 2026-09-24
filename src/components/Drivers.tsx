@@ -1,7 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { Plus, Users, Phone, Calendar, Car, Edit, Trash2, DollarSign, Droplets, Umbrella } from 'lucide-react';
 import { Driver, Rickshaw } from '../types';
-import { todayYMD } from '../utils/date';
+import { todayYMD, toYMD, formatDate } from '../utils/date';
+
+const ymdOf = (d: any) => (typeof d === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(d) ? d : toYMD(d));
+const oilDate = (d: any) => formatDate(ymdOf(d), { day: 'numeric', month: 'short', year: 'numeric' }).replace(/^(\w+) (\d+), (\d+)$/, '$2 $1 $3');
+const oilMonthLabel = (ym: string) => formatDate(ym + '-01', { month: 'long', year: 'numeric' });
 
 export default function Drivers({ onDriverAdded, defaultShowForm }: { onDriverAdded?: () => void, defaultShowForm?: boolean }) {
   const [drivers, setDrivers] = useState<Driver[]>([]);
@@ -14,6 +18,7 @@ export default function Drivers({ onDriverAdded, defaultShowForm }: { onDriverAd
   const [oilChangeList, setOilChangeList] = useState<any[]>([]);
   const [view, setView] = useState<'drivers' | 'oil'>('drivers');
   const [oilDriverFilter, setOilDriverFilter] = useState('');
+  const [oilMonthFilter, setOilMonthFilter] = useState('');
   
   const [formData, setFormData] = useState({ name: '', phone: '', join_date: todayYMD(), rickshaw_id: '', daily_rent: '', pending_balance: '' });
   const [editFormData, setEditFormData] = useState({ name: '', phone: '', join_date: '', id: '', daily_rent: '', pending_balance: '' });
@@ -271,50 +276,79 @@ export default function Drivers({ onDriverAdded, defaultShowForm }: { onDriverAd
 
       {view === 'oil' && (() => {
         const driverName = (tx: any) => tx.driver_name || drivers.find(d => d.id === tx.resolved_driver_id)?.name || '-';
-        const rows = oilChangeList.filter(tx => !oilDriverFilter || String(tx.resolved_driver_id) === oilDriverFilter);
+        const months = Array.from(new Set(oilChangeList.map(tx => ymdOf(tx.date).slice(0, 7)))).sort().reverse();
+        const rows = oilChangeList.filter(tx =>
+          (!oilDriverFilter || String(tx.resolved_driver_id) === oilDriverFilter) &&
+          (!oilMonthFilter || ymdOf(tx.date).startsWith(oilMonthFilter))
+        );
         const total = rows.reduce((sum, tx) => sum + (Number(tx.amount) || 0), 0);
+        const groups: Record<string, any[]> = {};
+        rows.forEach(tx => { const m = ymdOf(tx.date).slice(0, 7); (groups[m] ||= []).push(tx); });
+        const groupKeys = Object.keys(groups).sort().reverse();
         return (
           <div className="space-y-4">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-              <select
-                className="w-full sm:w-64 px-4 py-2.5 bg-white border border-zinc-200 rounded-xl text-sm"
-                value={oilDriverFilter}
-                onChange={e => setOilDriverFilter(e.target.value)}
-              >
-                <option value="">All Drivers</option>
-                {drivers.map(d => <option key={d.id} value={String(d.id)}>{d.name}</option>)}
-              </select>
+              <div className="flex flex-col sm:flex-row gap-3">
+                <select
+                  className="w-full sm:w-52 px-4 py-2.5 bg-white border border-zinc-200 rounded-xl text-sm"
+                  value={oilMonthFilter}
+                  onChange={e => setOilMonthFilter(e.target.value)}
+                >
+                  <option value="">All Months</option>
+                  {months.map(m => <option key={m} value={m}>{oilMonthLabel(m)}</option>)}
+                </select>
+                <select
+                  className="w-full sm:w-52 px-4 py-2.5 bg-white border border-zinc-200 rounded-xl text-sm"
+                  value={oilDriverFilter}
+                  onChange={e => setOilDriverFilter(e.target.value)}
+                >
+                  <option value="">All Drivers</option>
+                  {drivers.map(d => <option key={d.id} value={String(d.id)}>{d.name}</option>)}
+                </select>
+              </div>
               <div className="text-sm text-zinc-600">
                 <span className="font-number">{rows.length}</span> oil changes · Total: <span className="font-semibold text-zinc-900">{currency} <span className="font-number">{total.toLocaleString()}</span></span>
               </div>
             </div>
-            <div className="bg-white rounded-2xl shadow-sm border border-zinc-200/60 overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead className="bg-zinc-50 text-zinc-600 text-[12px] uppercase tracking-wide">
-                  <tr>
-                    <th className="text-left px-4 py-3 font-medium">Date</th>
-                    <th className="text-left px-4 py-3 font-medium">Driver</th>
-                    <th className="text-left px-4 py-3 font-medium">Rickshaw</th>
-                    <th className="text-right px-4 py-3 font-medium">Price</th>
-                    <th className="text-left px-4 py-3 font-medium hidden md:table-cell">Notes</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-zinc-100">
-                  {rows.map(tx => (
-                    <tr key={tx.id} className="hover:bg-zinc-50">
-                      <td className="px-4 py-3 font-number whitespace-nowrap">{tx.date}</td>
-                      <td className="px-4 py-3 font-medium text-zinc-900">{driverName(tx)}</td>
-                      <td className="px-4 py-3">{tx.rickshaw_number || '-'}</td>
-                      <td className="px-4 py-3 text-right font-number font-semibold text-blue-700 whitespace-nowrap">{currency} {(Number(tx.amount) || 0).toLocaleString()}</td>
-                      <td className="px-4 py-3 text-zinc-500 hidden md:table-cell">{tx.notes || ''}</td>
-                    </tr>
-                  ))}
-                  {rows.length === 0 && (
-                    <tr><td colSpan={5} className="px-4 py-12 text-center text-zinc-500">No oil changes recorded yet.</td></tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
+            {groupKeys.length === 0 && (
+              <div className="bg-white rounded-2xl border border-zinc-200/60 px-4 py-12 text-center text-zinc-500 text-sm">No oil changes recorded yet.</div>
+            )}
+            {groupKeys.map(m => {
+              const list = groups[m];
+              const monthTotal = list.reduce((sum, tx) => sum + (Number(tx.amount) || 0), 0);
+              return (
+                <div key={m} className="bg-white rounded-2xl shadow-sm border border-zinc-200/60 overflow-hidden">
+                  <div className="flex items-center justify-between px-4 py-3 bg-blue-50 border-b border-blue-100">
+                    <h3 className="font-semibold text-blue-900 flex items-center gap-2"><Droplets className="w-4 h-4" /> {oilMonthLabel(m)}</h3>
+                    <span className="text-sm text-blue-800"><span className="font-number">{list.length}</span> changes · <span className="font-semibold">{currency} <span className="font-number">{monthTotal.toLocaleString()}</span></span></span>
+                  </div>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead className="bg-zinc-50 text-zinc-600 text-[12px] uppercase tracking-wide">
+                        <tr>
+                          <th className="text-left px-4 py-3 font-medium">Date</th>
+                          <th className="text-left px-4 py-3 font-medium">Driver</th>
+                          <th className="text-left px-4 py-3 font-medium">Rickshaw</th>
+                          <th className="text-right px-4 py-3 font-medium">Price</th>
+                          <th className="text-left px-4 py-3 font-medium hidden md:table-cell">Notes</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-zinc-100">
+                        {list.map(tx => (
+                          <tr key={tx.id} className="hover:bg-zinc-50">
+                            <td className="px-4 py-3 font-number whitespace-nowrap">{oilDate(tx.date)}</td>
+                            <td className="px-4 py-3 font-medium text-zinc-900">{driverName(tx)}</td>
+                            <td className="px-4 py-3">{tx.rickshaw_number || '-'}</td>
+                            <td className="px-4 py-3 text-right font-number font-semibold text-blue-700 whitespace-nowrap">{currency} {(Number(tx.amount) || 0).toLocaleString()}</td>
+                            <td className="px-4 py-3 text-zinc-500 hidden md:table-cell">{tx.notes || ''}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              );
+            })}
           </div>
         );
       })()}
@@ -453,7 +487,7 @@ export default function Drivers({ onDriverAdded, defaultShowForm }: { onDriverAd
               }`}>
                 <Droplets className="w-3 h-3" />
                 <span className="font-medium">
-                  {lastOilChange[d.id] ? `Oil: ${lastOilChange[d.id]}` : 'No oil change'}
+                  {lastOilChange[d.id] ? `Oil: ${oilDate(lastOilChange[d.id])}` : 'No oil change'}
                 </span>
               </div>
             </div>

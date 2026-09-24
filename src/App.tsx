@@ -233,7 +233,7 @@ function AppContent() {
 
       {/* Sidebar */}
       <div className={`
-        fixed md:static inset-y-0 left-0 z-50 w-64 bg-gradient-to-b from-zinc-950 to-zinc-900 text-zinc-300
+        fixed md:sticky md:top-0 md:h-screen md:shrink-0 inset-y-0 left-0 z-50 w-64 bg-gradient-to-b from-zinc-950 to-zinc-900 text-zinc-300
         transform transition-all duration-300 ease-in-out border-r border-zinc-800/50 flex flex-col shadow-2xl
         ${isMobileMenuOpen ? 'translate-x-0 pointer-events-auto' : '-translate-x-full md:translate-x-0 pointer-events-none md:pointer-events-auto'}
       `}>
@@ -260,7 +260,7 @@ function AppContent() {
           </div>
         </div>
 
-        <nav className="px-3 space-y-1 flex-1">
+        <nav className="px-3 space-y-1 flex-1 min-h-0 overflow-y-auto">
           {navItems.map((item) => {
             const Icon = item.icon;
             const isActive = activeTab === item.id;
