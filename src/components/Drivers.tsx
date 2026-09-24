@@ -11,6 +11,9 @@ export default function Drivers({ onDriverAdded, defaultShowForm }: { onDriverAd
   const [currency, setCurrency] = useState('Rs.');
   const [driversOnLeave, setDriversOnLeave] = useState<Set<number>>(new Set());
   const [lastOilChange, setLastOilChange] = useState<Record<number, string>>({});
+  const [oilChangeList, setOilChangeList] = useState<any[]>([]);
+  const [view, setView] = useState<'drivers' | 'oil'>('drivers');
+  const [oilDriverFilter, setOilDriverFilter] = useState('');
   
   const [formData, setFormData] = useState({ name: '', phone: '', join_date: todayYMD(), rickshaw_id: '', daily_rent: '', pending_balance: '' });
   const [editFormData, setEditFormData] = useState({ name: '', phone: '', join_date: '', id: '', daily_rent: '', pending_balance: '' });
@@ -73,11 +76,12 @@ export default function Drivers({ onDriverAdded, defaultShowForm }: { onDriverAd
     }
     
     // Fetch last oil change for all drivers
-    const allTxRes = await fetch('/api/transactions?limit=1000', { headers });
+    const allTxRes = await fetch('/api/transactions', { headers });
     const allTransactions = await allTxRes.json();
     
     if (Array.isArray(allTransactions)) {
       const oilChanges: Record<number, string> = {};
+      const oilList: any[] = [];
       // Sort by date descending to find most recent first
       const sortedTx = [...allTransactions].sort((a: any, b: any) =>
         new Date(b.date).getTime() - new Date(a.date).getTime()
@@ -115,9 +119,11 @@ export default function Drivers({ onDriverAdded, defaultShowForm }: { onDriverAd
           if (driverId && !oilChanges[driverId]) {
             oilChanges[driverId] = tx.date;
           }
+          oilList.push({ ...tx, resolved_driver_id: driverId || null });
         }
       });
       setLastOilChange(oilChanges);
+      setOilChangeList(oilList);
     }
   };
 
@@ -248,7 +254,72 @@ export default function Drivers({ onDriverAdded, defaultShowForm }: { onDriverAd
         </div>
       </div>
 
-      {showForm && (
+      <div className="flex gap-2 bg-white p-1.5 rounded-xl border border-zinc-200/60 shadow-sm w-full sm:w-fit">
+        <button
+          onClick={() => setView('drivers')}
+          className={`flex-1 sm:flex-none px-4 py-2 rounded-lg text-sm font-medium flex items-center justify-center gap-2 transition-colors ${view === 'drivers' ? 'bg-amber-500 text-white shadow-sm' : 'text-zinc-600 hover:bg-zinc-100'}`}
+        >
+          <Users className="w-4 h-4" /> Drivers
+        </button>
+        <button
+          onClick={() => setView('oil')}
+          className={`flex-1 sm:flex-none px-4 py-2 rounded-lg text-sm font-medium flex items-center justify-center gap-2 transition-colors ${view === 'oil' ? 'bg-blue-500 text-white shadow-sm' : 'text-zinc-600 hover:bg-zinc-100'}`}
+        >
+          <Droplets className="w-4 h-4" /> Oil Changes
+        </button>
+      </div>
+
+      {view === 'oil' && (() => {
+        const driverName = (tx: any) => tx.driver_name || drivers.find(d => d.id === tx.resolved_driver_id)?.name || '-';
+        const rows = oilChangeList.filter(tx => !oilDriverFilter || String(tx.resolved_driver_id) === oilDriverFilter);
+        const total = rows.reduce((sum, tx) => sum + (Number(tx.amount) || 0), 0);
+        return (
+          <div className="space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+              <select
+                className="w-full sm:w-64 px-4 py-2.5 bg-white border border-zinc-200 rounded-xl text-sm"
+                value={oilDriverFilter}
+                onChange={e => setOilDriverFilter(e.target.value)}
+              >
+                <option value="">All Drivers</option>
+                {drivers.map(d => <option key={d.id} value={String(d.id)}>{d.name}</option>)}
+              </select>
+              <div className="text-sm text-zinc-600">
+                <span className="font-number">{rows.length}</span> oil changes · Total: <span className="font-semibold text-zinc-900">{currency} <span className="font-number">{total.toLocaleString()}</span></span>
+              </div>
+            </div>
+            <div className="bg-white rounded-2xl shadow-sm border border-zinc-200/60 overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead className="bg-zinc-50 text-zinc-600 text-[12px] uppercase tracking-wide">
+                  <tr>
+                    <th className="text-left px-4 py-3 font-medium">Date</th>
+                    <th className="text-left px-4 py-3 font-medium">Driver</th>
+                    <th className="text-left px-4 py-3 font-medium">Rickshaw</th>
+                    <th className="text-right px-4 py-3 font-medium">Price</th>
+                    <th className="text-left px-4 py-3 font-medium hidden md:table-cell">Notes</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-zinc-100">
+                  {rows.map(tx => (
+                    <tr key={tx.id} className="hover:bg-zinc-50">
+                      <td className="px-4 py-3 font-number whitespace-nowrap">{tx.date}</td>
+                      <td className="px-4 py-3 font-medium text-zinc-900">{driverName(tx)}</td>
+                      <td className="px-4 py-3">{tx.rickshaw_number || '-'}</td>
+                      <td className="px-4 py-3 text-right font-number font-semibold text-blue-700 whitespace-nowrap">{currency} {(Number(tx.amount) || 0).toLocaleString()}</td>
+                      <td className="px-4 py-3 text-zinc-500 hidden md:table-cell">{tx.notes || ''}</td>
+                    </tr>
+                  ))}
+                  {rows.length === 0 && (
+                    <tr><td colSpan={5} className="px-4 py-12 text-center text-zinc-500">No oil changes recorded yet.</td></tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        );
+      })()}
+
+      {view === 'drivers' && showForm && (
         <form onSubmit={handleSubmit} className="bg-white p-6 rounded-2xl shadow-sm border border-zinc-200/60 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
           <div>
             <label className="block text-[13px] font-medium text-zinc-700 mb-1.5">Driver Name</label>
@@ -295,7 +366,7 @@ export default function Drivers({ onDriverAdded, defaultShowForm }: { onDriverAd
         </form>
       )}
 
-      {editingDriver && (
+      {view === 'drivers' && editingDriver && (
         <form onSubmit={handleUpdate} className="bg-amber-50 p-6 rounded-2xl shadow-sm border border-amber-200/60 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
           <div>
             <label className="block text-[13px] font-medium text-zinc-700 mb-1.5">Driver Name</label>
@@ -344,7 +415,7 @@ export default function Drivers({ onDriverAdded, defaultShowForm }: { onDriverAd
         </form>
       )}
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-5">
+      {view === 'drivers' && <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-5">
         {drivers.map(d => (
           <div key={d.id} className="bg-white p-6 rounded-2xl shadow-sm border border-zinc-200/60 hover:shadow-md transition-all group">
             <div className="flex items-center gap-4 mb-5">
@@ -433,7 +504,7 @@ export default function Drivers({ onDriverAdded, defaultShowForm }: { onDriverAd
             <p className="text-sm text-zinc-500">Add your first driver to start assigning rickshaws.</p>
           </div>
         )}
-      </div>
+      </div>}
     </div>
   );
 }
