@@ -154,11 +154,13 @@ export default function OilWeeklyTable({ oilChanges, rickshaws, drivers, currenc
             )}
             {rows.map(({ r, driver, last }) => {
               const ago = last ? daysBetween(last, today) : null;
+              const overdue = ago === null || ago > 7;
               return (
-                <tr key={r.id} className="hover:bg-zinc-50/60">
-                  <td className="px-3 py-2.5 sticky left-0 bg-white z-10">
-                    <p className="font-semibold text-zinc-900 whitespace-nowrap">{r.number}</p>
-                    <p className="text-[11px] text-zinc-500 whitespace-nowrap">{driver?.name || 'No driver'}</p>
+                <tr key={r.id} className={overdue ? 'bg-rose-50 hover:bg-rose-100/70' : 'hover:bg-zinc-50/60'}>
+                  <td className={`px-3 py-2.5 sticky left-0 z-10 ${overdue ? 'bg-rose-50 border-l-4 border-rose-500' : 'bg-white'}`}>
+                    <p className={`font-semibold whitespace-nowrap ${overdue ? 'text-rose-700' : 'text-zinc-900'}`}>{r.number}</p>
+                    <p className={`text-[11px] whitespace-nowrap ${overdue ? 'text-rose-600 font-semibold' : 'text-zinc-500'}`}>{driver?.name || 'No driver'}</p>
+                    {overdue && <span className="inline-block mt-0.5 text-[9px] font-bold uppercase tracking-wide bg-rose-500 text-white px-1.5 py-0.5 rounded">Overdue</span>}
                   </td>
                   <td className="px-3 py-2.5 whitespace-nowrap">
                     {last ? (
@@ -212,7 +214,7 @@ export default function OilWeeklyTable({ oilChanges, rickshaws, drivers, currenc
         </table>
       </div>
       <p className="px-4 py-2 text-[11px] text-zinc-500 border-t border-zinc-100">
-        Weeks run Monday–Sunday. Green = oil changed that week, red = missed, amber = still due this week.
+        Weeks run Monday–Sunday. Green = oil changed that week, red = missed, amber = still due this week. Red rows = no oil change in more than 7 days.
       </p>
     </div>
   );

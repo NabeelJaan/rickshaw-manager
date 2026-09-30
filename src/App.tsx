@@ -14,7 +14,7 @@ import ExpenseManager from './components/ExpenseManager';
 import OilTab from './components/OilTab';
 import SettingsPage from './components/Settings';
 import { Driver } from './types';
-import { todayYMD, currentMonth } from './utils/date';
+import { todayYMD, currentMonth, shiftYMD } from './utils/date';
 
 // Names to always show last in the driver list (case-insensitive substring match)
 const PINNED_LAST_NAMES = ['zain', 'hassan'];
@@ -39,6 +39,8 @@ function AppContent() {
   const [topDriverId, setTopDriverId] = useState<string | null>(null);
   // Drivers on leave today
   const [driversOnLeave, setDriversOnLeave] = useState<Set<string>>(new Set());
+  // Driver ids / rickshaw numbers with an oil change in the last 7 days
+  const [oilRecent, setOilRecent] = useState<{ drivers: Set<string>; rickshaws: Set<string> } | null>(null);
 
   const fetchDrivers = () => {
     const token = localStorage.getItem('auth_token');
@@ -61,7 +63,20 @@ function AppContent() {
     Promise.all([
       fetch(`/api/transactions?start_date=${today}&end_date=${today}`, { headers }).then(r => r.json()),
       fetch(`/api/transactions?month=${monthToFetch}`, { headers }).then(r => r.json()),
-    ]).then(([todayData, monthData]) => {
+      fetch(`/api/transactions?start_date=${shiftYMD(today, -7)}&end_date=${today}`, { headers }).then(r => r.json()),
+    ]).then(([todayData, monthData, weekData]) => {
+      // Oil changes in the last 7 days (category or note mentions "oil")
+      if (Array.isArray(weekData)) {
+        const ds = new Set<string>(), rs = new Set<string>();
+        weekData.forEach((tx: any) => {
+          const isOil = (tx.category && tx.category.toLowerCase().includes('oil')) || (tx.notes && /\boil\b/i.test(tx.notes));
+          if (!isOil) return;
+          if (tx.driver_id) ds.add(tx.driver_id.toString());
+          if (tx.rickshaw_number) rs.add(tx.rickshaw_number);
+        });
+        setOilRecent({ drivers: ds, rickshaws: rs });
+      }
+
       // Today color map
       if (Array.isArray(todayData)) {
         const map: Record<string, 'income' | 'pending' | null> = {};
@@ -333,14 +348,23 @@ function AppContent() {
                 // Badge uses current month's pending only
                 const monthPending = monthlyPendingMap[dId] || 0;
                 const pendingLabel = formatPendingBadge(monthPending);
+                // Red oil alert: driver has a rickshaw but no oil change in the last 7 days
+                const oilOverdue = !!oilRecent && !!d.assigned_rickshaw &&
+                  !oilRecent.drivers.has(dId) && !oilRecent.rickshaws.has(d.assigned_rickshaw);
                 return (
                   <div key={d.id} className="relative inline-flex">
                     <button
                       onClick={() => { setSelectedDriverId(dId); setShowAddDriverForm(false); setIsMobileMenuOpen(false); }}
                       className={`px-3 md:px-4 py-1.5 md:py-2 rounded-lg md:rounded-xl text-xs md:text-sm font-medium transition-all ${getDriverButtonClasses(dId, isSelected, isOnLeave)}`}
                     >
-                      {isTop && <span className="mr-1 text-[11px]">⭐</span>}{d.name}
+                      {isTop && <span className="mr-1 text-[11px]">⭐</span>}<span className={oilOverdue && !isSelected && !isOnLeave ? 'text-rose-600 font-semibold' : ''}>{d.name}</span>
                     </button>
+                    {oilOverdue && (
+                      <span title="Oil not changed in more than 7 days"
+                        className="absolute -bottom-1.5 -left-1.5 w-[18px] h-[18px] flex items-center justify-center rounded-full bg-rose-600 text-white shadow-md shadow-rose-600/40 ring-2 ring-white pointer-events-none">
+                        <Droplets className="w-2.5 h-2.5" />
+                      </span>
+                    )}
                     {pendingLabel && (
                       <span className="absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] px-1 flex items-center justify-center rounded-full bg-amber-500 text-white text-[9px] font-bold leading-none shadow-md shadow-amber-500/40 pointer-events-none">
                         {pendingLabel}
