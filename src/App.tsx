@@ -161,7 +161,8 @@ function AppContent() {
   const isPinnedLast = (name: string) =>
     PINNED_LAST_NAMES.some(p => name.toLowerCase().includes(p));
 
-  const sortedDrivers = [...drivers].sort((a, b) => {
+  // Drivers of parked rickshaws are hidden until the rickshaw is made active again
+  const sortedDrivers = drivers.filter(d => d.rickshaw_status !== 'parked').sort((a, b) => {
     const aLast = isPinnedLast(a.name);
     const bLast = isPinnedLast(b.name);
     if (aLast && !bLast) return 1;
@@ -213,7 +214,7 @@ function AppContent() {
   const renderContent = () => {
     switch (activeTab) {
       case 'dashboard': return <Dashboard selectedDriverId={selectedDriverId} selectedMonth={selectedMonth} onMonthChange={setSelectedMonth} />;
-      case 'rickshaws': return <Rickshaws selectedDriverId={selectedDriverId} />;
+      case 'rickshaws': return <Rickshaws selectedDriverId={selectedDriverId} onStatusChange={() => { fetchDrivers(); setSelectedDriverId(''); }} />;
       case 'drivers': return <Drivers onDriverAdded={fetchDrivers} defaultShowForm={showAddDriverForm} />;
       case 'transactions': return <Transactions selectedDriverId={selectedDriverId} />;
       case 'reports': return <Reports selectedDriverId={selectedDriverId} />;

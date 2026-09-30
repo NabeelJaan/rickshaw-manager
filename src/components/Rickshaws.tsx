@@ -3,7 +3,7 @@ import { Plus, Car, Calendar, DollarSign, UserPlus, Users, TrendingUp, TrendingD
 import { Rickshaw, Driver, Assignment, Transaction } from '../types';
 import { todayYMD } from '../utils/date';
 
-export default function Rickshaws({ selectedDriverId }: { selectedDriverId?: string }) {
+export default function Rickshaws({ selectedDriverId, onStatusChange }: { selectedDriverId?: string; onStatusChange?: () => void }) {
   const [rickshaws, setRickshaws] = useState<Rickshaw[]>([]);
   const [drivers, setDrivers] = useState<Driver[]>([]);
   const [assignments, setAssignments] = useState<Assignment[]>([]);
@@ -94,6 +94,7 @@ export default function Rickshaws({ selectedDriverId }: { selectedDriverId?: str
     const res = await fetch(`/api/rickshaws/${r.id}/status`, { method: 'PUT', headers, body: JSON.stringify({ status: next }) });
     if (!res.ok) { const error = await res.json(); alert(`Error: ${error.error}`); return; }
     fetchData();
+    onStatusChange?.();
   };
 
   const handleDelete = async (id: number) => {
