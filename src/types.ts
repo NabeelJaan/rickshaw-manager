@@ -15,6 +15,7 @@ export interface Driver {
   status: string;
   pending_balance?: number;
   assigned_rickshaw?: string;
+  rickshaw_status?: string;
 }
 
 export interface Assignment {

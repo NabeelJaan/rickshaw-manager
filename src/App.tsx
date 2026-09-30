@@ -353,7 +353,7 @@ function AppContent() {
                 const oilDates = oilLast ? [oilLast.drivers[dId], d.assigned_rickshaw ? oilLast.rickshaws[d.assigned_rickshaw] : undefined].filter(Boolean) as string[] : [];
                 const lastOil = oilDates.sort().pop();
                 const oilDays = lastOil ? Math.round((Date.parse(todayYMD() + 'T00:00:00Z') - Date.parse(lastOil + 'T00:00:00Z')) / 86400000) : null;
-                const oilOverdue = !!oilLast && !!d.assigned_rickshaw && (oilDays === null || oilDays > 7);
+                const oilOverdue = !!oilLast && !!d.assigned_rickshaw && d.rickshaw_status !== 'parked' && (oilDays === null || oilDays > 7);
                 return (
                   <div key={d.id} className="relative inline-flex">
                     <button

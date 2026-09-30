@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Car, Calendar, DollarSign, UserPlus, Users, TrendingUp, TrendingDown, Edit, Trash2 } from 'lucide-react';
+import { Plus, Car, Calendar, DollarSign, UserPlus, Users, TrendingUp, TrendingDown, Edit, Trash2, ParkingSquare, PlayCircle } from 'lucide-react';
 import { Rickshaw, Driver, Assignment, Transaction } from '../types';
 import { todayYMD } from '../utils/date';
 
@@ -83,6 +83,16 @@ export default function Rickshaws({ selectedDriverId }: { selectedDriverId?: str
     });
     if (!res.ok) { const error = await res.json(); alert(`Error updating rickshaw: ${error.error}`); return; }
     setEditingRickshaw(null);
+    fetchData();
+  };
+
+  const toggleParked = async (r: Rickshaw) => {
+    const next = r.status === 'parked' ? 'active' : 'parked';
+    if (next === 'parked' && !confirm(`Park rickshaw ${r.number}? It will be marked as not active.`)) return;
+    const token = localStorage.getItem('auth_token');
+    const headers = { 'Content-Type': 'application/json', ...(token ? { 'Authorization': `Bearer ${token}` } : {}) };
+    const res = await fetch(`/api/rickshaws/${r.id}/status`, { method: 'PUT', headers, body: JSON.stringify({ status: next }) });
+    if (!res.ok) { const error = await res.json(); alert(`Error: ${error.error}`); return; }
     fetchData();
   };
 
@@ -248,7 +258,7 @@ export default function Rickshaws({ selectedDriverId }: { selectedDriverId?: str
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-5">
         {filteredRickshaws.map(r => (
-          <div key={r.id} className="bg-white p-6 rounded-2xl shadow-sm border border-zinc-200/60 hover:shadow-md transition-all relative group">
+          <div key={r.id} className={`p-6 rounded-2xl shadow-sm border hover:shadow-md transition-all relative group ${r.status === 'parked' ? 'bg-zinc-50 border-zinc-300 border-dashed' : 'bg-white border-zinc-200/60'}`}>
             <div className="flex items-center justify-between mb-5">
               <div className="flex items-center gap-3.5">
                 <div className="p-3 bg-zinc-100 text-zinc-600 rounded-xl group-hover:bg-emerald-50 group-hover:text-emerald-600 transition-colors">
@@ -256,9 +266,15 @@ export default function Rickshaws({ selectedDriverId }: { selectedDriverId?: str
                 </div>
                 <div>
                   <h3 className="text-lg font-bold text-zinc-900 tracking-tight">{r.number}</h3>
-                  <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-medium bg-emerald-50 text-emerald-700 border border-emerald-200/50">
-                    {r.status}
-                  </span>
+                  {r.status === 'parked' ? (
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-semibold bg-zinc-700 text-white">
+                      <ParkingSquare className="w-3 h-3" /> Parked
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-medium bg-emerald-50 text-emerald-700 border border-emerald-200/50">
+                      {r.status || 'active'}
+                    </span>
+                  )}
                 </div>
               </div>
             </div>
@@ -398,7 +414,14 @@ export default function Rickshaws({ selectedDriverId }: { selectedDriverId?: str
               </div>
             </div>
 
-            <div className="flex gap-2 mt-4 pt-4 border-t border-zinc-100">
+            <button onClick={() => toggleParked(r)}
+              className={`w-full mt-4 px-3 py-2 rounded-xl text-[12px] font-semibold transition-colors flex items-center justify-center gap-1.5 ${
+                r.status === 'parked' ? 'bg-emerald-500 hover:bg-emerald-600 text-white' : 'bg-zinc-800 hover:bg-zinc-900 text-white'
+              }`}>
+              {r.status === 'parked' ? <><PlayCircle className="w-3.5 h-3.5" /> Make Active</> : <><ParkingSquare className="w-3.5 h-3.5" /> Park Rickshaw</>}
+            </button>
+
+            <div className="flex gap-2 mt-2 pt-4 border-t border-zinc-100">
               <button onClick={() => handleEdit(r)} className="flex-1 bg-amber-50 hover:bg-amber-100 text-amber-600 px-3 py-2 rounded-xl text-[12px] font-medium transition-colors flex items-center justify-center gap-1.5">
                 <Edit className="w-3.5 h-3.5" /> Edit
               </button>

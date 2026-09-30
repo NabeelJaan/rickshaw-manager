@@ -406,6 +406,21 @@ app.put('/api/rickshaws/:id', authenticate, async (req, res) => {
   } catch (e: any) { res.status(400).json({ error: e.message }); }
 });
 
+// Park / activate a rickshaw
+app.put('/api/rickshaws/:id/status', authenticate, async (req, res) => {
+  try {
+    await ensureDb();
+    const { status } = req.body;
+    if (!['active', 'parked'].includes(status)) return res.status(400).json({ error: 'Status must be active or parked' });
+    const old = (await sql`SELECT * FROM rickshaws WHERE id=${req.params.id}`).rows[0] as any;
+    const r = await sql`UPDATE rickshaws SET status=${status} WHERE id=${req.params.id} RETURNING *`;
+    if (r.rowCount === 0) return res.status(404).json({ error: 'Not found' });
+    await logActivity('rickshaw', req.params.id, 'update',
+      `Rickshaw "${old?.number}" ${status === 'parked' ? 'parked' : 'set active'}`, old, r.rows[0], req.user?.username ?? null);
+    res.json(r.rows[0]);
+  } catch (e: any) { res.status(400).json({ error: e.message }); }
+});
+
 app.delete('/api/rickshaws/:id', authenticate, async (req, res) => {
   try {
     await ensureDb();
@@ -426,7 +441,7 @@ app.get('/api/drivers', authenticate, async (req, res) => {
   try {
     await ensureDb();
     const r = await sql`
-      SELECT d.*, rk.number as assigned_rickshaw,
+      SELECT d.*, rk.number as assigned_rickshaw, rk.status as rickshaw_status,
         COALESCE((SELECT SUM(amount::float8) FROM transactions WHERE driver_id=d.id AND category='rent_pending'),0) -
         COALESCE((SELECT SUM(amount::float8) FROM transactions WHERE driver_id=d.id AND category='rent_recovery'),0) as pending_balance
       FROM drivers d
