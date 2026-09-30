@@ -69,7 +69,8 @@ export default function ExpenseManager() {
 
   const sum = (list: LedgerEntry[], t: LedgerType) => list.filter(e => e.type === t).reduce((s, e) => s + e.amount, 0);
   const totalIncome = sum(periodEntries, 'income');
-  const totalExpense = sum(periodEntries, 'expense');
+  // Repaying udhaar reduces the shopkeeper balance AND counts as an expense
+  const totalExpense = sum(periodEntries, 'expense') + sum(periodEntries, 'repay');
   const periodBorrowed = sum(periodEntries, 'borrow');
   const periodRepaid = sum(periodEntries, 'repay');
   const net = totalIncome - totalExpense;
@@ -190,7 +191,7 @@ export default function ExpenseManager() {
       {/* Totals */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 md:gap-4">
         <Card label="Total Income" value={fmt(totalIncome)} sub={periodLabel} icon={TrendingUp} tone="text-emerald-600" />
-        <Card label="Total Expenses" value={fmt(totalExpense)} sub={periodLabel} icon={TrendingDown} tone="text-rose-600" />
+        <Card label="Total Expenses" value={fmt(totalExpense)} sub={periodRepaid > 0 ? `${periodLabel} · incl. ${fmt(periodRepaid)} udhaar paid` : periodLabel} icon={TrendingDown} tone="text-rose-600" />
         <Card label="Net Balance" value={`${net < 0 ? '-' : ''}${fmt(Math.abs(net))}`} sub="Income − Expenses" icon={Scale} tone={net >= 0 ? 'text-zinc-900' : 'text-rose-600'} />
         <Card label="Udhaar Due" value={fmt(totalDue)} sub={month === 'all' ? `Borrowed ${fmt(periodBorrowed)} · Repaid ${fmt(periodRepaid)}` : `This month: +${fmt(periodBorrowed)} / −${fmt(periodRepaid)}`} icon={HandCoins} tone="text-amber-600" />
       </div>
@@ -329,7 +330,7 @@ export default function ExpenseManager() {
                 <tr><td colSpan={4} className="px-4 py-8 text-center text-xs md:text-sm text-zinc-500">No entries</td></tr>
               ) : visible.map(e => {
                 const m = TYPE_META[e.type];
-                const sign = e.type === 'income' ? '+' : e.type === 'expense' ? '−' : '';
+                const sign = e.type === 'income' ? '+' : e.type === 'expense' || e.type === 'repay' ? '−' : '';
                 return (
                   <tr key={e.id} className="hover:bg-zinc-50/50">
                     <td className="px-3 md:px-4 py-2.5 text-[11px] md:text-sm text-zinc-600 whitespace-nowrap">{formatDate(e.date, { day: 'numeric', month: 'short', year: '2-digit' })}</td>
