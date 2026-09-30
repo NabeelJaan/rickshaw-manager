@@ -75,8 +75,6 @@ export default function ExpenseManager() {
   const periodRepaid = sum(periodEntries, 'repay');
   // Net = income − expenses − udhaar paid (repayment deducted once)
   const net = totalIncome - totalExpense;
-  // Income shown after udhaar repayments are cut from it
-  const incomeAfterRepay = totalIncome - periodRepaid;
 
   // Udhaar balances per shopkeeper — always all-time (what you still owe today)
   const partyBalances = useMemo(() => {
@@ -193,9 +191,9 @@ export default function ExpenseManager() {
 
       {/* Totals */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 md:gap-4">
-        <Card label="Total Income" value={`${incomeAfterRepay < 0 ? '-' : ''}${fmt(Math.abs(incomeAfterRepay))}`} sub={periodRepaid > 0 ? `${fmt(totalIncome)} − ${fmt(periodRepaid)} udhaar paid` : periodLabel} icon={TrendingUp} tone="text-emerald-600" />
+        <Card label="Total Income" value={fmt(totalIncome)} sub={periodLabel} icon={TrendingUp} tone="text-emerald-600" />
         <Card label="Total Expenses" value={fmt(totalExpense)} sub={periodRepaid > 0 ? `${periodLabel} · incl. ${fmt(periodRepaid)} udhaar paid` : periodLabel} icon={TrendingDown} tone="text-rose-600" />
-        <Card label="Net Balance" value={`${net < 0 ? '-' : ''}${fmt(Math.abs(net))}`} sub="Income − Expenses − Udhaar paid" icon={Scale} tone={net >= 0 ? 'text-zinc-900' : 'text-rose-600'} />
+        <Card label="Balance" value={`${net < 0 ? '-' : ''}${fmt(Math.abs(net))}`} sub={`${fmt(totalIncome)} income − ${fmt(totalExpense)} expenses`} icon={Scale} tone={net >= 0 ? 'text-zinc-900' : 'text-rose-600'} />
         <Card label="Udhaar Due" value={fmt(totalDue)} sub={month === 'all' ? `Borrowed ${fmt(periodBorrowed)} · Repaid ${fmt(periodRepaid)}` : `This month: +${fmt(periodBorrowed)} / −${fmt(periodRepaid)}`} icon={HandCoins} tone="text-amber-600" />
       </div>
 
