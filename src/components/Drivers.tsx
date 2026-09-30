@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Plus, Users, Phone, Calendar, Car, Edit, Trash2, DollarSign, Droplets, Umbrella, X } from 'lucide-react';
 import { Driver, Rickshaw } from '../types';
-import OilWeeklyTable from './OilWeeklyTable';
 import { todayYMD, toYMD, formatDate, currentMonth } from '../utils/date';
 
 const ymdOf = (d: any) => (typeof d === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(d) ? d : toYMD(d));
@@ -288,7 +287,6 @@ export default function Drivers({ onDriverAdded, defaultShowForm }: { onDriverAd
         const groupKeys = Object.keys(groups).sort().reverse();
         return (
           <div className="space-y-4">
-            <OilWeeklyTable oilChanges={oilChangeList} rickshaws={rickshaws} drivers={drivers} currency={currency} onLogged={fetchData} />
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
               <div className="flex flex-col sm:flex-row gap-3">
                 <select
