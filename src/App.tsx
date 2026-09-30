@@ -40,7 +40,7 @@ function AppContent() {
   // Drivers on leave today
   const [driversOnLeave, setDriversOnLeave] = useState<Set<string>>(new Set());
   // Driver ids / rickshaw numbers with an oil change in the last 7 days
-  const [oilRecent, setOilRecent] = useState<{ drivers: Set<string>; rickshaws: Set<string> } | null>(null);
+  const [oilLast, setOilLast] = useState<{ drivers: Record<string, string>; rickshaws: Record<string, string> } | null>(null);
 
   const fetchDrivers = () => {
     const token = localStorage.getItem('auth_token');
@@ -63,18 +63,19 @@ function AppContent() {
     Promise.all([
       fetch(`/api/transactions?start_date=${today}&end_date=${today}`, { headers }).then(r => r.json()),
       fetch(`/api/transactions?month=${monthToFetch}`, { headers }).then(r => r.json()),
-      fetch(`/api/transactions?start_date=${shiftYMD(today, -7)}&end_date=${today}`, { headers }).then(r => r.json()),
+      fetch(`/api/transactions?start_date=${shiftYMD(today, -120)}&end_date=${today}`, { headers }).then(r => r.json()),
     ]).then(([todayData, monthData, weekData]) => {
-      // Oil changes in the last 7 days (category or note mentions "oil")
+      // Last oil change date per driver / rickshaw (category or note mentions "oil"), last 120 days
       if (Array.isArray(weekData)) {
-        const ds = new Set<string>(), rs = new Set<string>();
+        const ds: Record<string, string> = {}, rs: Record<string, string> = {};
         weekData.forEach((tx: any) => {
           const isOil = (tx.category && tx.category.toLowerCase().includes('oil')) || (tx.notes && /\boil\b/i.test(tx.notes));
           if (!isOil) return;
-          if (tx.driver_id) ds.add(tx.driver_id.toString());
-          if (tx.rickshaw_number) rs.add(tx.rickshaw_number);
+          const d = String(tx.date).slice(0, 10);
+          if (tx.driver_id) { const k = tx.driver_id.toString(); if (!ds[k] || d > ds[k]) ds[k] = d; }
+          if (tx.rickshaw_number) { const k = tx.rickshaw_number; if (!rs[k] || d > rs[k]) rs[k] = d; }
         });
-        setOilRecent({ drivers: ds, rickshaws: rs });
+        setOilLast({ drivers: ds, rickshaws: rs });
       }
 
       // Today color map
@@ -349,8 +350,10 @@ function AppContent() {
                 const monthPending = monthlyPendingMap[dId] || 0;
                 const pendingLabel = formatPendingBadge(monthPending);
                 // Red oil alert: driver has a rickshaw but no oil change in the last 7 days
-                const oilOverdue = !!oilRecent && !!d.assigned_rickshaw &&
-                  !oilRecent.drivers.has(dId) && !oilRecent.rickshaws.has(d.assigned_rickshaw);
+                const oilDates = oilLast ? [oilLast.drivers[dId], d.assigned_rickshaw ? oilLast.rickshaws[d.assigned_rickshaw] : undefined].filter(Boolean) as string[] : [];
+                const lastOil = oilDates.sort().pop();
+                const oilDays = lastOil ? Math.round((Date.parse(todayYMD() + 'T00:00:00Z') - Date.parse(lastOil + 'T00:00:00Z')) / 86400000) : null;
+                const oilOverdue = !!oilLast && !!d.assigned_rickshaw && (oilDays === null || oilDays > 7);
                 return (
                   <div key={d.id} className="relative inline-flex">
                     <button
@@ -360,9 +363,9 @@ function AppContent() {
                       {isTop && <span className="mr-1 text-[11px]">⭐</span>}<span className={oilOverdue && !isSelected && !isOnLeave ? 'text-rose-600 font-semibold' : ''}>{d.name}</span>
                     </button>
                     {oilOverdue && (
-                      <span title="Oil not changed in more than 7 days"
-                        className="absolute -bottom-1.5 -left-1.5 w-[18px] h-[18px] flex items-center justify-center rounded-full bg-rose-600 text-white shadow-md shadow-rose-600/40 ring-2 ring-white pointer-events-none">
-                        <Droplets className="w-2.5 h-2.5" />
+                      <span title={oilDays === null ? 'No oil change in the last 120 days' : `Oil changed ${oilDays} days ago`}
+                        className="absolute -bottom-1.5 -left-1.5 min-w-[18px] h-[18px] px-1 flex items-center justify-center rounded-full bg-rose-600 text-white text-[9px] font-bold leading-none shadow-md shadow-rose-600/40 ring-2 ring-white pointer-events-none">
+                        {oilDays === null ? '!' : oilDays}
                       </span>
                     )}
                     {pendingLabel && (
