@@ -71,10 +71,10 @@ export default function OilTab() {
               <table className="w-full text-sm">
                 <thead className="bg-zinc-50 text-zinc-600 text-[11px] uppercase tracking-wide">
                   <tr>
-                    <th className="text-left px-4 py-2.5 font-medium">Date</th>
-                    <th className="text-left px-4 py-2.5 font-medium">Rickshaw</th>
-                    <th className="text-left px-4 py-2.5 font-medium">Driver</th>
-                    <th className="text-right px-4 py-2.5 font-medium">Price</th>
+                    <th className="text-left px-2.5 md:px-4 py-2.5 font-medium">Date</th>
+                    <th className="text-left px-2.5 md:px-4 py-2.5 font-medium">Rickshaw</th>
+                    <th className="text-left px-2.5 md:px-4 py-2.5 font-medium">Driver</th>
+                    <th className="text-right px-2.5 md:px-4 py-2.5 font-medium">Price</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-zinc-100">
@@ -83,10 +83,10 @@ export default function OilTab() {
                   )}
                   {recent.map(tx => (
                     <tr key={tx.id} className="hover:bg-zinc-50">
-                      <td className="px-4 py-2.5 font-number whitespace-nowrap">{formatDate(ymdOf(tx.date), { day: 'numeric', month: 'short', year: 'numeric' })}</td>
-                      <td className="px-4 py-2.5">{tx.rickshaw_number || rickshaws.find(r => r.id === tx.rickshaw_id)?.number || '-'}</td>
-                      <td className="px-4 py-2.5 font-medium text-zinc-900">{tx.driver_name || drivers.find(d => d.id === tx.driver_id)?.name || '-'}</td>
-                      <td className="px-4 py-2.5 text-right font-number font-semibold text-blue-700 whitespace-nowrap">{currency} {(Number(tx.amount) || 0).toLocaleString()}</td>
+                      <td className="px-2.5 md:px-4 py-2.5 font-number whitespace-nowrap">{formatDate(ymdOf(tx.date), { day: 'numeric', month: 'short' })}</td>
+                      <td className="px-2.5 md:px-4 py-2.5">{tx.rickshaw_number || rickshaws.find(r => r.id === tx.rickshaw_id)?.number || '-'}</td>
+                      <td className="px-2.5 md:px-4 py-2.5 font-medium text-zinc-900">{tx.driver_name || drivers.find(d => d.id === tx.driver_id)?.name || '-'}</td>
+                      <td className="px-2.5 md:px-4 py-2.5 text-right font-number font-semibold text-blue-700 whitespace-nowrap">{currency} {(Number(tx.amount) || 0).toLocaleString()}</td>
                     </tr>
                   ))}
                 </tbody>

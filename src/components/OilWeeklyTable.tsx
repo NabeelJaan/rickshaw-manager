@@ -82,7 +82,8 @@ export default function OilWeeklyTable({ oilChanges, rickshaws, drivers, currenc
   const rows = active
     .map(r => {
       const last = byRickshaw[r.id]?.dates[0] || null;
-      return { r, driver: driverFor(r), last, doneThisWeek: doneIn(r.id, thisWeek).length > 0 };
+      // "OK" while the last oil change is 7 days old or less
+      return { r, driver: driverFor(r), last, doneThisWeek: !!last && daysBetween(last, today) <= 7 };
     })
     .sort((a, b) => Number(a.doneThisWeek) - Number(b.doneThisWeek) || (a.last || '').localeCompare(b.last || ''));
 
@@ -121,6 +122,13 @@ export default function OilWeeklyTable({ oilChanges, rickshaws, drivers, currenc
 
   const weekLabel = (wk: string) => formatDate(wk, { day: 'numeric', month: 'short' });
 
+  // Oil-change dates for a week cell; "This week" stays green until 7 days pass since the last change
+  const cellDone = (rid: number, wk: string, i: number, last: string | null) => {
+    const done = doneIn(rid, wk);
+    if (i === 0 && done.length === 0 && last && daysBetween(last, today) <= 7) return [last];
+    return done;
+  };
+
   return (
     <div className="bg-white rounded-2xl shadow-sm border border-zinc-200/60 overflow-hidden">
       <div className="flex items-center justify-between gap-2 flex-wrap px-4 py-3 bg-blue-50 border-b border-blue-100">
@@ -134,7 +142,75 @@ export default function OilWeeklyTable({ oilChanges, rickshaws, drivers, currenc
         </span>
       </div>
 
-      <div className="overflow-x-auto">
+      {/* Mobile: one card per rickshaw */}
+      <div className="md:hidden divide-y divide-zinc-100">
+        {rows.length === 0 && <p className="px-4 py-8 text-center text-sm text-zinc-500">No active rickshaws</p>}
+        {rows.map(({ r, driver, last }) => {
+          const ago = last ? daysBetween(last, today) : null;
+          const overdue = ago === null || ago > 7;
+          const isLogging = logging === r.id;
+          return (
+            <div key={r.id} className={`px-3 py-3 ${overdue ? 'bg-rose-50 border-l-4 border-rose-500' : ''}`}>
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0">
+                  <p className={`font-semibold text-[15px] ${overdue ? 'text-rose-700' : 'text-zinc-900'}`}>{r.number}</p>
+                  <p className={`text-xs ${overdue ? 'text-rose-600 font-semibold' : 'text-zinc-500'}`}>{driver?.name || 'No driver'}</p>
+                </div>
+                <div className="text-right shrink-0">
+                  {overdue
+                    ? <span className="inline-block text-[10px] font-bold uppercase tracking-wide bg-rose-500 text-white px-2 py-0.5 rounded">Overdue</span>
+                    : <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wide bg-emerald-500 text-white px-2 py-0.5 rounded"><Check className="w-3 h-3" /> OK</span>}
+                  <p className="text-xs mt-1 font-number text-zinc-700">{last ? formatDate(last, { day: 'numeric', month: 'short' }) : 'Never'}</p>
+                  {ago !== null && (
+                    <p className={`text-[11px] font-medium ${overdue ? 'text-rose-600' : 'text-emerald-600'}`}>
+                      {ago === 0 ? 'today' : `${ago} day${ago === 1 ? '' : 's'} ago`}
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              {/* Last 8 weeks, oldest → newest */}
+              <div className="mt-2.5 grid grid-cols-8 gap-1">
+                {[...weeks].reverse().map(wk => {
+                  const i = weeks.indexOf(wk);
+                  const done = cellDone(r.id, wk, i, last);
+                  return (
+                    <div key={wk} className={`flex flex-col items-center rounded-lg py-1 ${i === 0 ? 'bg-blue-50 ring-1 ring-blue-200' : ''}`}>
+                      <span className={`w-5 h-5 rounded-full inline-flex items-center justify-center ${
+                        done.length > 0 ? 'bg-emerald-500 text-white' : i === 0 ? 'bg-amber-100 text-amber-600' : 'bg-rose-100 text-rose-500'
+                      }`}>
+                        {done.length > 0 ? <Check className="w-3 h-3" /> : <X className="w-3 h-3" />}
+                      </span>
+                      <span className={`text-[9px] mt-0.5 leading-none ${i === 0 ? 'text-blue-800 font-semibold' : 'text-zinc-400'}`}>
+                        {i === 0 ? 'Now' : formatDate(wk, { day: 'numeric' })}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {isLogging ? (
+                <div className="mt-2.5 flex items-center gap-1.5">
+                  <input type="date" value={logDate} max={today} onChange={e => setLogDate(e.target.value)}
+                    className="flex-1 min-w-0 border border-zinc-200 rounded-lg px-2 py-2 text-sm bg-white" />
+                  <input type="number" inputMode="numeric" value={logAmount} onChange={e => setLogAmount(e.target.value)}
+                    placeholder={currency} className="w-20 border border-zinc-200 rounded-lg px-2 py-2 text-sm font-number bg-white" />
+                  <button onClick={() => saveLog(r)} disabled={saving || !(Number(logAmount) > 0)}
+                    className="p-2.5 rounded-lg bg-emerald-500 text-white disabled:opacity-40"><Check className="w-4 h-4" /></button>
+                  <button onClick={() => setLogging(null)} className="p-2.5 rounded-lg bg-zinc-100 text-zinc-600"><X className="w-4 h-4" /></button>
+                </div>
+              ) : (
+                <button onClick={() => startLog(r.id)}
+                  className="mt-2.5 w-full py-2 rounded-lg text-sm font-medium bg-blue-50 text-blue-700 border border-blue-200 active:bg-blue-100 inline-flex items-center justify-center gap-1.5">
+                  <Plus className="w-4 h-4" /> Log oil change
+                </button>
+              )}
+            </div>
+          );
+        })}
+      </div>
+
+      <div className="hidden md:block overflow-x-auto">
         <table className="w-full text-sm">
           <thead className="bg-zinc-50 text-zinc-600 text-[11px] uppercase tracking-wide">
             <tr>
@@ -173,7 +249,7 @@ export default function OilWeeklyTable({ oilChanges, rickshaws, drivers, currenc
                     ) : <span className="text-[11px] text-rose-600 font-medium">Never</span>}
                   </td>
                   {weeks.map((wk, i) => {
-                    const done = doneIn(r.id, wk);
+                    const done = cellDone(r.id, wk, i, last);
                     return (
                       <td key={wk} className={`px-2 py-2.5 text-center ${i === 0 ? 'bg-blue-50/40' : ''}`}>
                         {done.length > 0 ? (
@@ -214,7 +290,7 @@ export default function OilWeeklyTable({ oilChanges, rickshaws, drivers, currenc
         </table>
       </div>
       <p className="px-4 py-2 text-[11px] text-zinc-500 border-t border-zinc-100">
-        Weeks run Monday–Sunday. Green = oil changed that week, red = missed, amber = still due this week. Red rows = no oil change in more than 7 days.
+        Weeks run Monday–Sunday. Green = oil changed that week (stays green in "This week" until 7 days pass), red = missed, amber = due now. Red rows = no oil change in more than 7 days.
       </p>
     </div>
   );
