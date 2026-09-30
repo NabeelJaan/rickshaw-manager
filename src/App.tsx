@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { LayoutDashboard, Users, Car, Receipt, Settings, Menu, X, LogOut, FileText, Calculator, History, TrendingUp } from 'lucide-react';
+import { LayoutDashboard, Users, Car, Receipt, Settings, Menu, X, LogOut, FileText, Calculator, History, TrendingUp, Wallet } from 'lucide-react';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import LoginPage from './components/LoginPage';
 import Dashboard from './components/Dashboard';
@@ -10,6 +10,7 @@ import Reports from './components/Reports';
 import NetProfit from './components/NetProfit';
 import HistoryPage from './components/History';
 import IncomeTab from './components/IncomeTab';
+import ExpenseManager from './components/ExpenseManager';
 import SettingsPage from './components/Settings';
 import { Driver } from './types';
 import { todayYMD, currentMonth } from './utils/date';
@@ -186,6 +187,7 @@ function AppContent() {
     { id: 'reports', label: 'Reports', icon: FileText },
     { id: 'netprofit', label: 'Net Profit', icon: Calculator },
     { id: 'income', label: 'Daily Diary', icon: TrendingUp },
+    { id: 'expenses', label: 'Expense Manager', icon: Wallet },
     { id: 'history', label: 'History', icon: History },
     { id: 'settings', label: 'Settings', icon: Settings },
   ];
@@ -199,6 +201,7 @@ function AppContent() {
       case 'reports': return <Reports selectedDriverId={selectedDriverId} />;
       case 'netprofit': return <NetProfit />;
       case 'income': return <IncomeTab />;
+      case 'expenses': return <ExpenseManager />;
       case 'history': return <HistoryPage />;
       case 'settings': return <SettingsPage />;
       default: return <Dashboard selectedDriverId={selectedDriverId} />;

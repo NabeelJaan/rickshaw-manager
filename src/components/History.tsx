@@ -22,6 +22,7 @@ const DIFF_FIELDS: Record<string, string[]> = {
   transaction: ['date', 'type', 'category', 'amount', 'notes', 'rickshaw_id', 'driver_id'],
   driver: ['name', 'phone', 'join_date', 'status'],
   rickshaw: ['number', 'purchase_date', 'investment_cost', 'status'],
+  ledger: ['date', 'type', 'amount', 'party', 'category', 'notes'],
 };
 
 export default function History() {
@@ -100,6 +101,7 @@ export default function History() {
                 <option className="text-zinc-900" value="transaction">Transactions</option>
                 <option className="text-zinc-900" value="driver">Drivers</option>
                 <option className="text-zinc-900" value="rickshaw">Rickshaws</option>
+                <option className="text-zinc-900" value="ledger">Expense Manager</option>
               </select>
             </div>
             <select value={actionFilter} onChange={e => setActionFilter(e.target.value)}

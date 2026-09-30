@@ -105,6 +105,16 @@ async function ensureDb() {
     username TEXT,
     created_at TEXT DEFAULT CURRENT_TIMESTAMP
   )`;
+  await sql`CREATE TABLE IF NOT EXISTS ledger_entries (
+    id SERIAL PRIMARY KEY,
+    date TEXT NOT NULL,
+    type TEXT NOT NULL CHECK (type IN ('income','expense','borrow','repay')),
+    amount REAL NOT NULL,
+    party TEXT,
+    category TEXT,
+    notes TEXT,
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP
+  )`;
   dbReady = true;
 }
 
@@ -665,6 +675,59 @@ app.post('/api/admin/backfill-rickshaw-ids', authenticate, async (req, res) => {
       still_untagged: Number(remaining),
     });
   } catch (e: any) { res.status(500).json({ error: e.message }); }
+});
+
+// ─── Expense Manager (separate personal ledger: income, expenses, udhaar) ────
+const LEDGER_TYPES = ['income', 'expense', 'borrow', 'repay'];
+
+app.get('/api/ledger', authenticate, async (req, res) => {
+  try {
+    await ensureDb();
+    const { rows } = await sql`SELECT * FROM ledger_entries ORDER BY date DESC, id DESC`;
+    res.json(rows.map((r: any) => ({ ...r, amount: Number(r.amount) })));
+  } catch (e: any) { res.status(500).json({ error: e.message }); }
+});
+
+app.post('/api/ledger', authenticate, async (req, res) => {
+  try {
+    await ensureDb();
+    const { date, type, amount, party, category, notes } = req.body;
+    if (!date || !LEDGER_TYPES.includes(type) || !(Number(amount) > 0))
+      return res.status(400).json({ error: 'Date, type and a positive amount are required' });
+    if ((type === 'borrow' || type === 'repay') && !party?.trim())
+      return res.status(400).json({ error: 'Shopkeeper / person name is required for borrow & repay' });
+    const { rows } = await sql`INSERT INTO ledger_entries (date,type,amount,party,category,notes)
+      VALUES (${date},${type},${Number(amount)},${party?.trim() || null},${category?.trim() || null},${notes?.trim() || null})
+      RETURNING *`;
+    res.json(rows[0]);
+  } catch (e: any) { res.status(400).json({ error: e.message }); }
+});
+
+app.put('/api/ledger/:id', authenticate, async (req, res) => {
+  try {
+    await ensureDb();
+    const { id } = req.params;
+    const { date, type, amount, party, category, notes } = req.body;
+    if (!date || !LEDGER_TYPES.includes(type) || !(Number(amount) > 0))
+      return res.status(400).json({ error: 'Date, type and a positive amount are required' });
+    const old = (await sql`SELECT * FROM ledger_entries WHERE id=${id}`).rows[0];
+    const { rows } = await sql`UPDATE ledger_entries SET date=${date}, type=${type}, amount=${Number(amount)},
+      party=${party?.trim() || null}, category=${category?.trim() || null}, notes=${notes?.trim() || null}
+      WHERE id=${id} RETURNING *`;
+    if (old) await logActivity('ledger', id, 'update', `Expense Manager entry #${id} updated (${type}, ${amount})`, old, rows[0], req.user?.username ?? null);
+    res.json(rows[0]);
+  } catch (e: any) { res.status(400).json({ error: e.message }); }
+});
+
+app.delete('/api/ledger/:id', authenticate, async (req, res) => {
+  try {
+    await ensureDb();
+    const { id } = req.params;
+    const old = (await sql`SELECT * FROM ledger_entries WHERE id=${id}`).rows[0];
+    await sql`DELETE FROM ledger_entries WHERE id=${id}`;
+    if (old) await logActivity('ledger', id, 'delete', `Expense Manager entry #${id} deleted (${old.type}, ${old.amount}${old.party ? ', ' + old.party : ''})`, old, null, req.user?.username ?? null);
+    res.json({ success: true });
+  } catch (e: any) { res.status(400).json({ error: e.message }); }
 });
 
 // ─── Activity History ─────────────────────────────────────────────────────────
