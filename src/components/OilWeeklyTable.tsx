@@ -82,8 +82,8 @@ export default function OilWeeklyTable({ oilChanges, rickshaws, drivers, currenc
   const rows = active
     .map(r => {
       const last = byRickshaw[r.id]?.dates[0] || null;
-      // "OK" while the last oil change is 7 days old or less
-      return { r, driver: driverFor(r), last, doneThisWeek: !!last && daysBetween(last, today) <= 7 };
+      // "OK" while the last oil change is 5 days old or less (red from day 6)
+      return { r, driver: driverFor(r), last, doneThisWeek: !!last && daysBetween(last, today) <= 5 };
     })
     .sort((a, b) => Number(a.doneThisWeek) - Number(b.doneThisWeek) || (a.last || '').localeCompare(b.last || ''));
 
@@ -122,10 +122,10 @@ export default function OilWeeklyTable({ oilChanges, rickshaws, drivers, currenc
 
   const weekLabel = (wk: string) => formatDate(wk, { day: 'numeric', month: 'short' });
 
-  // Oil-change dates for a week cell; "This week" stays green until 7 days pass since the last change
+  // Oil-change dates for a week cell; "This week" stays green until 6 days pass since the last change
   const cellDone = (rid: number, wk: string, i: number, last: string | null) => {
     const done = doneIn(rid, wk);
-    if (i === 0 && done.length === 0 && last && daysBetween(last, today) <= 7) return [last];
+    if (i === 0 && done.length === 0 && last && daysBetween(last, today) <= 5) return [last];
     return done;
   };
 
@@ -147,7 +147,7 @@ export default function OilWeeklyTable({ oilChanges, rickshaws, drivers, currenc
         {rows.length === 0 && <p className="px-4 py-8 text-center text-sm text-zinc-500">No active rickshaws</p>}
         {rows.map(({ r, driver, last }) => {
           const ago = last ? daysBetween(last, today) : null;
-          const overdue = ago === null || ago > 7;
+          const overdue = ago === null || ago > 5;
           const isLogging = logging === r.id;
           return (
             <div key={r.id} className={`px-3 py-3 ${overdue ? 'bg-rose-50 border-l-4 border-rose-500' : ''}`}>
@@ -230,7 +230,7 @@ export default function OilWeeklyTable({ oilChanges, rickshaws, drivers, currenc
             )}
             {rows.map(({ r, driver, last }) => {
               const ago = last ? daysBetween(last, today) : null;
-              const overdue = ago === null || ago > 7;
+              const overdue = ago === null || ago > 5;
               return (
                 <tr key={r.id} className={overdue ? 'bg-rose-50 hover:bg-rose-100/70' : 'hover:bg-zinc-50/60'}>
                   <td className={`px-3 py-2.5 sticky left-0 z-10 ${overdue ? 'bg-rose-50 border-l-4 border-rose-500' : 'bg-white'}`}>
@@ -242,7 +242,7 @@ export default function OilWeeklyTable({ oilChanges, rickshaws, drivers, currenc
                     {last ? (
                       <>
                         <p className="font-number text-zinc-800">{formatDate(last, { day: 'numeric', month: 'short' })}</p>
-                        <p className={`text-[11px] font-medium ${ago! > 7 ? 'text-rose-600' : 'text-emerald-600'}`}>
+                        <p className={`text-[11px] font-medium ${ago! > 5 ? 'text-rose-600' : 'text-emerald-600'}`}>
                           {ago === 0 ? 'today' : `${ago} day${ago === 1 ? '' : 's'} ago`}
                         </p>
                       </>
@@ -290,7 +290,7 @@ export default function OilWeeklyTable({ oilChanges, rickshaws, drivers, currenc
         </table>
       </div>
       <p className="px-4 py-2 text-[11px] text-zinc-500 border-t border-zinc-100">
-        Weeks run Monday–Sunday. Green = oil changed that week (stays green in "This week" until 7 days pass), red = missed, amber = due now. Red rows = no oil change in more than 7 days.
+        Weeks run Monday–Sunday. Green = oil changed that week (stays green in "This week" until 6 days pass), red = missed, amber = due now. Red rows = no oil change in 6 days or more.
       </p>
     </div>
   );

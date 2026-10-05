@@ -350,11 +350,11 @@ function AppContent() {
                 // Badge uses current month's pending only
                 const monthPending = monthlyPendingMap[dId] || 0;
                 const pendingLabel = formatPendingBadge(monthPending);
-                // Red oil alert: driver has a rickshaw but no oil change in the last 7 days
+                // Red oil alert: driver has a rickshaw but no oil change in the last 5 days (red from day 6)
                 const oilDates = oilLast ? [oilLast.drivers[dId], d.assigned_rickshaw ? oilLast.rickshaws[d.assigned_rickshaw] : undefined].filter(Boolean) as string[] : [];
                 const lastOil = oilDates.sort().pop();
                 const oilDays = lastOil ? Math.round((Date.parse(todayYMD() + 'T00:00:00Z') - Date.parse(lastOil + 'T00:00:00Z')) / 86400000) : null;
-                const oilOverdue = !!oilLast && !!d.assigned_rickshaw && d.rickshaw_status !== 'parked' && (oilDays === null || oilDays > 7);
+                const oilOverdue = !!oilLast && !!d.assigned_rickshaw && d.rickshaw_status !== 'parked' && (oilDays === null || oilDays > 5);
                 return (
                   <div key={d.id} className="relative inline-flex">
                     <button
