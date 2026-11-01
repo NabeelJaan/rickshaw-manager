@@ -1,5 +1,5 @@
-import { validatePendingRecord } from '../src/utils/pendingRecord';
-import { transactionAmount } from '../src/utils/transactionAmount';
+import { validatePendingRecord } from '../src/utils/pendingRecord.js';
+import { transactionAmount } from '../src/utils/transactionAmount.js';
 import express from 'express';
 import { sql } from '@vercel/postgres';
 import bcrypt from 'bcryptjs';
