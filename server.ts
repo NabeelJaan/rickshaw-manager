@@ -1,3 +1,4 @@
+import { categoryName, categoryType } from './src/utils/category';
 import { validatePendingRecord } from './src/utils/pendingRecord';
 import { transactionAmount } from './src/utils/transactionAmount';
 import express from "express";
@@ -447,8 +448,11 @@ function txParties(rickshawId: any, driverId: any): string {
   });
 
   app.post("/api/categories", (req, res) => {
-    const { name, type } = req.body;
     try {
+      const name = categoryName(req.body.name);
+      const type = categoryType(req.body.type);
+      const existing = db.prepare("SELECT * FROM categories WHERE name = ? AND type = ?").get(name, type);
+      if (existing) return res.json(existing);
       const stmt = db.prepare("INSERT INTO categories (name, type) VALUES (?, ?)");
       const info = stmt.run(name, type);
       res.json({ id: info.lastInsertRowid, name, type });
@@ -488,7 +492,7 @@ function txParties(rickshawId: any, driverId: any): string {
       }
       
       // Check if category is being used in transactions
-      const usageCount = db.prepare("SELECT COUNT(*) as count FROM transactions WHERE category = ?").get(category.name) as { count: number };
+      const usageCount = db.prepare("SELECT COUNT(*) as count FROM transactions WHERE category = ? AND type = ?").get(category.name, category.type) as { count: number };
       
       if (usageCount.count > 0) {
         return res.status(400).json({ error: `Cannot delete category that is used in ${usageCount.count} transaction(s)` });

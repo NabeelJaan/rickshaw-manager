@@ -175,7 +175,12 @@ export default function ExpenseModal({ isOpen, onClose, onSuccess, driverId, dri
 
           <CategoryPicker categories={categories} value={formData.category} type="expense"
             onChange={category => setFormData(prev => ({ ...prev, category }))}
-            onCreated={category => setCategories(prev => [...prev, category])} />
+            onCreated={category => setCategories(prev => [...prev.filter(c => c.id !== category.id), category])}
+            onRemoved={category => {
+              const remaining = categories.filter(c => c.id !== category.id);
+              setCategories(remaining);
+              setFormData(prev => ({ ...prev, category: prev.category === category.name ? remaining[0]?.name || '' : prev.category }));
+            }} />
 
           <div>
             <label className="block text-[13px] font-medium text-zinc-700 mb-1.5">Rickshaw</label>

@@ -1,3 +1,4 @@
+import { categoryName, categoryType } from '../src/utils/category.js';
 import { validatePendingRecord } from '../src/utils/pendingRecord.js';
 import { transactionAmount } from '../src/utils/transactionAmount.js';
 import express from 'express';
@@ -820,8 +821,9 @@ app.get('/api/categories', authenticate, async (req, res) => {
 app.post('/api/categories', authenticate, async (req, res) => {
   try {
     await ensureDb();
-    const { name, type } = req.body;
-    const r = await sql`INSERT INTO categories (name,type) VALUES (${name},${type}) RETURNING *`;
+    const name = categoryName(req.body.name);
+    const type = categoryType(req.body.type);
+    const r = await sql`INSERT INTO categories (name,type) VALUES (${name},${type}) ON CONFLICT (name,type) DO UPDATE SET name=EXCLUDED.name RETURNING *`;
     res.json(r.rows[0]);
   } catch (e: any) { res.status(400).json({ error: e.message }); }
 });
@@ -842,7 +844,7 @@ app.delete('/api/categories/:id', authenticate, async (req, res) => {
     const cat = (await sql`SELECT * FROM categories WHERE id=${id}`).rows[0] as any;
     if (!cat) return res.status(404).json({ error: 'Not found' });
     if (cat.is_default) return res.status(400).json({ error: 'Cannot delete default category' });
-    const cnt = Number((await sql`SELECT COUNT(*) as count FROM transactions WHERE category=${cat.name}`).rows[0].count);
+    const cnt = Number((await sql`SELECT COUNT(*) as count FROM transactions WHERE category=${cat.name} AND type=${cat.type}`).rows[0].count);
     if (cnt > 0) return res.status(400).json({ error: `Used in ${cnt} transaction(s)` });
     await sql`DELETE FROM categories WHERE id=${id}`;
     res.json({ success: true });

@@ -173,7 +173,7 @@ export default function Settings() {
         method: 'POST',
         headers,
         body: JSON.stringify({
-          name: newCategory.name.toLowerCase().replace(/\s+/g, '_'),
+          name: newCategory.name.trim().toLowerCase().replace(/\s+/g, '_'),
           type: newCategory.type
         })
       });
@@ -204,7 +204,7 @@ export default function Settings() {
         method: 'PUT',
         headers,
         body: JSON.stringify({
-          name: editingCategory.name.toLowerCase().replace(/\s+/g, '_')
+          name: editingCategory.name.trim().toLowerCase().replace(/\s+/g, '_')
         })
       });
       
