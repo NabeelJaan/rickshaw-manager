@@ -1,3 +1,4 @@
+import PendingLedger from './components/PendingLedger';
 import { useState, useEffect } from 'react';
 import { LayoutDashboard, Users, Car, Receipt, Settings, Menu, X, LogOut, FileText, Calculator, History, TrendingUp, Wallet, Droplets } from 'lucide-react';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
@@ -201,6 +202,7 @@ function AppContent() {
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { id: 'rickshaws', label: 'Rickshaws', icon: Car },
     { id: 'drivers', label: 'Drivers', icon: Users },
+    { id: 'pending-register', label: 'Monthly Pending', icon: FileText },
     { id: 'transactions', label: 'Transactions', icon: Receipt },
     { id: 'reports', label: 'Reports', icon: FileText },
     { id: 'netprofit', label: 'Net Profit', icon: Calculator },
@@ -220,6 +222,7 @@ function AppContent() {
       case 'reports': return <Reports selectedDriverId={selectedDriverId} />;
       case 'netprofit': return <NetProfit />;
       case 'income': return <IncomeTab />;
+      case 'pending-register': return <PendingLedger />;
       case 'oil': return <OilTab />;
       case 'expenses': return <ExpenseManager />;
       case 'history': return <HistoryPage />;

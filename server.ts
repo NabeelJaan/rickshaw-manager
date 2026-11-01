@@ -1,8 +1,15 @@
+import { validatePendingRecord } from './src/utils/pendingRecord';
 import { transactionAmount } from './src/utils/transactionAmount';
 import express from "express";
 import { createServer as createViteServer } from "vite";
 import db from "./server/database";
 
+db.prepare(`CREATE TABLE IF NOT EXISTS pending_register (
+  id INTEGER PRIMARY KEY AUTOINCREMENT, date TEXT NOT NULL, month TEXT NOT NULL,
+  category TEXT NOT NULL CHECK (category IN ('pending', 'payment')), amount REAL NOT NULL CHECK (amount > 0),
+  rickshaw_id INTEGER NOT NULL, driver_id INTEGER, rickshaw_number TEXT NOT NULL,
+  driver_name TEXT NOT NULL DEFAULT '', notes TEXT
+)`).run();
 const app = express();
 const PORT = 3000;
 
@@ -224,6 +231,29 @@ function txParties(rickshawId: any, driverId: any): string {
     } catch (error: any) {
       res.status(400).json({ error: error.message });
     }
+  });
+
+  app.get('/api/pending-register', (_req, res) => {
+    try { res.json(db.prepare('SELECT * FROM pending_register ORDER BY month DESC, date DESC, id DESC').all()); }
+    catch (e: any) { res.status(500).json({ error: e.message }); }
+  });
+  app.post('/api/pending-register', (req, res) => {
+    try {
+      const p = validatePendingRecord(req.body);
+      const rk = db.prepare('SELECT number FROM rickshaws WHERE id=?').get(p.rickshaw_id) as any;
+      const driver = p.driver_id ? db.prepare('SELECT name FROM drivers WHERE id=?').get(p.driver_id) as any : null;
+      if (!rk || (p.driver_id && !driver)) return res.status(400).json({ error: 'Rickshaw or driver not found' });
+      const r = db.prepare('INSERT INTO pending_register (date,month,category,amount,rickshaw_id,driver_id,rickshaw_number,driver_name,notes) VALUES (?,?,?,?,?,?,?,?,?)')
+        .run(p.date,p.month,p.category,p.amount,p.rickshaw_id,p.driver_id,rk.number,driver?.name || '',p.notes);
+      res.json({ id: r.lastInsertRowid, ...p, rickshaw_number: rk.number, driver_name: driver?.name || '' });
+    } catch (e: any) { res.status(400).json({ error: e.message }); }
+  });
+  app.delete('/api/pending-register/:id', (req, res) => {
+    try {
+      const r = db.prepare('DELETE FROM pending_register WHERE id=?').run(req.params.id);
+      if (!r.changes) return res.status(404).json({ error: 'Record not found' });
+      res.json({ success: true });
+    } catch (e: any) { res.status(400).json({ error: e.message }); }
   });
 
   // Assignments

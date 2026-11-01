@@ -1,3 +1,4 @@
+import { validatePendingRecord } from '../src/utils/pendingRecord';
 import { transactionAmount } from '../src/utils/transactionAmount';
 import express from 'express';
 import { sql } from '@vercel/postgres';
@@ -71,6 +72,13 @@ async function ensureDb() {
     rickshaw_id INTEGER REFERENCES rickshaws(id),
     driver_id INTEGER REFERENCES drivers(id),
     notes TEXT
+  )`;
+  await sql`CREATE TABLE IF NOT EXISTS pending_register (
+    id SERIAL PRIMARY KEY, date TEXT NOT NULL, month TEXT NOT NULL,
+    category TEXT NOT NULL CHECK (category IN ('pending', 'payment')),
+    amount NUMERIC(14,2) NOT NULL CHECK (amount > 0),
+    rickshaw_id INTEGER NOT NULL, driver_id INTEGER,
+    rickshaw_number TEXT NOT NULL, driver_name TEXT NOT NULL DEFAULT '', notes TEXT
   )`;
   await sql`CREATE TABLE IF NOT EXISTS settings (
     id INTEGER PRIMARY KEY DEFAULT 1,
@@ -526,6 +534,36 @@ app.post('/api/assignments', authenticate, async (req, res) => {
     await sql`UPDATE rickshaw_assignments SET end_date=${start_date} WHERE rickshaw_id=${rickshaw_id} AND end_date IS NULL`;
     const r = await sql`INSERT INTO rickshaw_assignments (rickshaw_id,driver_id,start_date) VALUES (${rickshaw_id},${driver_id},${start_date}) RETURNING *`;
     res.json(r.rows[0]);
+  } catch (e: any) { res.status(400).json({ error: e.message }); }
+});
+
+// Independent monthly pending register. No transaction or balance mutations.
+app.get('/api/pending-register', authenticate, async (_req, res) => {
+  try {
+    await ensureDb();
+    const r = await sql`SELECT * FROM pending_register ORDER BY month DESC, date DESC, id DESC`;
+    res.json(r.rows.map(row => ({ ...row, amount: Number(row.amount) })));
+  } catch (e: any) { res.status(500).json({ error: e.message }); }
+});
+app.post('/api/pending-register', authenticate, async (req, res) => {
+  try {
+    await ensureDb();
+    const p = validatePendingRecord(req.body);
+    const rk = (await sql`SELECT number FROM rickshaws WHERE id=${p.rickshaw_id}`).rows[0];
+    if (!rk) return res.status(400).json({ error: 'Rickshaw not found' });
+    const driver = p.driver_id ? (await sql`SELECT name FROM drivers WHERE id=${p.driver_id}`).rows[0] : null;
+    if (p.driver_id && !driver) return res.status(400).json({ error: 'Driver not found' });
+    const r = await sql`INSERT INTO pending_register (date,month,category,amount,rickshaw_id,driver_id,rickshaw_number,driver_name,notes)
+      VALUES (${p.date},${p.month},${p.category},${p.amount},${p.rickshaw_id},${p.driver_id},${rk.number},${driver?.name || ''},${p.notes}) RETURNING *`;
+    res.json(r.rows[0]);
+  } catch (e: any) { res.status(400).json({ error: e.message }); }
+});
+app.delete('/api/pending-register/:id', authenticate, async (req, res) => {
+  try {
+    await ensureDb();
+    const r = await sql`DELETE FROM pending_register WHERE id=${req.params.id} RETURNING id`;
+    if (!r.rowCount) return res.status(404).json({ error: 'Record not found' });
+    res.json({ success: true });
   } catch (e: any) { res.status(400).json({ error: e.message }); }
 });
 

@@ -38,25 +38,16 @@ export default function LoginPage() {
   useEffect(() => {
     const checkRegistration = async () => {
       try {
-        const res = await fetch('/api/auth/can-register');
-        
-        // If API doesn't exist (404), assume fresh deployment - show registration
-        if (res.status === 404) {
-          setCanRegister(true);
-          setView('register');
-          return;
-        }
-        
+        const res = await fetch('/api/auth/can-register', { cache: 'no-store' });
+        if (!res.ok) throw new Error(`System status check failed (${res.status})`);
         const data = await res.json();
-        setCanRegister(data.canRegister);
-        if (data.canRegister) {
-          setView('register');
-        }
+        if (typeof data.canRegister !== 'boolean') throw new Error('Invalid system status response');
+        setCanRegister(data.canRegister === true);
+        setView(data.canRegister === true ? 'register' : 'login');
       } catch (err) {
-        // On error, assume fresh deployment - show registration
-        console.error('Failed to check registration status, showing registration form');
-        setCanRegister(true);
-        setView('register');
+        setCanRegister(false);
+        setView('login');
+        setError('Unable to check the server connection. Your existing account may still be available. Try signing in or refresh to retry.');
       } finally {
         setCheckingRegistration(false);
       }
