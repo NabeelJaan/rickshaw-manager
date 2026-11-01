@@ -1,3 +1,4 @@
+import { isPendingTransaction } from '../utils/transactionStatus';
 import React, { useState, useEffect } from 'react';
 import { Plus, Receipt, Trash2, Filter, DollarSign, Edit, TrendingDown, TrendingUp, Calendar, Search } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell } from 'recharts';
@@ -46,8 +47,8 @@ export default function Transactions({ selectedDriverId }: { selectedDriverId?: 
       (t.rickshaw_number && t.rickshaw_number.toLowerCase().includes(searchQuery.toLowerCase()));
     
     const matchesType = typeFilter === 'all' || 
-      (typeFilter === 'pending' && t.category === 'rent_pending') ||
-      t.type === typeFilter;
+      (typeFilter === 'pending' && isPendingTransaction(t)) ||
+      (!isPendingTransaction(t) && t.type === typeFilter);
     
     return matchesSearch && matchesType;
   });
@@ -447,7 +448,7 @@ export default function Transactions({ selectedDriverId }: { selectedDriverId?: 
         {/* Mobile card view */}
         <div className="block md:hidden">
           {filteredTransactions.map(t => {
-            const isPending = t.category === 'rent_pending' || t.type === 'pending';
+            const isPending = isPendingTransaction(t);
             return (
               <div key={t.id} className="px-3 py-2.5 border-b border-zinc-100 last:border-0">
                 <div className="flex items-start justify-between gap-2">
@@ -521,20 +522,18 @@ export default function Transactions({ selectedDriverId }: { selectedDriverId?: 
                   <td className="p-4 text-sm text-zinc-600 font-number">{t.date}</td>
                   <td className="p-4">
                     <span className={`inline-flex items-center px-2.5 py-0.5 rounded-md text-[11px] font-medium border ${
-                      t.type === 'income' ? 'bg-emerald-50 text-emerald-700 border-emerald-200/50' : 
-                      t.type === 'pending' ? 'bg-amber-50 text-amber-700 border-amber-200/50' :
+                      isPendingTransaction(t) ? 'bg-amber-50 text-amber-700 border-amber-200/50' : t.type === 'income' ? 'bg-emerald-50 text-emerald-700 border-emerald-200/50' :
                       'bg-rose-50 text-rose-700 border-rose-200/50'
                     }`}>
-                      {t.type}
+                      {isPendingTransaction(t) ? 'pending' : t.type}
                     </span>
                   </td>
                   <td className="p-4 text-sm text-zinc-700 capitalize">{t.category.replace('_', ' ')}</td>
                   <td className={`p-4 text-sm font-medium font-number ${
-                    t.type === 'income' ? 'text-emerald-600' : 
-                    t.type === 'pending' ? 'text-amber-600' :
+                    isPendingTransaction(t) ? 'text-amber-600' : t.type === 'income' ? 'text-emerald-600' :
                     'text-rose-600'
                   }`}>
-                    {t.type === 'income' ? '+' : t.type === 'pending' ? '' : '-'}{currency} {t.amount.toLocaleString()}
+                    {isPendingTransaction(t) ? '' : t.type === 'income' ? '+' : '-'}{currency} {t.amount.toLocaleString()}
                   </td>
                   <td className="p-4 text-sm text-zinc-600">{t.rickshaw_number || '-'}</td>
                   <td className="p-4 text-sm text-zinc-600">{t.driver_name || '-'}</td>

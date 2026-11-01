@@ -1,3 +1,4 @@
+import { isPendingTransaction } from '../utils/transactionStatus';
 import { useState, useEffect } from 'react';
 import ReactApexChart from 'react-apexcharts';
 import { TrendingUp, TrendingDown, DollarSign, Car, Plus, Edit, ChevronDown, Trash2, Users, Percent } from 'lucide-react';
@@ -206,10 +207,10 @@ export default function Dashboard({ selectedDriverId, selectedMonth: propSelecte
   const filteredTransactions = txFilter === 'all'
     ? allTransactions
     : txFilter === 'income'
-      ? allTransactions.filter(t => t.type === 'income')
+      ? allTransactions.filter(t => t.type === 'income' && !isPendingTransaction(t))
       : txFilter === 'pending'
-        ? allTransactions.filter(t => t.category === 'rent_pending')
-        : allTransactions.filter(t => t.type === 'expense' && t.category !== 'rent_pending');
+        ? allTransactions.filter(t => isPendingTransaction(t))
+        : allTransactions.filter(t => t.type === 'expense' && !isPendingTransaction(t));
 
   // Chart helpers for mobile — limit daily labels to avoid overflow
   const buildChartData = (view: 'daily' | 'monthly') => {
@@ -471,19 +472,19 @@ export default function Dashboard({ selectedDriverId, selectedMonth: propSelecte
                 <div className="flex items-center gap-0.5 px-1.5 py-0.5 md:px-3 md:py-1.5 bg-emerald-50 rounded-md md:rounded-lg">
                   <div className="w-1 h-1 md:w-1.5 md:h-1.5 rounded-full bg-emerald-500"></div>
                   <span className="text-[9px] md:text-[12px] font-semibold text-emerald-700">
-                    {allTransactions.filter(t => t.type === 'income').length}
+                    {allTransactions.filter(t => t.type === 'income' && !isPendingTransaction(t)).length}
                   </span>
                 </div>
                 <div className="flex items-center gap-0.5 px-1.5 py-0.5 md:px-3 md:py-1.5 bg-rose-50 rounded-md md:rounded-lg">
                   <div className="w-1 h-1 md:w-1.5 md:h-1.5 rounded-full bg-rose-500"></div>
                   <span className="text-[9px] md:text-[12px] font-semibold text-rose-700">
-                    {allTransactions.filter(t => t.type === 'expense' && t.category !== 'rent_pending').length}
+                    {allTransactions.filter(t => t.type === 'expense' && !isPendingTransaction(t)).length}
                   </span>
                 </div>
                 <div className="flex items-center gap-0.5 px-1.5 py-0.5 md:px-3 md:py-1.5 bg-amber-50 rounded-md md:rounded-lg">
                   <div className="w-1 h-1 md:w-1.5 md:h-1.5 rounded-full bg-amber-500"></div>
                   <span className="text-[9px] md:text-[12px] font-semibold text-amber-700">
-                    {allTransactions.filter(t => t.category === 'rent_pending').length}
+                    {allTransactions.filter(t => isPendingTransaction(t)).length}
                   </span>
                 </div>
               </div>
@@ -498,16 +499,13 @@ export default function Dashboard({ selectedDriverId, selectedMonth: propSelecte
               <div className="flex items-start justify-between gap-2">
                 <div className="flex items-start gap-2 flex-1 min-w-0">
                   <div className={
-                    t.type === 'income' 
-                      ? 'w-7 h-7 rounded-lg flex items-center justify-center shrink-0 bg-emerald-50' 
-                      : t.category === 'rent_pending' 
-                        ? 'w-7 h-7 rounded-lg flex items-center justify-center shrink-0 bg-amber-50' 
+                    isPendingTransaction(t) ? 'w-7 h-7 rounded-lg flex items-center justify-center shrink-0 bg-amber-50' : t.type === 'income' ? 'w-7 h-7 rounded-lg flex items-center justify-center shrink-0 bg-emerald-50'
                         : 'w-7 h-7 rounded-lg flex items-center justify-center shrink-0 bg-rose-50'
                   }>
-                    {t.type === 'income' ? (
-                      <TrendingUp className="w-3.5 h-3.5 text-emerald-600" />
-                    ) : t.category === 'rent_pending' ? (
+                    {isPendingTransaction(t) ? (
                       <DollarSign className="w-3.5 h-3.5 text-amber-600" />
+                    ) : t.type === 'income' ? (
+                      <TrendingUp className="w-3.5 h-3.5 text-emerald-600" />
                     ) : (
                       <TrendingDown className="w-3.5 h-3.5 text-rose-600" />
                     )}
@@ -532,13 +530,13 @@ export default function Dashboard({ selectedDriverId, selectedMonth: propSelecte
                 </div>
                 <div className="text-right shrink-0">
                   <p className={
-                    t.category === 'rent_pending' 
+                    isPendingTransaction(t)
                       ? 'text-[12px] font-bold font-number text-amber-600' 
                       : t.type === 'income' 
                         ? 'text-[12px] font-bold font-number text-emerald-600' 
                         : 'text-[12px] font-bold font-number text-rose-600'
                   }>
-                    {t.category === 'rent_pending' ? '+' : t.type === 'income' ? '+' : '-'}{currency}{t.amount.toLocaleString()}
+                    {isPendingTransaction(t) ? '' : t.type === 'income' ? '+' : '-'}{currency}{t.amount.toLocaleString()}
                   </p>
                   <div className="flex items-center gap-1.5 mt-1.5 justify-end">
                     <button 
@@ -581,10 +579,7 @@ export default function Dashboard({ selectedDriverId, selectedMonth: propSelecte
                   <td className="p-4 text-sm text-zinc-600 font-medium">
                     <div className="flex items-center gap-2">
                       <div className={
-                        t.type === 'income' 
-                          ? 'w-2 h-2 rounded-full bg-emerald-500' 
-                          : t.category === 'rent_pending' 
-                            ? 'w-2 h-2 rounded-full bg-amber-500' 
+                        isPendingTransaction(t) ? 'w-2 h-2 rounded-full bg-amber-500' : t.type === 'income' ? 'w-2 h-2 rounded-full bg-emerald-500'
                             : 'w-2 h-2 rounded-full bg-rose-500'
                       }></div>
                       {formatDate(t.date, { weekday: 'short', month: 'short', day: 'numeric' })}
@@ -592,31 +587,25 @@ export default function Dashboard({ selectedDriverId, selectedMonth: propSelecte
                   </td>
                   <td className="p-4">
                     <div className={
-                      t.type === 'income' 
-                        ? 'inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-semibold bg-emerald-100 text-emerald-700' 
-                        : t.category === 'rent_pending' 
-                          ? 'inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-semibold bg-amber-100 text-amber-700' 
+                      isPendingTransaction(t) ? 'inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-semibold bg-amber-100 text-amber-700' : t.type === 'income' ? 'inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-semibold bg-emerald-100 text-emerald-700'
                           : 'inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-semibold bg-rose-100 text-rose-700'
                     }>
-                      {t.type === 'income' ? (
-                        <TrendingUp className="w-3 h-3" />
-                      ) : t.category === 'rent_pending' ? (
+                      {isPendingTransaction(t) ? (
                         <DollarSign className="w-3 h-3" />
+                      ) : t.type === 'income' ? (
+                        <TrendingUp className="w-3 h-3" />
                       ) : (
                         <TrendingDown className="w-3 h-3" />
                       )}
-                      {t.type}
+                      {isPendingTransaction(t) ? 'pending' : t.type}
                     </div>
                   </td>
                   <td className="p-4 text-sm text-zinc-700 capitalize font-medium">{t.category.replace('_', ' ')}</td>
                   <td className={
-                    t.type === 'income' 
-                      ? 'p-4 text-sm font-bold font-number text-emerald-600' 
-                      : t.category === 'rent_pending' 
-                        ? 'p-4 text-sm font-bold font-number text-amber-600' 
+                    isPendingTransaction(t) ? 'p-4 text-sm font-bold font-number text-amber-600' : t.type === 'income' ? 'p-4 text-sm font-bold font-number text-emerald-600'
                         : 'p-4 text-sm font-bold font-number text-rose-600'
                   }>
-                    {t.type === 'income' ? '+' : t.category === 'rent_pending' ? '' : '-'}{currency}{t.amount.toLocaleString()}
+                    {isPendingTransaction(t) ? '' : t.type === 'income' ? '+' : '-'}{currency}{t.amount.toLocaleString()}
                   </td>
                   <td className="p-4">
                     {t.rickshaw_number ? (

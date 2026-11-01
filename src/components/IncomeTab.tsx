@@ -1,6 +1,7 @@
+import { dailyPendingRows } from '../utils/dailyPending';
 import { useState, useEffect } from 'react';
 import { CalendarDays, Calendar, ChevronLeft, ChevronRight, Check } from 'lucide-react';
-import { Transaction, Driver } from '../types';
+import { Transaction, Driver, Rickshaw } from '../types';
 import { todayYMD, shiftYMD, formatDate } from '../utils/date';
 
 interface DiaryRow {
@@ -8,7 +9,6 @@ interface DiaryRow {
   name: string;
   rickshaw: string;
   income: number;
-  pending: number;
   expense: number;
   paid: boolean;
   isDriver: boolean;
@@ -27,6 +27,8 @@ const isGroup1 = (rickshawNo: string, name: string) =>
 export default function IncomeTab() {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [drivers, setDrivers] = useState<Driver[]>([]);
+  const [rickshaws, setRickshaws] = useState<Rickshaw[]>([]);
+  const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [currency, setCurrency] = useState('Rs.');
   const [date, setDate] = useState<string>(() => todayYMD());
@@ -36,22 +38,28 @@ export default function IncomeTab() {
     if (saved) setCurrency(saved);
     const token = localStorage.getItem('auth_token');
     const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
-    fetch('/api/drivers', { headers })
-      .then(r => r.json())
-      .then(d => { if (Array.isArray(d)) setDrivers(d); })
-      .catch(() => {});
+    Promise.all(['drivers', 'rickshaws'].map(async resource => {
+      const response = await fetch(`/api/${resource}`, { headers });
+      if (!response.ok) throw new Error('Could not load drivers and rickshaws. Please refresh.');
+      const data = await response.json();
+      if (!Array.isArray(data)) throw new Error('Could not load drivers and rickshaws. Please refresh.');
+      return data;
+    })).then(([drivers, rickshaws]) => { setDrivers(drivers); setRickshaws(rickshaws); })
+      .catch(e => setError(e.message));
   }, []);
 
   useEffect(() => {
+    const controller = new AbortController();
     setLoading(true);
     const token = localStorage.getItem('auth_token');
     const headers: Record<string, string> = { 'Cache-Control': 'no-cache', 'Pragma': 'no-cache' };
     if (token) headers['Authorization'] = `Bearer ${token}`;
-    fetch(`/api/transactions?start_date=${date}&end_date=${date}`, { headers })
-      .then(r => r.json())
+    fetch(`/api/transactions?start_date=${date}&end_date=${date}`, { headers, signal: controller.signal })
+      .then(r => { if (!r.ok) throw new Error('Could not load diary entries. Please refresh.'); return r.json(); })
       .then(data => setTransactions(Array.isArray(data) ? data : []))
-      .catch(() => setTransactions([]))
-      .finally(() => setLoading(false));
+      .catch(e => { if (!controller.signal.aborted) { setTransactions([]); setError(e.message); } })
+      .finally(() => { if (!controller.signal.aborted) setLoading(false); });
+    return () => controller.abort();
   }, [date]);
 
   const shiftDay = (delta: number) => setDate(shiftYMD(date, delta));
@@ -60,24 +68,21 @@ export default function IncomeTab() {
 
   // Sum income / pending / expense per driver id for the selected date
   const incomeById: Record<string, number> = {};
-  const pendingById: Record<string, number> = {};
   const expenseById: Record<string, number> = {};
-  let noDriverIncome = 0, noDriverPending = 0, noDriverExpense = 0;
+  let noDriverIncome = 0, noDriverExpense = 0;
   transactions.forEach(t => {
     const isPending = t.category === 'rent_pending' || t.type === 'pending';
     const amount = Number(t.amount) || 0;
     const isIncome = t.type === 'income' && !isPending;
     const isExpense = t.type === 'expense' && !isPending;
-    if (!isIncome && !isExpense && !isPending) return;
+    if (isPending || (!isIncome && !isExpense)) return;
     if (t.driver_id == null || !drivers.some(d => String(d.id) === String(t.driver_id))) {
-      if (isPending) noDriverPending += amount;
-      else if (isIncome) noDriverIncome += amount;
+      if (isIncome) noDriverIncome += amount;
       else noDriverExpense += amount;
       return;
     }
     const id = String(t.driver_id);
-    if (isPending) pendingById[id] = (pendingById[id] || 0) + amount;
-    else if (isIncome) incomeById[id] = (incomeById[id] || 0) + amount;
+    if (isIncome) incomeById[id] = (incomeById[id] || 0) + amount;
     else expenseById[id] = (expenseById[id] || 0) + amount;
   });
 
@@ -85,9 +90,8 @@ export default function IncomeTab() {
   const allRows: DiaryRow[] = drivers.map(d => {
     const id = String(d.id);
     const income = incomeById[id] || 0;
-    const pending = pendingById[id] || 0;
     const expense = expenseById[id] || 0;
-    return { key: id, name: d.name, rickshaw: d.assigned_rickshaw || '', income, pending, expense, paid: income > 0, isDriver: true };
+    return { key: id, name: d.name, rickshaw: d.assigned_rickshaw || '', income, expense, paid: income > 0, isDriver: true };
   });
 
   const sortRows = (rows: DiaryRow[]) =>
@@ -96,16 +100,18 @@ export default function IncomeTab() {
   // Split into the two groups by rickshaw number
   const group1 = sortRows(allRows.filter(r => isGroup1(r.rickshaw, r.name)));
   const others = sortRows(allRows.filter(r => !isGroup1(r.rickshaw, r.name)));
-  if (noDriverIncome > 0 || noDriverExpense > 0 || noDriverPending > 0) {
-    others.push({ key: 'none', name: '— (no driver)', rickshaw: '', income: noDriverIncome, pending: noDriverPending, expense: noDriverExpense, paid: noDriverIncome > 0, isDriver: false });
+  if (noDriverIncome > 0 || noDriverExpense > 0) {
+    others.push({ key: 'none', name: '— (no driver)', rickshaw: '', income: noDriverIncome, expense: noDriverExpense, paid: noDriverIncome > 0, isDriver: false });
   }
+
+  const pendingRows = dailyPendingRows(rickshaws, transactions);
+  const totalPending = pendingRows.reduce((sum, row) => sum + Math.round(row.amount * 100), 0) / 100;
 
   const grandIncome = allRows.reduce((s, r) => s + r.income, 0) + noDriverIncome;
   const grandExpense = allRows.reduce((s, r) => s + r.expense, 0) + noDriverExpense;
 
   const DiaryTable = ({ title, rows }: { title: string; rows: DiaryRow[] }) => {
     const totalIncome = rows.reduce((s, r) => s + r.income, 0);
-    const totalPending = rows.reduce((s, r) => s + r.pending, 0);
     const totalExpense = rows.reduce((s, r) => s + r.expense, 0);
     const driverRows = rows.filter(r => r.isDriver);
     const paidCount = driverRows.filter(r => r.paid).length;
@@ -126,15 +132,14 @@ export default function IncomeTab() {
               <tr>
                 <th className="px-3 md:px-4 py-2 md:py-2.5 text-left text-[10px] md:text-xs font-semibold text-zinc-500 uppercase tracking-wider">Name</th>
                 <th className="px-3 md:px-4 py-2 md:py-2.5 text-right text-[10px] md:text-xs font-semibold text-zinc-500 uppercase tracking-wider">Income</th>
-                <th className="px-3 md:px-4 py-2 md:py-2.5 text-right text-[10px] md:text-xs font-semibold text-zinc-500 uppercase tracking-wider">Pending</th>
                 <th className="px-3 md:px-4 py-2 md:py-2.5 text-right text-[10px] md:text-xs font-semibold text-zinc-500 uppercase tracking-wider">Expense</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-zinc-100">
               {loading ? (
-                <tr><td colSpan={4} className="px-4 py-8 text-center text-xs md:text-sm text-zinc-500">Loading...</td></tr>
+                <tr><td colSpan={3} className="px-4 py-8 text-center text-xs md:text-sm text-zinc-500">Loading...</td></tr>
               ) : rows.length === 0 ? (
-                <tr><td colSpan={4} className="px-4 py-8 text-center text-xs md:text-sm text-zinc-500">No drivers</td></tr>
+                <tr><td colSpan={3} className="px-4 py-8 text-center text-xs md:text-sm text-zinc-500">No drivers</td></tr>
               ) : (
                 rows.map(r => (
                   <tr key={r.key} className="transition-colors hover:bg-zinc-50/50">
@@ -152,9 +157,6 @@ export default function IncomeTab() {
                     <td className={`px-3 md:px-4 py-2.5 md:py-3 text-right text-[12px] md:text-sm font-semibold font-number ${r.income > 0 ? 'text-emerald-600' : 'text-zinc-300'}`}>
                       {r.income > 0 ? `${currency} ${r.income.toLocaleString()}` : '—'}
                     </td>
-                    <td className={`px-3 md:px-4 py-2.5 md:py-3 text-right text-[12px] md:text-sm font-semibold font-number ${r.pending > 0 ? 'text-amber-600' : 'text-zinc-300'}`}>
-                      {r.pending > 0 ? `${currency} ${r.pending.toLocaleString()}` : '—'}
-                    </td>
                     <td className={`px-3 md:px-4 py-2.5 md:py-3 text-right text-[12px] md:text-sm font-semibold font-number ${r.expense > 0 ? 'text-rose-600' : 'text-zinc-300'}`}>
                       {r.expense > 0 ? `${currency} ${r.expense.toLocaleString()}` : '—'}
                     </td>
@@ -167,7 +169,6 @@ export default function IncomeTab() {
                 <tr>
                   <td className="px-3 md:px-4 py-2.5 md:py-3 text-[12px] md:text-sm font-bold text-zinc-900">Total</td>
                   <td className="px-3 md:px-4 py-2.5 md:py-3 text-right text-[12px] md:text-sm font-bold text-emerald-700 font-number">{currency} {totalIncome.toLocaleString()}</td>
-                  <td className="px-3 md:px-4 py-2.5 md:py-3 text-right text-[12px] md:text-sm font-bold text-amber-700 font-number">{totalPending > 0 ? `${currency} ${totalPending.toLocaleString()}` : '—'}</td>
                   <td className="px-3 md:px-4 py-2.5 md:py-3 text-right text-[12px] md:text-sm font-bold text-rose-700 font-number">{currency} {totalExpense.toLocaleString()}</td>
                 </tr>
               </tfoot>
@@ -246,9 +247,25 @@ export default function IncomeTab() {
         )}
       </div>
 
-      {/* Two grouped tables */}
+      {error && <p role="alert" className="text-sm text-rose-600">{error}</p>}
+      {/* Income and expenses remain in the driver tables. */}
       <DiaryTable title="Main Drivers" rows={group1} />
       <DiaryTable title="Other Drivers" rows={others} />
+      <div className="bg-white rounded-2xl shadow-sm border border-amber-200 overflow-hidden">
+        <div className="px-3 md:px-4 py-3 bg-amber-50 border-b border-amber-100">
+          <h3 className="text-sm md:text-base font-semibold text-amber-900">Rickshaw Pending</h3>
+          <p className="text-xs text-amber-700 mt-1">Pending logged on the selected day, listed by rickshaw.</p>
+        </div>
+        <div className="overflow-x-auto"><table className="w-full text-xs md:text-sm text-left">
+          <thead className="bg-amber-50/50"><tr><th scope="col" className="p-3">Rickshaw</th><th scope="col" className="p-3">Driver on entry</th><th scope="col" className="p-3 text-right">Pending</th></tr></thead>
+          <tbody className="divide-y divide-amber-100">
+            {loading ? <tr><td colSpan={3} className="p-4 text-center text-zinc-500">Loading...</td></tr> : pendingRows.length ? pendingRows.map(row => <tr key={row.key} className={row.amount > 0 ? 'bg-amber-50/50' : ''}>
+              <td className="p-3 font-medium">{row.number}</td><td className="p-3 text-zinc-500">{row.drivers || '—'}</td><td className={`p-3 text-right font-semibold font-number ${row.amount > 0 ? 'text-amber-700' : 'text-zinc-400'}`}>{currency} {row.amount.toLocaleString()}</td>
+            </tr>) : <tr><td colSpan={3} className="p-4 text-center text-zinc-500">No rickshaws found.</td></tr>}
+          </tbody>
+          {!loading && pendingRows.length > 0 && <tfoot className="bg-amber-50 border-t border-amber-200"><tr><th scope="row" colSpan={2} className="p-3">Total pending</th><td className="p-3 text-right font-bold text-amber-800 font-number">{currency} {totalPending.toLocaleString()}</td></tr></tfoot>}
+        </table></div>
+      </div>
     </div>
   );
 }
