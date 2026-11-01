@@ -1,4 +1,4 @@
-import { monthlyProfit } from '../utils/monthlyProfit';
+import { monthlyProfit as calculateMonthlyProfit } from '../utils/monthlyProfit';
 import { isPendingTransaction } from '../utils/transactionStatus';
 import { useState, useEffect } from 'react';
 import ReactApexChart from 'react-apexcharts';
@@ -867,11 +867,11 @@ export default function Dashboard({ selectedDriverId, selectedMonth: propSelecte
               series={[
                 {
                   name: 'Net profit',
-                  data: yearChartData.raw.map((d: any) => monthlyProfit(d).net),
+                  data: yearChartData.raw.map((d: any) => calculateMonthlyProfit(d).net),
                 },
                 {
                   name: 'Net profit + pending',
-                  data: yearChartData.raw.map((d: any) => monthlyProfit(d).includingPending),
+                  data: yearChartData.raw.map((d: any) => calculateMonthlyProfit(d).includingPending),
                 },
               ]}
               type="bar"
