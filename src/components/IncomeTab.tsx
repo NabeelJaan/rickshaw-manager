@@ -64,20 +64,21 @@ export default function IncomeTab() {
   const expenseById: Record<string, number> = {};
   let noDriverIncome = 0, noDriverPending = 0, noDriverExpense = 0;
   transactions.forEach(t => {
-    const isPending = t.category === 'rent_pending';
+    const isPending = t.category === 'rent_pending' || t.type === 'pending';
+    const amount = Number(t.amount) || 0;
     const isIncome = t.type === 'income' && !isPending;
     const isExpense = t.type === 'expense' && !isPending;
     if (!isIncome && !isExpense && !isPending) return;
-    if (t.driver_id == null) {
-      if (isPending) noDriverPending += t.amount;
-      else if (isIncome) noDriverIncome += t.amount;
-      else noDriverExpense += t.amount;
+    if (t.driver_id == null || !drivers.some(d => String(d.id) === String(t.driver_id))) {
+      if (isPending) noDriverPending += amount;
+      else if (isIncome) noDriverIncome += amount;
+      else noDriverExpense += amount;
       return;
     }
     const id = String(t.driver_id);
-    if (isPending) pendingById[id] = (pendingById[id] || 0) + t.amount;
-    else if (isIncome) incomeById[id] = (incomeById[id] || 0) + t.amount;
-    else expenseById[id] = (expenseById[id] || 0) + t.amount;
+    if (isPending) pendingById[id] = (pendingById[id] || 0) + amount;
+    else if (isIncome) incomeById[id] = (incomeById[id] || 0) + amount;
+    else expenseById[id] = (expenseById[id] || 0) + amount;
   });
 
   // One row per driver so non-payers are visible

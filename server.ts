@@ -1,3 +1,4 @@
+import { transactionAmount } from './src/utils/transactionAmount';
 import express from "express";
 import { createServer as createViteServer } from "vite";
 import db from "./server/database";
@@ -295,15 +296,7 @@ function txParties(rickshawId: any, driverId: any): string {
     const { date, type, category, amount, rickshaw_id, driver_id, notes } = req.body;
     try {
       db.transaction(() => {
-        let finalAmount = amount;
-        
-        // If category is rent_pending or type is pending and amount is 0 or empty, try to parse from notes
-        if ((category === 'rent_pending' || type === 'pending') && (!amount || amount === 0) && notes) {
-          const amountMatch = notes.match(/(\d+)/);
-          if (amountMatch) {
-            finalAmount = parseFloat(amountMatch[1]);
-          }
-        }
+        const finalAmount = transactionAmount(amount, category, type, notes);
         
         const stmt = db.prepare("INSERT INTO transactions (date, type, category, amount, rickshaw_id, driver_id, notes) VALUES (?, ?, ?, ?, ?, ?, ?)");
         const info = stmt.run(date, type, category, finalAmount, rickshaw_id || null, driver_id || null, notes || null);
@@ -330,23 +323,15 @@ function txParties(rickshawId: any, driverId: any): string {
         // Get old transaction to update pending balance if needed
         const oldTx = db.prepare("SELECT * FROM transactions WHERE id = ?").get(id) as any;
         
-        let finalAmount = amount;
-        
-        // If category is rent_pending or type is pending and amount is 0 or empty, try to parse from notes
-        if ((category === 'rent_pending' || type === 'pending') && (!amount || amount === 0) && notes) {
-          const amountMatch = notes.match(/(\d+)/);
-          if (amountMatch) {
-            finalAmount = parseFloat(amountMatch[1]);
-          }
-        }
+        const finalAmount = transactionAmount(amount, category, type, notes);
         
         // Update pending balance for old transaction
         if (oldTx && oldTx.driver_id) {
           let oldFinalAmount = oldTx.amount;
           if ((oldTx.category === 'rent_pending' || oldTx.type === 'pending') && (!oldTx.amount || oldTx.amount === 0) && oldTx.notes) {
-            const amountMatch = oldTx.notes.match(/(\d+)/);
+            const amountMatch = oldTx.notes.match(/(-?\d+(?:,\d{3})*(?:\.\d+)?)/);
             if (amountMatch) {
-              oldFinalAmount = parseFloat(amountMatch[1]);
+              oldFinalAmount = Number(amountMatch[1].replace(/,/g, ''));
             }
           }
           
@@ -391,9 +376,9 @@ function txParties(rickshawId: any, driverId: any): string {
           
           // If category is rent_pending or type is pending and amount is 0 or empty, try to parse from notes
           if ((tx.category === 'rent_pending' || tx.type === 'pending') && (!tx.amount || tx.amount === 0) && tx.notes) {
-            const amountMatch = tx.notes.match(/(\d+)/);
+            const amountMatch = tx.notes.match(/(-?\d+(?:,\d{3})*(?:\.\d+)?)/);
             if (amountMatch) {
-              finalAmount = parseFloat(amountMatch[1]);
+              finalAmount = Number(amountMatch[1].replace(/,/g, ''));
             }
           }
           

@@ -1,3 +1,4 @@
+import CategoryPicker from './CategoryPicker';
 import React, { useState, useEffect, useRef } from 'react';
 import { DollarSign, X } from 'lucide-react';
 import { todayYMD } from '../utils/date';
@@ -93,7 +94,10 @@ export default function ExpenseModal({ isOpen, onClose, onSuccess, driverId, dri
       const response = await fetch('/api/categories?type=expense', { headers });
       if (response.ok) {
         const data = await response.json();
-        if (Array.isArray(data)) setCategories(data);
+        if (Array.isArray(data)) {
+          setCategories(data);
+          setFormData(prev => ({ ...prev, category: data.some(c => c.name === prev.category) ? prev.category : data[0]?.name || '' }));
+        }
       }
     } catch (error) {
       console.error('Failed to fetch categories:', error);
@@ -102,6 +106,7 @@ export default function ExpenseModal({ isOpen, onClose, onSuccess, driverId, dri
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!categories.some(c => c.name === formData.category)) { alert('Please select a category.'); return; }
     const token = localStorage.getItem('auth_token');
     const headers = { 
       'Content-Type': 'application/json',
@@ -141,7 +146,7 @@ export default function ExpenseModal({ isOpen, onClose, onSuccess, driverId, dri
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-2xl shadow-xl max-w-md w-full p-6">
+      <div className="bg-white rounded-2xl shadow-xl max-w-md w-full p-6 max-h-[90dvh] overflow-y-auto">
         <div className="flex items-center justify-between mb-6">
           <h3 className="text-xl font-bold text-zinc-900">Add Expense</h3>
           <button 
@@ -168,20 +173,9 @@ export default function ExpenseModal({ isOpen, onClose, onSuccess, driverId, dri
             />
           </div>
 
-          <div>
-            <label className="block text-[13px] font-medium text-zinc-700 mb-1.5">Category</label>
-            <select 
-              className="w-full px-4 py-2.5 bg-zinc-50 border border-zinc-200 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all text-sm"
-              value={formData.category} 
-              onChange={e => setFormData({...formData, category: e.target.value})}
-            >
-              {categories.map(cat => (
-                <option key={cat.id} value={cat.name}>
-                  {cat.name.replace('_', ' ').charAt(0).toUpperCase() + cat.name.replace('_', ' ').slice(1)}
-                </option>
-              ))}
-            </select>
-          </div>
+          <CategoryPicker categories={categories} value={formData.category} type="expense"
+            onChange={category => setFormData(prev => ({ ...prev, category }))}
+            onCreated={category => setCategories(prev => [...prev, category])} />
 
           <div>
             <label className="block text-[13px] font-medium text-zinc-700 mb-1.5">Rickshaw</label>
@@ -205,7 +199,7 @@ export default function ExpenseModal({ isOpen, onClose, onSuccess, driverId, dri
             <label className="block text-[13px] font-medium text-zinc-700 mb-1.5">Amount</label>
             <input 
               type="number" 
-              step="0.01" 
+              step="0.01" min="0"
               className="w-full px-4 py-2.5 bg-zinc-50 border border-zinc-200 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all text-sm font-number"
               value={formData.amount} 
               onChange={e => setFormData({...formData, amount: e.target.value})} 

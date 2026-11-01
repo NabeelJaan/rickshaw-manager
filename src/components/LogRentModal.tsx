@@ -1,3 +1,4 @@
+import CategoryPicker from './CategoryPicker';
 import React, { useState, useEffect } from 'react';
 import { X, DollarSign, Calendar, User } from 'lucide-react';
 import { Driver, Rickshaw } from '../types';
@@ -74,6 +75,7 @@ export default function LogRentModal({ isOpen, onClose, onSubmit, onSuccess, sel
             cat.type === 'income' || cat.name === 'rent_pending'
           );
           setCategories(incomeCats);
+          setFormData(prev => ({ ...prev, category: incomeCats.some(c => c.name === prev.category) ? prev.category : incomeCats[0]?.name || '' }));
         }
       }
     } catch (error) {
@@ -83,19 +85,15 @@ export default function LogRentModal({ isOpen, onClose, onSubmit, onSuccess, sel
 
   // Auto-select rickshaw if driver is selected and has an assigned rickshaw
   useEffect(() => {
-    if (formData.driver_id) {
-      const driver = drivers.find(d => d.id.toString() === formData.driver_id);
-      if (driver && driver.assigned_rickshaw) {
-        const rickshaw = rickshaws.find(r => r.number === driver.assigned_rickshaw);
-        if (rickshaw) {
-          setFormData(prev => ({ ...prev, rickshaw_id: rickshaw.id.toString() }));
-        }
-      }
-    }
+    const driver = drivers.find(d => String(d.id) === formData.driver_id);
+    const rickshaw = driver?.assigned_rickshaw
+      ? rickshaws.find(r => r.number === driver.assigned_rickshaw) : undefined;
+    setFormData(prev => ({ ...prev, rickshaw_id: rickshaw ? String(rickshaw.id) : '' }));
   }, [formData.driver_id, drivers, rickshaws]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!categories.some(c => c.name === formData.category)) { alert('Please select a category.'); return; }
     const token = localStorage.getItem('auth_token');
     const headers = { 
       'Content-Type': 'application/json',
@@ -134,7 +132,7 @@ export default function LogRentModal({ isOpen, onClose, onSubmit, onSuccess, sel
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-zinc-950/50 backdrop-blur-sm">
-      <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+      <div className="bg-white rounded-2xl shadow-xl w-full max-w-md max-h-[90dvh] overflow-y-auto animate-in fade-in zoom-in-95 duration-200">
         <div className="flex justify-between items-center p-5 border-b border-zinc-100">
           <h3 className="text-lg font-bold text-zinc-900 flex items-center gap-2">
             <DollarSign className="w-5 h-5 text-emerald-500" />
@@ -171,20 +169,9 @@ export default function LogRentModal({ isOpen, onClose, onSubmit, onSuccess, sel
             )}
           </div>
           
-          <div>
-            <label className="block text-[13px] font-medium text-zinc-700 mb-1.5">Category</label>
-            <select 
-              required
-              className="w-full px-4 py-2.5 bg-zinc-50 border border-zinc-200 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all text-sm"
-              value={formData.category} onChange={e => setFormData({...formData, category: e.target.value})}
-            >
-              {categories.map(cat => (
-                <option key={cat.id} value={cat.name}>
-                  {cat.name.replace('_', ' ').charAt(0).toUpperCase() + cat.name.replace('_', ' ').slice(1)}
-                </option>
-              ))}
-            </select>
-          </div>
+          <CategoryPicker categories={categories} value={formData.category} type="income"
+            onChange={category => setFormData(prev => ({ ...prev, category }))}
+            onCreated={category => setCategories(prev => [...prev, category])} />
           
           <div>
             <label className="block text-[13px] font-medium text-zinc-700 mb-1.5">Driver</label>

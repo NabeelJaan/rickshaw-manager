@@ -1,3 +1,4 @@
+import { transactionAmount } from '../src/utils/transactionAmount';
 import express from 'express';
 import { sql } from '@vercel/postgres';
 import bcrypt from 'bcryptjs';
@@ -569,10 +570,7 @@ app.post('/api/transactions', authenticate, async (req, res) => {
   try {
     await ensureDb();
     const { date, type, category, amount, rickshaw_id, driver_id, notes } = req.body;
-    let fa = amount;
-    if ((category==='rent_pending'||type==='pending') && (!amount||amount===0) && notes) {
-      const m = notes.match(/(\d+)/); if (m) fa = parseFloat(m[1]);
-    }
+    const fa = transactionAmount(amount, category, type, notes);
     const r = await sql`INSERT INTO transactions (date,type,category,amount,rickshaw_id,driver_id,notes)
       VALUES (${date},${type},${category},${fa},${rickshaw_id??null},${driver_id??null},${notes??null}) RETURNING *`;
     if (driver_id) {
@@ -591,14 +589,11 @@ app.put('/api/transactions/:id', authenticate, async (req, res) => {
     const { id } = req.params;
     const { date, type, category, amount, rickshaw_id, driver_id, notes } = req.body;
     const old = (await sql`SELECT * FROM transactions WHERE id=${id}`).rows[0] as any;
-    let fa = amount;
-    if ((category==='rent_pending'||type==='pending') && (!amount||amount===0) && notes) {
-      const m = notes.match(/(\d+)/); if (m) fa = parseFloat(m[1]);
-    }
+    const fa = transactionAmount(amount, category, type, notes);
     if (old?.driver_id) {
       let oa = old.amount;
       if ((old.category==='rent_pending'||old.type==='pending') && !old.amount && old.notes) {
-        const m = old.notes.match(/(\d+)/); if (m) oa = parseFloat(m[1]);
+        const m = old.notes.match(/(-?\d+(?:,\d{3})*(?:\.\d+)?)/); if (m) oa = Number(m[1].replace(/,/g, ''));
       }
       if (old.type==='pending'||old.category==='rent_pending')
         await sql`UPDATE drivers SET pending_balance=pending_balance-${oa} WHERE id=${old.driver_id}`;
@@ -628,7 +623,7 @@ app.delete('/api/transactions/:id', authenticate, async (req, res) => {
     if (tx?.driver_id) {
       let fa = tx.amount;
       if ((tx.category==='rent_pending'||tx.type==='pending') && !tx.amount && tx.notes) {
-        const m = tx.notes.match(/(\d+)/); if (m) fa = parseFloat(m[1]);
+        const m = tx.notes.match(/(-?\d+(?:,\d{3})*(?:\.\d+)?)/); if (m) fa = Number(m[1].replace(/,/g, ''));
       }
       if (tx.type==='pending'||tx.category==='rent_pending')
         await sql`UPDATE drivers SET pending_balance=pending_balance-${fa} WHERE id=${tx.driver_id}`;

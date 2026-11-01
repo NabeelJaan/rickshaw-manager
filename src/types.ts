@@ -31,7 +31,7 @@ export interface Assignment {
 export interface Transaction {
   id: number;
   date: string;
-  type: 'income' | 'expense';
+  type: 'income' | 'expense' | 'pending';
   category: string;
   amount: number;
   rickshaw_id: number | null;
