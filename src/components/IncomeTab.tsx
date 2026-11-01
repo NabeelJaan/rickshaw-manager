@@ -12,17 +12,8 @@ interface DiaryRow {
   expense: number;
   paid: boolean;
   isDriver: boolean;
+  parked: boolean;
 }
-
-// Group-1 gets its own table, matched primarily by RICKSHAW NUMBER (digits) — driver
-// names can change over time, but the rickshaw's number stays the same. Substring match
-// handles numbers embedded in labels like "BAB - 2023" or "BJK 6020".
-const GROUP1_RICKSHAWS = ['2023', '6020', '5184'];
-// Extra name matches (case-insensitive substring) for drivers to keep in group 1.
-const GROUP1_NAMES = ['shah'];
-const isGroup1 = (rickshawNo: string, name: string) =>
-  GROUP1_RICKSHAWS.some(n => (rickshawNo || '').includes(n)) ||
-  GROUP1_NAMES.some(nm => (name || '').toLowerCase().includes(nm));
 
 export default function IncomeTab() {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
@@ -66,7 +57,7 @@ export default function IncomeTab() {
 
   const isToday = date === todayYMD();
 
-  // Sum income / pending / expense per driver id for the selected date
+  // Sum income and expenses per driver for the selected date
   const incomeById: Record<string, number> = {};
   const expenseById: Record<string, number> = {};
   let noDriverIncome = 0, noDriverExpense = 0;
@@ -91,17 +82,19 @@ export default function IncomeTab() {
     const id = String(d.id);
     const income = incomeById[id] || 0;
     const expense = expenseById[id] || 0;
-    return { key: id, name: d.name, rickshaw: d.assigned_rickshaw || '', income, expense, paid: income > 0, isDriver: true };
+    const rickshaw = rickshaws.find(r => r.number === d.assigned_rickshaw);
+    const parked = (rickshaw?.status || d.rickshaw_status) === 'parked';
+    return { key: id, name: d.name, rickshaw: d.assigned_rickshaw || '', income, expense, paid: income > 0, isDriver: true, parked };
   });
 
   const sortRows = (rows: DiaryRow[]) =>
     [...rows].sort((a, b) => (b.paid ? 1 : 0) - (a.paid ? 1 : 0) || b.income - a.income);
 
-  // Split into the two groups by rickshaw number
-  const group1 = sortRows(allRows.filter(r => isGroup1(r.rickshaw, r.name)));
-  const others = sortRows(allRows.filter(r => !isGroup1(r.rickshaw, r.name)));
+  // Keep every driver in one of the two status groups.
+  const activeRows = sortRows(allRows.filter(r => !r.parked));
+  const parkedRows = sortRows(allRows.filter(r => r.parked));
   if (noDriverIncome > 0 || noDriverExpense > 0) {
-    others.push({ key: 'none', name: '— (no driver)', rickshaw: '', income: noDriverIncome, expense: noDriverExpense, paid: noDriverIncome > 0, isDriver: false });
+    activeRows.push({ key: 'none', name: '— (no driver)', rickshaw: '', income: noDriverIncome, expense: noDriverExpense, paid: noDriverIncome > 0, isDriver: false, parked: false });
   }
 
   const pendingRows = dailyPendingRows(rickshaws, transactions);
@@ -249,8 +242,7 @@ export default function IncomeTab() {
 
       {error && <p role="alert" className="text-sm text-rose-600">{error}</p>}
       {/* Income and expenses remain in the driver tables. */}
-      <DiaryTable title="Main Drivers" rows={group1} />
-      <DiaryTable title="Other Drivers" rows={others} />
+      <DiaryTable title="Active Rickshaw Drivers" rows={activeRows} />
       <div className="bg-white rounded-2xl shadow-sm border border-amber-200 overflow-hidden">
         <div className="px-3 md:px-4 py-3 bg-amber-50 border-b border-amber-100">
           <h3 className="text-sm md:text-base font-semibold text-amber-900">Rickshaw Pending</h3>
@@ -266,6 +258,7 @@ export default function IncomeTab() {
           {!loading && pendingRows.length > 0 && <tfoot className="bg-amber-50 border-t border-amber-200"><tr><th scope="row" colSpan={2} className="p-3">Total pending</th><td className="p-3 text-right font-bold text-amber-800 font-number">{currency} {totalPending.toLocaleString()}</td></tr></tfoot>}
         </table></div>
       </div>
+      <DiaryTable title="Parked Rickshaw Drivers" rows={parkedRows} />
     </div>
   );
 }

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Settings as SettingsIcon, Plus, Trash2, Edit, Save, Download, FileText, AlertTriangle, RefreshCw, Users, TrendingUp, TrendingDown } from 'lucide-react';
+import { Settings as SettingsIcon, Plus, Trash2, Edit, Save, Download, FileText, RefreshCw, Users, TrendingUp, TrendingDown } from 'lucide-react';
 import UserManagement from './UserManagement';
 import { useAuth } from '../contexts/AuthContext';
 import { todayYMD } from '../utils/date';
@@ -36,7 +36,6 @@ export default function Settings() {
   const [settings, setSettings] = useState<AppSettings>(defaultSettings);
   const [tempSettings, setTempSettings] = useState<AppSettings>(defaultSettings);
   const [hasChanges, setHasChanges] = useState(false);
-  const [isResetting, setIsResetting] = useState(false);
   const [isBackfilling, setIsBackfilling] = useState(false);
 
   // One-time maintenance: tag legacy transactions (saved with only a driver) with the
@@ -155,11 +154,6 @@ export default function Settings() {
     alert('Settings saved successfully!');
   };
 
-  const resetSettings = () => {
-    setTempSettings(settings);
-    setHasChanges(false);
-  };
-
   const addCategory = async () => {
     if (!newCategory.name.trim()) return;
     
@@ -259,230 +253,6 @@ export default function Settings() {
     a.download = `rickshaw-manager-backup-${todayYMD()}.json`;
     a.click();
     URL.revokeObjectURL(url);
-  };
-
-  const resetTransactionsOnly = async () => {
-    if (!confirm('Are you sure you want to delete all transactions? This action cannot be undone!')) {
-      return;
-    }
-
-    setIsResetting(true);
-    
-    try {
-      console.log('Starting simple transaction reset...');
-      const token = localStorage.getItem('auth_token');
-      const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
-      
-      // Method 1: Try to get all transactions and delete them individually
-      console.log('Method 1: Getting all transactions...');
-      const getResponse = await fetch('/api/transactions', { headers });
-      
-      if (getResponse.ok) {
-        const transactions = await getResponse.json();
-        if (!Array.isArray(transactions)) {
-          alert('Failed to retrieve transactions');
-          setIsResetting(false);
-          return;
-        }
-        console.log('Found', transactions.length, 'transactions to delete');
-        
-        let deletedCount = 0;
-        let errorCount = 0;
-        
-        for (const transaction of transactions) {
-          try {
-            const deleteResponse = await fetch(`/api/transactions/${transaction.id}`, {
-              method: 'DELETE',
-              headers
-            });
-            
-            if (deleteResponse.ok) {
-              deletedCount++;
-              console.log('✅ Deleted transaction:', transaction.id);
-            } else {
-              errorCount++;
-              console.log('❌ Failed to delete transaction:', transaction.id, deleteResponse.status);
-            }
-          } catch (error) {
-            errorCount++;
-            console.log('❌ Error deleting transaction:', transaction.id, error);
-          }
-        }
-        
-        console.log(`Delete complete: ${deletedCount} deleted, ${errorCount} errors`);
-        alert(`Transaction reset complete!\n✅ Deleted: ${deletedCount} transactions\n❌ Errors: ${errorCount}\n\nPage will reload in 2 seconds.`);
-        
-      } else {
-        console.log('Failed to get transactions:', getResponse.status);
-        alert('Failed to retrieve transactions for deletion. Status: ' + getResponse.status);
-      }
-      
-      // Reload the page to refresh data
-      setTimeout(() => {
-        window.location.reload();
-      }, 2000);
-      
-    } catch (error) {
-      console.error('Simple reset error:', error);
-      alert(`Failed to reset transactions: ${error instanceof Error ? error.message : 'Unknown error'}`);
-    } finally {
-      setIsResetting(false);
-    }
-  };
-
-  const resetData = async (type: 'all' | 'transactions' | 'drivers' | 'rickshaws') => {
-    const confirmMessages = {
-      all: 'Are you sure you want to delete ALL data? This will remove:\n• All transactions\n• All drivers\n• All rickshaws\n• All settings\n\nThis action cannot be undone!',
-      transactions: 'Are you sure you want to delete all transactions? This action cannot be undone!',
-      drivers: 'Are you sure you want to delete all drivers? This will also delete all their transactions. This action cannot be undone!',
-      rickshaws: 'Are you sure you want to delete all rickshaws? This action cannot be undone!'
-    };
-
-    if (!confirm(confirmMessages[type])) {
-      return;
-    }
-
-    setIsResetting(true);
-    
-    try {
-      console.log('Resetting data type:', type);
-      const token = localStorage.getItem('auth_token');
-      const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
-      
-      switch (type) {
-        case 'all':
-          // Try to delete everything
-          try {
-            await fetch('/api/transactions', { method: 'DELETE', headers });
-            console.log('Transactions deleted');
-          } catch (e) {
-            console.log('Transactions endpoint might not support DELETE');
-          }
-          
-          try {
-            await fetch('/api/drivers', { method: 'DELETE', headers });
-            console.log('Drivers deleted');
-          } catch (e) {
-            console.log('Drivers endpoint might not support DELETE');
-          }
-          
-          try {
-            await fetch('/api/rickshaws', { method: 'DELETE', headers });
-            console.log('Rickshaws deleted');
-          } catch (e) {
-            console.log('Rickshaws endpoint might not support DELETE');
-          }
-          
-          // Clear localStorage
-          localStorage.clear();
-          break;
-          
-        case 'transactions':
-          try {
-            const response = await fetch('/api/transactions', { method: 'DELETE', headers });
-            console.log('Delete transactions response:', response.status);
-            if (!response.ok && response.status !== 404) {
-              throw new Error(`Failed to delete transactions: ${response.status}`);
-            }
-          } catch (error) {
-            console.log('Transactions delete failed, trying alternative method...');
-            // Alternative: Get all transactions and delete individually
-            const getResponse = await fetch('/api/transactions', { headers });
-            if (getResponse.ok) {
-              const transactions = await getResponse.json();
-              if (Array.isArray(transactions)) {
-                for (const tx of transactions) {
-                  try {
-                    await fetch(`/api/transactions/${tx.id}`, { method: 'DELETE', headers });
-                  } catch (e) {
-                    console.log('Failed to delete transaction:', tx.id);
-                  }
-                }
-              }
-            }
-          }
-          break;
-          
-        case 'drivers':
-          try {
-            const response = await fetch('/api/drivers', { method: 'DELETE', headers });
-            console.log('Delete drivers response:', response.status);
-            if (!response.ok && response.status !== 404) {
-              throw new Error(`Failed to delete drivers: ${response.status}`);
-            }
-          } catch (error) {
-            console.log('Drivers delete failed, trying alternative method...');
-            // Alternative: Get all drivers and delete individually
-            const getResponse = await fetch('/api/drivers', { headers });
-            if (getResponse.ok) {
-              const drivers = await getResponse.json();
-              if (Array.isArray(drivers)) {
-                for (const driver of drivers) {
-                  try {
-                    await fetch(`/api/drivers/${driver.id}`, { method: 'DELETE', headers });
-                  } catch (e) {
-                    console.log('Failed to delete driver:', driver.id);
-                  }
-                }
-              }
-            }
-          }
-          break;
-          
-        case 'rickshaws':
-          try {
-            const response = await fetch('/api/rickshaws', { method: 'DELETE', headers });
-            console.log('Delete rickshaws response:', response.status);
-            if (!response.ok && response.status !== 404) {
-              throw new Error(`Failed to delete rickshaws: ${response.status}`);
-            }
-          } catch (error) {
-            console.log('Rickshaws delete failed, trying alternative method...');
-            // Alternative: Get all rickshaws and delete individually
-            const getResponse = await fetch('/api/rickshaws', { headers });
-            if (getResponse.ok) {
-              const rickshaws = await getResponse.json();
-              if (Array.isArray(rickshaws)) {
-                for (const rickshaw of rickshaws) {
-                  try {
-                    await fetch(`/api/rickshaws/${rickshaw.id}`, { method: 'DELETE', headers });
-                  } catch (e) {
-                    console.log('Failed to delete rickshaw:', rickshaw.id);
-                  }
-                }
-              }
-            }
-          }
-          break;
-      }
-
-      const successMessages = {
-        all: 'All data has been successfully reset. The page will reload in 3 seconds.',
-        transactions: 'All transactions have been successfully deleted.',
-        drivers: 'All drivers and their transactions have been successfully deleted.',
-        rickshaws: 'All rickshaws have been successfully deleted.'
-      };
-
-      alert(successMessages[type]);
-      
-      if (type === 'all') {
-        // Reload the page to reset everything
-        setTimeout(() => {
-          window.location.reload();
-        }, 3000);
-      } else {
-        // Refresh the data by triggering a re-render
-        setTimeout(() => {
-          window.location.reload();
-        }, 1000);
-      }
-      
-    } catch (error) {
-      console.error('Reset error:', error);
-      alert(`Failed to reset data: ${error instanceof Error ? error.message : 'Unknown error'}`);
-    } finally {
-      setIsResetting(false);
-    }
   };
 
   return (
@@ -701,12 +471,6 @@ export default function Settings() {
             {hasChanges && (
               <div className="flex gap-2">
                 <button
-                  onClick={resetSettings}
-                  className="px-4 py-2 text-sm font-medium text-zinc-600 hover:bg-zinc-100 rounded-xl transition-colors"
-                >
-                  Reset
-                </button>
-                <button
                   onClick={saveAllSettings}
                   className="px-4 py-2 text-sm font-medium bg-emerald-500 text-white rounded-xl hover:bg-emerald-600 transition-colors shadow-sm flex items-center gap-2"
                 >
@@ -810,19 +574,6 @@ export default function Settings() {
           <div className="bg-white p-6 rounded-2xl shadow-sm border border-zinc-200/60">
             <h3 className="text-lg font-semibold text-zinc-900 mb-6">Data Management</h3>
             
-            {/* Warning Message */}
-            <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-6">
-              <div className="flex items-start gap-3">
-                <AlertTriangle className="w-5 h-5 text-amber-600 mt-0.5 flex-shrink-0" />
-                <div>
-                  <h4 className="text-sm font-semibold text-amber-800 mb-1">⚠️ Important Warning</h4>
-                  <p className="text-sm text-amber-700">
-                    Data reset operations are permanent and cannot be undone. Please consider exporting your data before performing any reset operations.
-                  </p>
-                </div>
-              </div>
-            </div>
-
             {/* Export Backup */}
             <div className="mb-8">
               <h4 className="text-base font-medium text-zinc-900 mb-3">Backup Your Data</h4>
@@ -852,86 +603,6 @@ export default function Settings() {
               </button>
             </div>
 
-            {/* Reset Options */}
-            <div>
-              <h4 className="text-base font-medium text-zinc-900 mb-3 text-rose-600">Reset Data</h4>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {/* Reset Transactions - Simple Method */}
-                <button
-                  onClick={resetTransactionsOnly}
-                  disabled={isResetting}
-                  className="p-4 bg-rose-50 hover:bg-rose-100 border border-rose-200 rounded-xl transition-colors text-left disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  <div className="flex items-center gap-3 mb-2">
-                    <Trash2 className="w-5 h-5 text-rose-600" />
-                    <span className="text-sm font-semibold text-rose-700">Reset Transactions (Simple)</span>
-                  </div>
-                  <p className="text-xs text-rose-600">Delete all transaction records - Try this first</p>
-                </button>
-
-                {/* Reset Transactions - Original Method */}
-                <button
-                  onClick={() => resetData('transactions')}
-                  disabled={isResetting}
-                  className="p-4 bg-orange-50 hover:bg-orange-100 border border-orange-200 rounded-xl transition-colors text-left disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  <div className="flex items-center gap-3 mb-2">
-                    <Trash2 className="w-5 h-5 text-orange-600" />
-                    <span className="text-sm font-semibold text-orange-700">Reset Transactions (Advanced)</span>
-                  </div>
-                  <p className="text-xs text-orange-600">Delete all transaction records - Alternative method</p>
-                </button>
-
-                {/* Reset Drivers */}
-                <button
-                  onClick={() => resetData('drivers')}
-                  disabled={isResetting}
-                  className="p-4 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded-xl transition-colors text-left disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  <div className="flex items-center gap-3 mb-2">
-                    <Trash2 className="w-5 h-5 text-blue-600" />
-                    <span className="text-sm font-semibold text-blue-700">Reset Drivers</span>
-                  </div>
-                  <p className="text-xs text-blue-600">Delete all drivers and their transactions</p>
-                </button>
-
-                {/* Reset Rickshaws */}
-                <button
-                  onClick={() => resetData('rickshaws')}
-                  disabled={isResetting}
-                  className="p-4 bg-purple-50 hover:bg-purple-100 border border-purple-200 rounded-xl transition-colors text-left disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  <div className="flex items-center gap-3 mb-2">
-                    <Trash2 className="w-5 h-5 text-purple-600" />
-                    <span className="text-sm font-semibold text-purple-700">Reset Rickshaws</span>
-                  </div>
-                  <p className="text-xs text-purple-600">Delete all rickshaw records</p>
-                </button>
-
-                {/* Reset All Data */}
-                <button
-                  onClick={() => resetData('all')}
-                  disabled={isResetting}
-                  className="p-4 bg-red-50 hover:bg-red-100 border border-red-200 rounded-xl transition-colors text-left disabled:opacity-50 disabled:cursor-not-allowed md:col-span-2"
-                >
-                  <div className="flex items-center gap-3 mb-2">
-                    <RefreshCw className="w-5 h-5 text-red-600" />
-                    <span className="text-sm font-semibold text-red-700">Reset All Data</span>
-                  </div>
-                  <p className="text-xs text-red-600">Delete everything and start fresh</p>
-                </button>
-              </div>
-            </div>
-
-            {/* Processing Indicator */}
-            {isResetting && (
-              <div className="mt-6 p-4 bg-zinc-50 rounded-xl border border-zinc-200">
-                <div className="flex items-center gap-3">
-                  <div className="w-4 h-4 border-2 border-zinc-400 border-t-transparent animate-spin"></div>
-                  <span className="text-sm text-zinc-600">Resetting data... Please wait.</span>
-                </div>
-              </div>
-            )}
           </div>
         </div>
       )}
