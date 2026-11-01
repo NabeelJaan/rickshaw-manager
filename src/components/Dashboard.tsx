@@ -1,3 +1,4 @@
+import { monthlyProfit } from '../utils/monthlyProfit';
 import { isPendingTransaction } from '../utils/transactionStatus';
 import { useState, useEffect } from 'react';
 import ReactApexChart from 'react-apexcharts';
@@ -788,7 +789,7 @@ export default function Dashboard({ selectedDriverId, selectedMonth: propSelecte
         </div>
 
         <div className="bg-white p-2.5 md:p-6 rounded-xl md:rounded-2xl border border-zinc-200/60 shadow-[0_2px_8px_rgba(0,0,0,0.04)]">
-          <h3 className="text-[11px] md:text-[15px] font-semibold text-zinc-900 mb-2 md:mb-6">Total Income by Month (Last Year)</h3>
+          <h3 className="text-[11px] md:text-[15px] font-semibold text-zinc-900 mb-2 md:mb-6">Net Profit by Month (Last Year)</h3>
           <div className="h-52 md:h-72">
             <ReactApexChart
               key={`year-chart-${stats.monthlyData?.length}-${stats.monthlyData?.map((d: any) => d.month).join(',')}`}
@@ -798,6 +799,7 @@ export default function Dashboard({ selectedDriverId, selectedMonth: propSelecte
                   height: '100%',
                   toolbar: { show: false },
                   fontFamily: 'inherit',
+                  stacked: false,
                 },
                 plotOptions: {
                   bar: {
@@ -830,9 +832,13 @@ export default function Dashboard({ selectedDriverId, selectedMonth: propSelecte
                 fill: { opacity: 1 },
                 tooltip: {
                   theme: 'light',
+                  shared: true,
+                  intersect: false,
+                  y: { formatter: (value: number) => `${currency} ${value.toLocaleString(undefined, { maximumFractionDigits: 2 })}` },
                   style: { fontSize: '12px' },
                 },
-                colors: ['#10b981'],
+                colors: ['#10b981', '#f59e0b'],
+                legend: { position: 'top', horizontalAlign: 'left', fontSize: '11px' },
                 responsive: [
                   {
                     breakpoint: 768,
@@ -860,8 +866,12 @@ export default function Dashboard({ selectedDriverId, selectedMonth: propSelecte
               }}
               series={[
                 {
-                  name: 'Income',
-                  data: yearChartData.raw.map((d: any) => d.income) || [],
+                  name: 'Net profit',
+                  data: yearChartData.raw.map((d: any) => monthlyProfit(d).net),
+                },
+                {
+                  name: 'Net profit + pending',
+                  data: yearChartData.raw.map((d: any) => monthlyProfit(d).includingPending),
                 },
               ]}
               type="bar"

@@ -936,10 +936,11 @@ app.get('/api/stats', authenticate, async (req, res) => {
     const monR = await sql.query(`
       SELECT TO_CHAR(TO_DATE(date,'YYYY-MM-DD'),'YYYY-MM') as month,
         SUM(CASE WHEN type='income' AND category!='rent_pending' THEN amount::float8 ELSE 0 END) as income,
-        SUM(CASE WHEN type='expense' AND category!='rent_pending' THEN amount::float8 ELSE 0 END) as expense
+        SUM(CASE WHEN type='expense' AND category!='rent_pending' THEN amount::float8 ELSE 0 END) as expense,
+        SUM(CASE WHEN category='rent_pending' OR type='pending' THEN amount::float8 ELSE 0 END) as pending
       FROM transactions WHERE 1=1 ${dfOnly} GROUP BY month ORDER BY month ASC`, dOnly);
     // Full history (used for cumulative profit / remaining investment); charts get the last 12 months.
-    const allMonthly = monR.rows.map((r: any) => ({ month: r.month, income: Number(r.income) || 0, expense: Number(r.expense) || 0 }));
+    const allMonthly = monR.rows.map((r: any) => ({ month: r.month, income: Number(r.income) || 0, expense: Number(r.expense) || 0, pending: Number(r.pending) || 0 }));
     monR.rows = monR.rows.slice(-12);
 
     // Calculate active rickshaws per month based on assignments
@@ -989,6 +990,7 @@ app.get('/api/stats', authenticate, async (req, res) => {
       ...row,
       income: Number(row.income) || 0,
       expense: Number(row.expense) || 0,
+      pending: Number(row.pending) || 0,
       activeRickshaws: monthlyActiveCounts[row.month] || Number(actR.rows[0]?.count) || 1
     }));
 

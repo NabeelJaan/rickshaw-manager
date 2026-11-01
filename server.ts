@@ -576,13 +576,14 @@ function txParties(rickshawId: any, driverId: any): string {
       const monthlyData = db.prepare(`
         SELECT strftime('%Y-%m', date) as month,
                SUM(CASE WHEN type = 'income' AND category != 'rent_pending' THEN amount ELSE 0 END) as income,
-               SUM(CASE WHEN type = 'expense' AND category != 'rent_pending' THEN amount ELSE 0 END) as expense
+               SUM(CASE WHEN type = 'expense' AND category != 'rent_pending' THEN amount ELSE 0 END) as expense,
+               SUM(CASE WHEN category = 'rent_pending' OR type = 'pending' THEN amount ELSE 0 END) as pending
         FROM transactions
         WHERE 1=1 ${driverFilter}
         GROUP BY month
         ORDER BY month DESC
         LIMIT 12
-      `).all(...params).reverse();
+      `).all(...params.slice(0, driver_id ? 1 : 0)).reverse();
 
       // Add activeRickshaws count to each month in monthlyData
       const monthlyDataWithActive = monthlyData.map((d: any) => {

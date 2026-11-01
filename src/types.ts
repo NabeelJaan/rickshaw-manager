@@ -53,6 +53,6 @@ export interface DashboardStats {
   pendingBalance: number;
   activeRickshaws: number;
   totalRickshaws: number;
-  monthlyData: { month: string; income: number; expense: number }[];
+  monthlyData: { month: string; income: number; expense: number; pending?: number }[];
   dailyData: { date: string; income: number; expense: number }[];
 }

@@ -1,13 +1,11 @@
 import PendingLedger from './components/PendingLedger';
 import { useState, useEffect } from 'react';
-import { LayoutDashboard, Users, Car, Receipt, Settings, Menu, X, LogOut, FileText, Calculator, History, TrendingUp, Wallet, Droplets } from 'lucide-react';
+import { LayoutDashboard, Users, Car, Settings, Menu, X, LogOut, FileText, Calculator, History, TrendingUp, Wallet, Droplets } from 'lucide-react';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import LoginPage from './components/LoginPage';
 import Dashboard from './components/Dashboard';
 import Rickshaws from './components/Rickshaws';
 import Drivers from './components/Drivers';
-import Transactions from './components/Transactions';
-import Reports from './components/Reports';
 import NetProfit from './components/NetProfit';
 import HistoryPage from './components/History';
 import IncomeTab from './components/IncomeTab';
@@ -200,13 +198,11 @@ function AppContent() {
 
   const navItems = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
+    { id: 'income', label: 'Daily Diary', icon: TrendingUp },
     { id: 'rickshaws', label: 'Rickshaws', icon: Car },
     { id: 'drivers', label: 'Drivers', icon: Users },
     { id: 'pending-register', label: 'Monthly Pending', icon: FileText },
-    { id: 'transactions', label: 'Transactions', icon: Receipt },
-    { id: 'reports', label: 'Reports', icon: FileText },
     { id: 'netprofit', label: 'Net Profit', icon: Calculator },
-    { id: 'income', label: 'Daily Diary', icon: TrendingUp },
     { id: 'oil', label: 'Oil Changes', icon: Droplets },
     { id: 'expenses', label: 'Expense Manager', icon: Wallet },
     { id: 'history', label: 'History', icon: History },
@@ -218,8 +214,6 @@ function AppContent() {
       case 'dashboard': return <Dashboard selectedDriverId={selectedDriverId} selectedMonth={selectedMonth} onMonthChange={setSelectedMonth} />;
       case 'rickshaws': return <Rickshaws selectedDriverId={selectedDriverId} onStatusChange={() => { fetchDrivers(); setSelectedDriverId(''); }} />;
       case 'drivers': return <Drivers onDriverAdded={fetchDrivers} defaultShowForm={showAddDriverForm} />;
-      case 'transactions': return <Transactions selectedDriverId={selectedDriverId} />;
-      case 'reports': return <Reports selectedDriverId={selectedDriverId} />;
       case 'netprofit': return <NetProfit />;
       case 'income': return <IncomeTab />;
       case 'pending-register': return <PendingLedger />;
