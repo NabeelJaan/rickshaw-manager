@@ -97,7 +97,7 @@ export default function IncomeTab() {
     activeRows.push({ key: 'none', name: '— (no driver)', rickshaw: '', income: noDriverIncome, expense: noDriverExpense, paid: noDriverIncome > 0, isDriver: false, parked: false });
   }
 
-  const pendingRows = dailyPendingRows(rickshaws, transactions);
+  const pendingRows = dailyPendingRows(rickshaws, transactions, date);
   const totalPending = pendingRows.reduce((sum, row) => sum + Math.round(row.amount * 100), 0) / 100;
 
   const grandIncome = allRows.reduce((s, r) => s + r.income, 0) + noDriverIncome;
@@ -246,14 +246,14 @@ export default function IncomeTab() {
       <div className="bg-white rounded-2xl shadow-sm border border-amber-200 overflow-hidden">
         <div className="px-3 md:px-4 py-3 bg-amber-50 border-b border-amber-100">
           <h3 className="text-sm md:text-base font-semibold text-amber-900">Rickshaw Pending</h3>
-          <p className="text-xs text-amber-700 mt-1">Pending logged on the selected day, listed by rickshaw.</p>
+          <p className="text-xs text-amber-700 mt-1">Only drivers with pending amounts on the selected date.</p>
         </div>
         <div className="overflow-x-auto"><table className="w-full text-xs md:text-sm text-left">
           <thead className="bg-amber-50/50"><tr><th scope="col" className="p-3">Rickshaw</th><th scope="col" className="p-3">Driver on entry</th><th scope="col" className="p-3 text-right">Pending</th></tr></thead>
           <tbody className="divide-y divide-amber-100">
             {loading ? <tr><td colSpan={3} className="p-4 text-center text-zinc-500">Loading...</td></tr> : pendingRows.length ? pendingRows.map(row => <tr key={row.key} className={row.amount > 0 ? 'bg-amber-50/50' : ''}>
               <td className="p-3 font-medium">{row.number}</td><td className="p-3 text-zinc-500">{row.drivers || '—'}</td><td className={`p-3 text-right font-semibold font-number ${row.amount > 0 ? 'text-amber-700' : 'text-zinc-400'}`}>{currency} {row.amount.toLocaleString()}</td>
-            </tr>) : <tr><td colSpan={3} className="p-4 text-center text-zinc-500">No rickshaws found.</td></tr>}
+            </tr>) : <tr><td colSpan={3} className="p-4 text-center text-zinc-500">No pending amounts for this date.</td></tr>}
           </tbody>
           {!loading && pendingRows.length > 0 && <tfoot className="bg-amber-50 border-t border-amber-200"><tr><th scope="row" colSpan={2} className="p-3">Total pending</th><td className="p-3 text-right font-bold text-amber-800 font-number">{currency} {totalPending.toLocaleString()}</td></tr></tfoot>}
         </table></div>
