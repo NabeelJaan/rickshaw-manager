@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { CalendarDays, Calendar, ChevronLeft, ChevronRight, Check } from 'lucide-react';
 import { Transaction, Driver, Rickshaw } from '../types';
 import { todayYMD, shiftYMD, formatDate } from '../utils/date';
+import { isLeaveTransaction } from '../utils/leave';
 
 interface DiaryRow {
   key: string;
@@ -13,6 +14,7 @@ interface DiaryRow {
   paid: boolean;
   isDriver: boolean;
   parked: boolean;
+  leave: boolean;
 }
 
 export default function IncomeTab() {
@@ -77,6 +79,11 @@ export default function IncomeTab() {
     else expenseById[id] = (expenseById[id] || 0) + amount;
   });
 
+  const leaveIds = new Set<string>();
+  transactions.forEach(t => {
+    if (t.driver_id != null && isLeaveTransaction(t)) leaveIds.add(String(t.driver_id));
+  });
+
   // One row per driver so non-payers are visible
   const allRows: DiaryRow[] = drivers.map(d => {
     const id = String(d.id);
@@ -84,7 +91,7 @@ export default function IncomeTab() {
     const expense = expenseById[id] || 0;
     const rickshaw = rickshaws.find(r => r.number === d.assigned_rickshaw);
     const parked = (rickshaw?.status || d.rickshaw_status) === 'parked';
-    return { key: id, name: d.name, rickshaw: d.assigned_rickshaw || '', income, expense, paid: income > 0, isDriver: true, parked };
+    return { key: id, name: d.name, rickshaw: d.assigned_rickshaw || '', income, expense, paid: income > 0, isDriver: true, parked, leave: leaveIds.has(id) };
   });
 
   const sortRows = (rows: DiaryRow[]) =>
@@ -94,7 +101,7 @@ export default function IncomeTab() {
   const activeRows = sortRows(allRows.filter(r => !r.parked));
   const parkedRows = sortRows(allRows.filter(r => r.parked));
   if (noDriverIncome > 0 || noDriverExpense > 0) {
-    activeRows.push({ key: 'none', name: '— (no driver)', rickshaw: '', income: noDriverIncome, expense: noDriverExpense, paid: noDriverIncome > 0, isDriver: false, parked: false });
+    activeRows.push({ key: 'none', name: '— (no driver)', rickshaw: '', income: noDriverIncome, expense: noDriverExpense, paid: noDriverIncome > 0, isDriver: false, parked: false, leave: false });
   }
 
   const pendingRows = dailyPendingRows(rickshaws, transactions, date);
@@ -139,9 +146,12 @@ export default function IncomeTab() {
                     <td className="px-3 md:px-4 py-2.5 md:py-3">
                       <div className="flex items-center gap-2">
                         {r.isDriver && (
-                          <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${r.paid ? 'bg-emerald-500' : 'bg-zinc-300'}`} />
+                          <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${r.leave ? 'bg-rose-500' : r.paid ? 'bg-emerald-500' : 'bg-zinc-300'}`} />
                         )}
                         <span className="text-[12px] md:text-sm font-medium text-zinc-900">{r.name}</span>
+                        {r.leave && (
+                          <span className="text-[9px] font-medium text-rose-700 bg-rose-50 px-1.5 py-0.5 rounded shrink-0">Leave</span>
+                        )}
                         {r.rickshaw && (
                           <span className="text-[9px] text-zinc-500 bg-zinc-100 px-1.5 py-0.5 rounded shrink-0">{r.rickshaw}</span>
                         )}

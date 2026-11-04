@@ -285,7 +285,7 @@ function txParties(rickshawId: any, driverId: any): string {
 
   // Transactions
   app.get("/api/transactions", (req, res) => {
-    const { start_date, end_date, rickshaw_id, driver_id, limit } = req.query;
+    const { start_date, end_date, rickshaw_id, driver_id, limit, month, leave } = req.query;
     let query = `
       SELECT t.*, r.number as rickshaw_number, d.name as driver_name 
       FROM transactions t
@@ -310,6 +310,18 @@ function txParties(rickshawId: any, driverId: any): string {
     if (driver_id) {
       query += " AND t.driver_id = ?";
       params.push(driver_id);
+    }
+    if (month && month !== "all") {
+      query += " AND substr(t.date, 1, 7) = ?";
+      params.push(String(month));
+    }
+    if (leave === "1") {
+      query += ` AND (
+        lower(COALESCE(t.category, '')) = 'leave'
+        OR lower(COALESCE(t.type, '')) = 'leave'
+        OR lower(COALESCE(t.notes, '')) LIKE '%leave%'
+        OR lower(COALESCE(t.notes, '')) LIKE '%off%'
+      )`;
     }
 
     query += " ORDER BY t.date DESC, t.id DESC";

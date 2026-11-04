@@ -2,28 +2,46 @@ import { monthlyProfit as calculateMonthlyProfit } from '../utils/monthlyProfit'
 import { isPendingTransaction } from '../utils/transactionStatus';
 import { useState, useEffect } from 'react';
 import ReactApexChart from 'react-apexcharts';
-import { TrendingUp, TrendingDown, DollarSign, Car, Plus, Edit, ChevronDown, Trash2, Users, Percent } from 'lucide-react';
+import { TrendingUp, TrendingDown, DollarSign, Car, Plus, Edit, ChevronDown, Trash2, Users, Percent, Umbrella } from 'lucide-react';
 import { DashboardStats, Transaction, Driver } from '../types';
 import { currentMonth, recentMonths, formatDate } from '../utils/date';
+import { isDedicatedLeave, uniqueLeaveDays } from '../utils/leave';
 import LogRentModal from './LogRentModal';
 import ExpenseModal from './ExpenseModal';
 import EditTransactionModal from './EditTransactionModal';
 import AddPendingBalanceModal from './AddPendingBalanceModal';
+import LeaveModal from './LeaveModal';
 
 interface DashboardProps {
   selectedDriverId?: string;
   selectedMonth?: string;
   onMonthChange?: (month: string) => void;
+  onSaved?: () => void;
 }
 
-export default function Dashboard({ selectedDriverId, selectedMonth: propSelectedMonth, onMonthChange }: DashboardProps) {
+function txKind(t: Transaction): 'leave' | 'pending' | 'income' | 'expense' {
+  if (isDedicatedLeave(t)) return 'leave';
+  if (isPendingTransaction(t)) return 'pending';
+  return t.type === 'income' ? 'income' : 'expense';
+}
+
+const txTone = {
+  leave: { text: 'text-amber-600', bg: 'bg-amber-50', icon: 'text-amber-600', dot: 'bg-amber-500', pill: 'bg-amber-100 text-amber-700', sign: '' },
+  pending: { text: 'text-amber-600', bg: 'bg-amber-50', icon: 'text-amber-600', dot: 'bg-amber-500', pill: 'bg-amber-100 text-amber-700', sign: '' },
+  income: { text: 'text-emerald-600', bg: 'bg-emerald-50', icon: 'text-emerald-600', dot: 'bg-emerald-500', pill: 'bg-emerald-100 text-emerald-700', sign: '+' },
+  expense: { text: 'text-rose-600', bg: 'bg-rose-50', icon: 'text-rose-600', dot: 'bg-rose-500', pill: 'bg-rose-100 text-rose-700', sign: '-' },
+} as const;
+
+export default function Dashboard({ selectedDriverId, selectedMonth: propSelectedMonth, onMonthChange, onSaved }: DashboardProps) {
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [leaveRecords, setLeaveRecords] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
   const [chartView, setChartView] = useState<'monthly' | 'daily'>('daily');
   const [isLogRentModalOpen, setIsLogRentModalOpen] = useState(false);
   const [isExpenseModalOpen, setIsExpenseModalOpen] = useState(false);
   const [isPendingBalanceModalOpen, setIsPendingBalanceModalOpen] = useState(false);
+  const [isLeaveModalOpen, setIsLeaveModalOpen] = useState(false);
   const [editTransaction, setEditTransaction] = useState<Transaction | null>(null);
   const [selectedDriverName, setSelectedDriverName] = useState('');
   const [currency, setCurrency] = useState('Rs.');
@@ -91,17 +109,26 @@ export default function Dashboard({ selectedDriverId, selectedMonth: propSelecte
     const headers: Record<string, string> = { 'Cache-Control': 'no-cache', 'Pragma': 'no-cache' };
     if (token) headers['Authorization'] = `Bearer ${token}`;
     
+    // Recent rows stay capped for the table. Leave is loaded on its own, with no
+    // cap, because a busy month has more than 30 transactions and the older
+    // leave days were being dropped.
+    const leaveUrl = selectedDriverId
+      ? `/api/transactions?${[...queryParts, 'leave=1'].join('&')}`
+      : null;
     Promise.all([
       fetch(`/api/stats${query}`, { headers }).then(res => res.json()).catch(() => ({})),
-      fetch(`/api/transactions${query ? query + '&' : '?'}limit=30`, { headers }).then(res => res.json()).catch(() => [])
-    ]).then(([statsData, txData]) => {
+      fetch(`/api/transactions${query ? query + '&' : '?'}limit=30`, { headers }).then(res => res.json()).catch(() => []),
+      leaveUrl ? fetch(leaveUrl, { headers }).then(res => res.json()).catch(() => []) : Promise.resolve([])
+    ]).then(([statsData, txData, leaveData]) => {
       setStats(statsData || {});
       setTransactions(Array.isArray(txData) ? txData : []);
+      setLeaveRecords(uniqueLeaveDays(Array.isArray(leaveData) ? leaveData : []));
       setLoading(false);
     }).catch(error => {
       console.error('Dashboard fetch error:', error);
       setStats({});
       setTransactions([]);
+      setLeaveRecords([]);
       setLoading(false);
     });
   };
@@ -195,10 +222,6 @@ export default function Dashboard({ selectedDriverId, selectedMonth: propSelecte
     ? statCards.filter(card => !card.hideOnDriver) 
     : statCards;
 
-  const leaveRecords = (Array.isArray(transactions) ? transactions : []).filter(t => 
-    t.notes && (t.notes.toLowerCase().includes('leave') || t.notes.toLowerCase().includes('off'))
-  );
-
   const oilChangeRecords = (Array.isArray(transactions) ? transactions : []).filter(t => 
     t.category && (t.category.toLowerCase().includes('oil') || t.category.toLowerCase().includes('engine'))
   ).slice(0, 1);
@@ -208,10 +231,10 @@ export default function Dashboard({ selectedDriverId, selectedMonth: propSelecte
   const filteredTransactions = txFilter === 'all'
     ? allTransactions
     : txFilter === 'income'
-      ? allTransactions.filter(t => t.type === 'income' && !isPendingTransaction(t))
+      ? allTransactions.filter(t => t.type === 'income' && !isPendingTransaction(t) && !isDedicatedLeave(t))
       : txFilter === 'pending'
         ? allTransactions.filter(t => isPendingTransaction(t))
-        : allTransactions.filter(t => t.type === 'expense' && !isPendingTransaction(t));
+        : allTransactions.filter(t => t.type === 'expense' && !isPendingTransaction(t) && !isDedicatedLeave(t));
 
   // Chart helpers for mobile — limit daily labels to avoid overflow
   const buildChartData = (view: 'daily' | 'monthly') => {
@@ -352,6 +375,15 @@ export default function Dashboard({ selectedDriverId, selectedMonth: propSelecte
                   </div>
                   Add Pending
                 </button>
+                <button
+                  onClick={() => { setIsLeaveModalOpen(true); setShowTransactionDropdown(false); }}
+                  className="w-full text-left px-4 py-3 rounded-xl text-[14px] text-zinc-700 hover:bg-zinc-50 transition-colors flex items-center gap-3"
+                >
+                  <div className="w-8 h-8 rounded-full bg-rose-50 flex items-center justify-center">
+                    <Umbrella className="w-4 h-4 text-rose-600" />
+                  </div>
+                  Set on Leave
+                </button>
               </div>
             )}
           </div>
@@ -389,20 +421,30 @@ export default function Dashboard({ selectedDriverId, selectedMonth: propSelecte
                 <div className="w-6 h-6 md:w-10 md:h-10 rounded-md md:rounded-lg bg-amber-50 flex items-center justify-center">
                   <Users className="w-3 h-3 md:w-5 md:h-5 text-amber-600" />
                 </div>
-                <h3 className="text-[11px] md:text-[15px] font-semibold text-zinc-900">Monthly Leave</h3>
+                <h3 className="text-[11px] md:text-[15px] font-semibold text-zinc-900">{isMonth ? 'Monthly Leave' : 'Leave'}</h3>
               </div>
               <span className="text-[10px] md:text-[13px] font-medium text-zinc-500">{leaveRecords.length} days</span>
             </div>
             {leaveRecords.length === 0 ? (
-              <p className="text-[10px] md:text-[13px] text-zinc-400 text-center py-3 md:py-6">No leave records this month</p>
+              <p className="text-[10px] md:text-[13px] text-zinc-400 text-center py-3 md:py-6">{isMonth ? 'No leave records this month' : 'No leave records'}</p>
             ) : (
               <div className="space-y-1 md:space-y-2">
                 {leaveRecords.map(t => (
                   <div key={t.id} className="flex items-center gap-1.5 p-1.5 md:p-3 bg-zinc-50 rounded-lg md:rounded-xl">
-                    <div className="w-1.5 h-1.5 md:w-2 md:h-2 rounded-full bg-amber-400"></div>
-                    <p className="text-[10px] md:text-[13px] font-medium text-zinc-700">
+                    <div className="w-1.5 h-1.5 md:w-2 md:h-2 rounded-full bg-amber-400 shrink-0"></div>
+                    <p className="text-[10px] md:text-[13px] font-medium text-zinc-700 flex-1">
                       {formatDate(t.date, { weekday: 'long', month: 'short', day: 'numeric' })}
                     </p>
+                    {isDedicatedLeave(t) && (
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteTransaction(t.id)}
+                        className="text-zinc-400 hover:text-rose-500"
+                        aria-label="Remove leave"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    )}
                   </div>
                 ))}
               </div>
@@ -473,13 +515,13 @@ export default function Dashboard({ selectedDriverId, selectedMonth: propSelecte
                 <div className="flex items-center gap-0.5 px-1.5 py-0.5 md:px-3 md:py-1.5 bg-emerald-50 rounded-md md:rounded-lg">
                   <div className="w-1 h-1 md:w-1.5 md:h-1.5 rounded-full bg-emerald-500"></div>
                   <span className="text-[9px] md:text-[12px] font-semibold text-emerald-700">
-                    {allTransactions.filter(t => t.type === 'income' && !isPendingTransaction(t)).length}
+                    {allTransactions.filter(t => t.type === 'income' && !isPendingTransaction(t) && !isDedicatedLeave(t)).length}
                   </span>
                 </div>
                 <div className="flex items-center gap-0.5 px-1.5 py-0.5 md:px-3 md:py-1.5 bg-rose-50 rounded-md md:rounded-lg">
                   <div className="w-1 h-1 md:w-1.5 md:h-1.5 rounded-full bg-rose-500"></div>
                   <span className="text-[9px] md:text-[12px] font-semibold text-rose-700">
-                    {allTransactions.filter(t => t.type === 'expense' && !isPendingTransaction(t)).length}
+                    {allTransactions.filter(t => t.type === 'expense' && !isPendingTransaction(t) && !isDedicatedLeave(t)).length}
                   </span>
                 </div>
                 <div className="flex items-center gap-0.5 px-1.5 py-0.5 md:px-3 md:py-1.5 bg-amber-50 rounded-md md:rounded-lg">
@@ -495,21 +537,15 @@ export default function Dashboard({ selectedDriverId, selectedMonth: propSelecte
         
         {/* Mobile View */}
         <div className="block md:hidden">
-          {filteredTransactions.map(t => (
+          {filteredTransactions.map(t => {
+            const kind = txKind(t);
+            const tone = txTone[kind];
+            return (
             <div key={t.id} className="px-2.5 py-2 border-b border-zinc-100 last:border-0">
               <div className="flex items-start justify-between gap-2">
                 <div className="flex items-start gap-2 flex-1 min-w-0">
-                  <div className={
-                    isPendingTransaction(t) ? 'w-7 h-7 rounded-lg flex items-center justify-center shrink-0 bg-amber-50' : t.type === 'income' ? 'w-7 h-7 rounded-lg flex items-center justify-center shrink-0 bg-emerald-50'
-                        : 'w-7 h-7 rounded-lg flex items-center justify-center shrink-0 bg-rose-50'
-                  }>
-                    {isPendingTransaction(t) ? (
-                      <DollarSign className="w-3.5 h-3.5 text-amber-600" />
-                    ) : t.type === 'income' ? (
-                      <TrendingUp className="w-3.5 h-3.5 text-emerald-600" />
-                    ) : (
-                      <TrendingDown className="w-3.5 h-3.5 text-rose-600" />
-                    )}
+                  <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${tone.bg}`}>
+                    {kind === 'leave' ? <Umbrella className={`w-3.5 h-3.5 ${tone.icon}`} /> : kind === 'pending' ? <DollarSign className={`w-3.5 h-3.5 ${tone.icon}`} /> : kind === 'income' ? <TrendingUp className={`w-3.5 h-3.5 ${tone.icon}`} /> : <TrendingDown className={`w-3.5 h-3.5 ${tone.icon}`} />}
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-[11px] font-semibold text-zinc-900 capitalize">{t.category.replace('_', ' ')}</p>
@@ -530,14 +566,8 @@ export default function Dashboard({ selectedDriverId, selectedMonth: propSelecte
                   </div>
                 </div>
                 <div className="text-right shrink-0">
-                  <p className={
-                    isPendingTransaction(t)
-                      ? 'text-[12px] font-bold font-number text-amber-600' 
-                      : t.type === 'income' 
-                        ? 'text-[12px] font-bold font-number text-emerald-600' 
-                        : 'text-[12px] font-bold font-number text-rose-600'
-                  }>
-                    {isPendingTransaction(t) ? '' : t.type === 'income' ? '+' : '-'}{currency}{t.amount.toLocaleString()}
+                  <p className={`text-[12px] font-bold font-number ${tone.text}`}>
+                    {kind === 'leave' ? 'Leave' : `${tone.sign}${currency}${t.amount.toLocaleString()}`}
                   </p>
                   <div className="flex items-center gap-1.5 mt-1.5 justify-end">
                     <button 
@@ -556,7 +586,8 @@ export default function Dashboard({ selectedDriverId, selectedMonth: propSelecte
                 </div>
               </div>
             </div>
-          ))}
+            );
+          })}
         </div>
 
         {/* Desktop View: Table */}
@@ -575,38 +606,26 @@ export default function Dashboard({ selectedDriverId, selectedMonth: propSelecte
               </tr>
             </thead>
             <tbody className="divide-y divide-zinc-100/80">
-              {filteredTransactions.map(t => (
+              {filteredTransactions.map(t => {
+                const kind = txKind(t);
+                const tone = txTone[kind];
+                return (
                 <tr key={t.id} className="hover:bg-zinc-50/50 transition-colors group">
                   <td className="p-4 text-sm text-zinc-600 font-medium">
                     <div className="flex items-center gap-2">
-                      <div className={
-                        isPendingTransaction(t) ? 'w-2 h-2 rounded-full bg-amber-500' : t.type === 'income' ? 'w-2 h-2 rounded-full bg-emerald-500'
-                            : 'w-2 h-2 rounded-full bg-rose-500'
-                      }></div>
+                      <div className={`w-2 h-2 rounded-full ${tone.dot}`}></div>
                       {formatDate(t.date, { weekday: 'short', month: 'short', day: 'numeric' })}
                     </div>
                   </td>
                   <td className="p-4">
-                    <div className={
-                      isPendingTransaction(t) ? 'inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-semibold bg-amber-100 text-amber-700' : t.type === 'income' ? 'inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-semibold bg-emerald-100 text-emerald-700'
-                          : 'inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-semibold bg-rose-100 text-rose-700'
-                    }>
-                      {isPendingTransaction(t) ? (
-                        <DollarSign className="w-3 h-3" />
-                      ) : t.type === 'income' ? (
-                        <TrendingUp className="w-3 h-3" />
-                      ) : (
-                        <TrendingDown className="w-3 h-3" />
-                      )}
-                      {isPendingTransaction(t) ? 'pending' : t.type}
+                    <div className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-semibold ${tone.pill}`}>
+                      {kind === 'leave' ? <Umbrella className="w-3 h-3" /> : kind === 'pending' ? <DollarSign className="w-3 h-3" /> : kind === 'income' ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
+                      {kind === 'pending' ? 'pending' : kind}
                     </div>
                   </td>
                   <td className="p-4 text-sm text-zinc-700 capitalize font-medium">{t.category.replace('_', ' ')}</td>
-                  <td className={
-                    isPendingTransaction(t) ? 'p-4 text-sm font-bold font-number text-amber-600' : t.type === 'income' ? 'p-4 text-sm font-bold font-number text-emerald-600'
-                        : 'p-4 text-sm font-bold font-number text-rose-600'
-                  }>
-                    {isPendingTransaction(t) ? '' : t.type === 'income' ? '+' : '-'}{currency}{t.amount.toLocaleString()}
+                  <td className={`p-4 text-sm font-bold font-number ${tone.text}`}>
+                    {kind === 'leave' ? 'Leave' : `${tone.sign}${currency}${t.amount.toLocaleString()}`}
                   </td>
                   <td className="p-4">
                     {t.rickshaw_number ? (
@@ -656,7 +675,8 @@ export default function Dashboard({ selectedDriverId, selectedMonth: propSelecte
                     </div>
                   </td>
                 </tr>
-              ))}
+                );
+              })}
             </tbody>
           </table>
         </div>
@@ -900,6 +920,13 @@ export default function Dashboard({ selectedDriverId, selectedMonth: propSelecte
         isOpen={isPendingBalanceModalOpen} 
         onClose={() => setIsPendingBalanceModalOpen(false)} 
         onSuccess={fetchData}
+        selectedDriverId={selectedDriverId}
+      />
+
+      <LeaveModal
+        isOpen={isLeaveModalOpen}
+        onClose={() => setIsLeaveModalOpen(false)}
+        onSuccess={() => { fetchData(); onSaved?.(); }}
         selectedDriverId={selectedDriverId}
       />
       

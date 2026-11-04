@@ -572,12 +572,15 @@ app.delete('/api/pending-register/:id', authenticate, async (req, res) => {
 app.get('/api/transactions', authenticate, async (req, res) => {
   try {
     await ensureDb();
-    const { start_date, end_date, rickshaw_id, driver_id, limit, month } = req.query;
+    const { start_date, end_date, rickshaw_id, driver_id, limit, month, leave } = req.query;
     const conds = ['1=1']; const args: any[] = []; let i = 1;
     if (start_date)  { conds.push(`t.date >= $${i++}`);       args.push(start_date); }
     if (end_date)    { conds.push(`t.date <= $${i++}`);       args.push(end_date); }
     if (month && month !== 'all') {
-      conds.push(`TO_CHAR(TO_DATE(t.date,'YYYY-MM-DD'),'YYYY-MM') = '${month}'`);
+      // Prefix match stays valid for both "YYYY-MM-DD" and timestamps, and does not
+      // abort the whole list when one stored date is not a strict date.
+      conds.push(`SUBSTRING(t.date, 1, 7) = $${i++}`);
+      args.push(String(month).slice(0, 7));
     }
     if (rickshaw_id) {
       if (Array.isArray(rickshaw_id)) {
@@ -589,6 +592,9 @@ app.get('/api/transactions', authenticate, async (req, res) => {
       }
     }
     if (driver_id)   { conds.push(`t.driver_id = $${i++}`);   args.push(driver_id); }
+    if (leave === '1') {
+      conds.push(`(LOWER(COALESCE(t.category,'')) = 'leave' OR LOWER(COALESCE(t.type,'')) = 'leave' OR LOWER(COALESCE(t.notes,'')) LIKE '%leave%' OR LOWER(COALESCE(t.notes,'')) LIKE '%off%')`);
+    }
     let q = `SELECT t.*, rk.number as rickshaw_number, d.name as driver_name
       FROM transactions t
       LEFT JOIN rickshaws rk ON t.rickshaw_id=rk.id

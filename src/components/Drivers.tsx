@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Plus, Users, Phone, Calendar, Car, Edit, Trash2, DollarSign, Droplets, Umbrella, X } from 'lucide-react';
 import { Driver, Rickshaw } from '../types';
 import { todayYMD, toYMD, formatDate, currentMonth } from '../utils/date';
+import { isLeaveTransaction, uniqueLeaveDays } from '../utils/leave';
 
 const ymdOf = (d: any) => (typeof d === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(d) ? d : toYMD(d));
 const oilDate = (d: any) => formatDate(ymdOf(d), { day: 'numeric', month: 'short', year: 'numeric' }).replace(/^(\w+) (\d+), (\d+)$/, '$2 $1 $3');
@@ -14,6 +15,7 @@ export default function Drivers({ onDriverAdded, defaultShowForm }: { onDriverAd
   const [editingDriver, setEditingDriver] = useState<Driver | null>(null);
   const [currency, setCurrency] = useState('Rs.');
   const [driversOnLeave, setDriversOnLeave] = useState<Set<number>>(new Set());
+  const [monthLeaves, setMonthLeaves] = useState<Record<string, { id: number; date: string }[]>>({});
   const [lastOilChange, setLastOilChange] = useState<Record<number, string>>({});
   const [oilChangeList, setOilChangeList] = useState<any[]>([]);
   const [view, setView] = useState<'drivers' | 'oil'>('drivers');
@@ -73,8 +75,8 @@ export default function Drivers({ onDriverAdded, defaultShowForm }: { onDriverAd
     if (Array.isArray(transactions)) {
       const onLeaveToday = new Set<number>();
       transactions.forEach((tx: any) => {
-        if (tx.notes && tx.notes.toLowerCase().includes('leave') && tx.driver_id) {
-          onLeaveToday.add(tx.driver_id);
+        if (isLeaveTransaction(tx) && tx.driver_id) {
+          onLeaveToday.add(Number(tx.driver_id));
         }
       });
       setDriversOnLeave(onLeaveToday);
@@ -129,6 +131,19 @@ export default function Drivers({ onDriverAdded, defaultShowForm }: { onDriverAd
       });
       setLastOilChange(oilChanges);
       setOilChangeList(oilList);
+
+      const monthPrefix = currentMonth();
+      const grouped: Record<string, any[]> = {};
+      allTransactions.forEach((tx: any) => {
+        if (!tx.driver_id || !isLeaveTransaction(tx)) return;
+        if (!String(tx.date).slice(0, 7).startsWith(monthPrefix)) return;
+        (grouped[String(tx.driver_id)] ||= []).push(tx);
+      });
+      const deduped: Record<string, { id: number; date: string }[]> = {};
+      Object.entries(grouped).forEach(([id, rows]) => {
+        deduped[id] = uniqueLeaveDays(rows).map(row => ({ id: row.id, date: row.date }));
+      });
+      setMonthLeaves(deduped);
     }
   };
 
@@ -490,6 +505,19 @@ export default function Drivers({ onDriverAdded, defaultShowForm }: { onDriverAd
                 </span>
               </div>
             </div>
+
+            {(monthLeaves[String(d.id)] || []).length > 0 && (
+              <div className="mb-3">
+                <p className="text-[11px] font-semibold text-amber-800 mb-1.5">Leave this month · {monthLeaves[String(d.id)].length}</p>
+                <div className="flex flex-wrap gap-1 max-h-24 overflow-y-auto">
+                  {monthLeaves[String(d.id)].map(leave => (
+                    <span key={leave.id} className="text-[10px] font-medium text-amber-900 bg-amber-50 border border-amber-100 px-1.5 py-0.5 rounded">
+                      {formatDate(leave.date, { month: 'short', day: 'numeric' })}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
 
             <div className="space-y-3.5 text-[13px] text-zinc-600">
               <div className="flex items-center gap-3">

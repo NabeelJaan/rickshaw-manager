@@ -14,6 +14,7 @@ import OilTab from './components/OilTab';
 import SettingsPage from './components/Settings';
 import { Driver } from './types';
 import { todayYMD, currentMonth, shiftYMD } from './utils/date';
+import { isLeaveTransaction } from './utils/leave';
 
 // Names to always show last in the driver list (case-insensitive substring match)
 const PINNED_LAST_NAMES = ['zain', 'hassan'];
@@ -86,7 +87,7 @@ function AppContent() {
           if (!tx.driver_id) return;
           const id = tx.driver_id.toString();
 
-          if (tx.notes && tx.notes.toLowerCase().includes('leave')) {
+          if (isLeaveTransaction(tx)) {
             onLeave.add(id);
           }
 
@@ -211,7 +212,7 @@ function AppContent() {
 
   const renderContent = () => {
     switch (activeTab) {
-      case 'dashboard': return <Dashboard selectedDriverId={selectedDriverId} selectedMonth={selectedMonth} onMonthChange={setSelectedMonth} />;
+      case 'dashboard': return <Dashboard selectedDriverId={selectedDriverId} selectedMonth={selectedMonth} onMonthChange={setSelectedMonth} onSaved={fetchTodayEntries} />;
       case 'rickshaws': return <Rickshaws selectedDriverId={selectedDriverId} onStatusChange={() => { fetchDrivers(); setSelectedDriverId(''); }} />;
       case 'drivers': return <Drivers onDriverAdded={fetchDrivers} defaultShowForm={showAddDriverForm} />;
       case 'netprofit': return <NetProfit />;

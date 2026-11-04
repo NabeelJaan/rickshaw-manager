@@ -7,6 +7,11 @@ test('pending notes preserve decimal and thousands amounts', () => {
   assert.equal(transactionAmount('', 'other', 'pending', '500.75 pending'), 500.75);
   assert.equal(transactionAmount('250.25', 'rent_pending', 'income', '500 pending'), 250.25);
 });
+test('leave records stay at zero even if an amount is sent', () => {
+  assert.equal(transactionAmount(0, 'leave', 'leave', 'Leave'), 0);
+  assert.equal(transactionAmount('', 'leave', 'leave'), 0);
+  assert.equal(transactionAmount(500, 'leave', 'leave', 'Leave'), 0);
+});
 test('invalid amounts cannot corrupt balances', () => {
   for (const value of [-5, 'bad', Infinity, '', 0]) {
     assert.throws(() => transactionAmount(value, 'rent', 'income'));
