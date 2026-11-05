@@ -17,10 +17,17 @@ interface Category {
   type: 'income' | 'expense';
 }
 
+const DEFAULT_EXPENSE_CATEGORY = 'engine_oil';
+
+function preferredExpenseCategory(categories: { name: string }[]): string {
+  const found = categories.find(c => c.name.toLowerCase().replace(/[\s-]+/g, '_') === DEFAULT_EXPENSE_CATEGORY);
+  return found?.name || DEFAULT_EXPENSE_CATEGORY;
+}
+
 export default function ExpenseModal({ isOpen, onClose, onSuccess, driverId, driverName }: ExpenseModalProps) {
   const [formData, setFormData] = useState({
     date: todayYMD(),
-    category: 'fuel',
+    category: DEFAULT_EXPENSE_CATEGORY,
     amount: '',
     notes: ''
   });
@@ -39,7 +46,7 @@ export default function ExpenseModal({ isOpen, onClose, onSuccess, driverId, dri
       fetchAssignedRickshaw();
       setFormData({
         date: todayYMD(),
-        category: 'fuel',
+        category: DEFAULT_EXPENSE_CATEGORY,
         amount: '',
         notes: ''
       });
@@ -96,7 +103,12 @@ export default function ExpenseModal({ isOpen, onClose, onSuccess, driverId, dri
         const data = await response.json();
         if (Array.isArray(data)) {
           setCategories(data);
-          setFormData(prev => ({ ...prev, category: data.some(c => c.name === prev.category) ? prev.category : data[0]?.name || '' }));
+          setFormData(prev => {
+            const preferred = preferredExpenseCategory(data);
+            const stillDefault = prev.category === 'fuel' || prev.category === DEFAULT_EXPENSE_CATEGORY;
+            const known = data.some(c => c.name === prev.category);
+            return { ...prev, category: stillDefault || !known ? preferred : prev.category };
+          });
         }
       }
     } catch (error) {
@@ -136,7 +148,7 @@ export default function ExpenseModal({ isOpen, onClose, onSuccess, driverId, dri
     onClose();
     setFormData({
       date: todayYMD(),
-      category: 'fuel',
+      category: DEFAULT_EXPENSE_CATEGORY,
       amount: '',
       notes: ''
     });
@@ -145,48 +157,61 @@ export default function ExpenseModal({ isOpen, onClose, onSuccess, driverId, dri
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-2xl shadow-xl max-w-md w-full p-6 max-h-[90dvh] overflow-y-auto">
-        <div className="flex items-center justify-between mb-6">
-          <h3 className="text-xl font-bold text-zinc-900">Add Expense</h3>
+    <div className="fixed inset-0 bg-black/50 flex items-end sm:items-center justify-center p-0 sm:p-4 z-50">
+      <div className="bg-white rounded-t-2xl sm:rounded-2xl shadow-xl max-w-md w-full p-4 sm:p-6 max-h-[100dvh] overflow-y-auto">
+        <div className="flex items-center justify-between mb-3">
+          <div className="min-w-0">
+            <h3 className="text-lg font-bold text-zinc-900 leading-tight">Add Expense</h3>
+            {driverName && <p className="text-xs text-zinc-500 truncate">Driver: <span className="font-medium text-zinc-800">{driverName}</span></p>}
+          </div>
           <button 
             onClick={onClose}
-            className="text-zinc-400 hover:text-zinc-600 transition-colors"
+            className="text-zinc-400 hover:text-zinc-600 transition-colors shrink-0"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
-        <div className="mb-4 p-3 bg-zinc-50 rounded-xl">
-          <p className="text-sm text-zinc-600">Driver: <span className="font-medium text-zinc-900">{driverName}</span></p>
-        </div>
-
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="block text-[13px] font-medium text-zinc-700 mb-1.5">Date</label>
-            <input 
-              type="date" 
-              required 
-              className="w-full px-4 py-2.5 bg-zinc-50 border border-zinc-200 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all text-sm"
-              value={formData.date} 
-              onChange={e => setFormData({...formData, date: e.target.value})} 
-            />
+        <form onSubmit={handleSubmit} className="space-y-3">
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-[13px] font-medium text-zinc-700 mb-1">Date</label>
+              <input 
+                type="date" 
+                required 
+                className="w-full px-3 py-2 bg-zinc-50 border border-zinc-200 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all text-sm"
+                value={formData.date} 
+                onChange={e => setFormData({...formData, date: e.target.value})} 
+              />
+            </div>
+            <div>
+              <label className="block text-[13px] font-medium text-zinc-700 mb-1">Amount</label>
+              <input 
+                type="number" 
+                step="0.01" min="0"
+                className="w-full px-3 py-2 bg-zinc-50 border border-zinc-200 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all text-sm font-number"
+                value={formData.amount} 
+                onChange={e => setFormData({...formData, amount: e.target.value})} 
+                placeholder={formData.category === 'rent_pending' ? "0" : "0.00"}
+                required={formData.category !== 'rent_pending'}
+              />
+            </div>
           </div>
 
-          <CategoryPicker categories={categories} value={formData.category} type="expense"
+          <CategoryPicker categories={categories} value={formData.category} type="expense" previewCount={6}
             onChange={category => setFormData(prev => ({ ...prev, category }))}
             onCreated={category => setCategories(prev => [...prev.filter(c => c.id !== category.id), category])}
             onRemoved={category => {
               const remaining = categories.filter(c => c.id !== category.id);
               setCategories(remaining);
-              setFormData(prev => ({ ...prev, category: prev.category === category.name ? remaining[0]?.name || '' : prev.category }));
+              setFormData(prev => ({ ...prev, category: prev.category === category.name ? preferredExpenseCategory(remaining) : prev.category }));
             }} />
 
           <div>
-            <label className="block text-[13px] font-medium text-zinc-700 mb-1.5">Rickshaw</label>
+            <label className="block text-[13px] font-medium text-zinc-700 mb-1">Rickshaw</label>
             <select
               required
-              className="w-full px-4 py-2.5 bg-zinc-50 border border-zinc-200 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all text-sm"
+              className="w-full px-3 py-2 bg-zinc-50 border border-zinc-200 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all text-sm"
               value={assignedRickshawId}
               onChange={e => setAssignedRickshawId(e.target.value)}
             >
@@ -195,41 +220,20 @@ export default function ExpenseModal({ isOpen, onClose, onSuccess, driverId, dri
                 <option key={r.id} value={String(r.id)}>{r.number}</option>
               ))}
             </select>
-            <p className="mt-1 text-[11px] text-zinc-400">
-              Expenses are tracked per rickshaw (drivers can switch).
-            </p>
           </div>
 
           <div>
-            <label className="block text-[13px] font-medium text-zinc-700 mb-1.5">Amount</label>
-            <input 
-              type="number" 
-              step="0.01" min="0"
-              className="w-full px-4 py-2.5 bg-zinc-50 border border-zinc-200 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all text-sm font-number"
-              value={formData.amount} 
-              onChange={e => setFormData({...formData, amount: e.target.value})} 
-              placeholder={formData.category === 'rent_pending' ? "0 (will use notes amount)" : "0.00"}
-              required={formData.category !== 'rent_pending'}
-            />
-            {formData.category === 'rent_pending' && (
-              <p className="mt-1 text-[11px] text-amber-600 font-medium">
-                Tip: Leave amount 0 and enter "500 pending" in notes to add 500 to pending balance.
-              </p>
-            )}
-          </div>
-
-          <div>
-            <label className="block text-[13px] font-medium text-zinc-700 mb-1.5">Notes/Comments</label>
-            <textarea 
-              className="w-full px-4 py-2.5 bg-zinc-50 border border-zinc-200 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all text-sm resize-none"
-              rows={3}
-              value={formData.notes} 
-              onChange={e => setFormData({...formData, notes: e.target.value})} 
-              placeholder="Add any additional details..."
+            <label className="block text-[13px] font-medium text-zinc-700 mb-1">Notes</label>
+            <input
+              type="text"
+              className="w-full px-3 py-2 bg-zinc-50 border border-zinc-200 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all text-sm"
+              value={formData.notes}
+              onChange={e => setFormData({...formData, notes: e.target.value})}
+              placeholder="Optional note"
             />
           </div>
 
-          <div className="flex gap-3 pt-2">
+          <div className="flex gap-3">
             <button 
               type="button" 
               onClick={onClose}

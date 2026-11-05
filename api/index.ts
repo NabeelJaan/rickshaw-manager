@@ -99,7 +99,7 @@ async function ensureDb() {
   )`;
   const defaults: [string, string][] = [
     ['rent','income'],['rent_recovery','income'],['tips','income'],['other','income'],
-    ['fuel','expense'],['maintenance','expense'],['salary','expense'],['rent_pending','expense'],['other','expense'],
+    ['fuel','expense'],['engine_oil','expense'],['maintenance','expense'],['salary','expense'],['rent_pending','expense'],['other','expense'],
   ];
   for (const [n, t] of defaults) {
     await sql`INSERT INTO categories (name,type,is_default) VALUES (${n},${t},1) ON CONFLICT (name,type) DO NOTHING`;

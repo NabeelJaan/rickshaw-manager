@@ -138,7 +138,7 @@ export default function Transactions({ selectedDriverId }: { selectedDriverId?: 
     setFormData({
       ...formData,
       type: 'expense',
-      category: 'maintenance',
+      category: 'engine_oil',
       amount: '',
       notes: ''
     });
@@ -326,7 +326,7 @@ export default function Transactions({ selectedDriverId }: { selectedDriverId?: 
                 setFormData({
                   ...formData, 
                   type: newType,
-                  category: newType === 'income' ? 'rent' : newType === 'pending' ? 'rent_pending' : 'fuel'
+                  category: newType === 'income' ? 'rent' : newType === 'pending' ? 'rent_pending' : 'engine_oil'
                 });
               }}>
               <option value="income">Income</option>
@@ -356,6 +356,7 @@ export default function Transactions({ selectedDriverId }: { selectedDriverId?: 
                 </>
               ) : formData.type === 'expense' ? (
                 <>
+                  <option value="engine_oil" />
                   <option value="fuel" />
                   <option value="maintenance" />
                   <option value="salary" />

@@ -117,7 +117,7 @@ export default function EditTransactionModal({ isOpen, onClose, onSuccess, trans
                   setFormData({
                     ...formData, 
                     type: newType,
-                    category: newType === 'income' ? 'rent' : newType === 'pending' ? 'rent_pending' : 'fuel'
+                    category: newType === 'income' ? 'rent' : newType === 'pending' ? 'rent_pending' : 'engine_oil'
                   });
                 }}
               >
@@ -149,6 +149,7 @@ export default function EditTransactionModal({ isOpen, onClose, onSuccess, trans
                   </>
                 ) : formData.type === 'expense' ? (
                   <>
+                    <option value="engine_oil" />
                     <option value="fuel" />
                     <option value="maintenance" />
                     <option value="salary" />

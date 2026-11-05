@@ -10,14 +10,25 @@ interface Props {
   onChange: (value: string) => void;
   onCreated: (category: Category) => void;
   onRemoved: (category: Category) => void;
+  /** When set, only this many categories show until "Show more". The selected one stays visible. */
+  previewCount?: number;
 }
 
-export default function CategoryPicker({ categories, value, type, onChange, onCreated, onRemoved }: Props) {
+export default function CategoryPicker({ categories, value, type, onChange, onCreated, onRemoved, previewCount }: Props) {
   const [managing, setManaging] = useState(false);
   const [adding, setAdding] = useState(false);
+  const [showAll, setShowAll] = useState(false);
   const [name, setName] = useState('');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  const ordered = [...categories];
+  const selectedIndex = ordered.findIndex(c => c.name === value);
+  if (previewCount && selectedIndex >= previewCount) {
+    const [selected] = ordered.splice(selectedIndex, 1);
+    ordered.unshift(selected);
+  }
+  const collapsed = !!previewCount && !showAll && ordered.length > previewCount;
+  const visible = collapsed ? ordered.slice(0, previewCount) : ordered;
   const add = async () => {
     let clean: string;
     try { clean = categoryName(name); } catch (e) { setError((e as Error).message); return; }
@@ -57,12 +68,17 @@ export default function CategoryPicker({ categories, value, type, onChange, onCr
       <legend className="text-[13px] font-medium text-zinc-700">Category</legend>
       <button type="button" onClick={() => setAdding(!adding)} className="inline-flex items-center gap-1 text-xs font-medium text-emerald-700"><Plus size={14} /> Add category</button>
     </div>
-    <div className="grid grid-cols-3 gap-[10px]" role="group" aria-label="Category">
-      {categories.map(cat => <button key={cat.id} type="button" aria-pressed={value === cat.name} onClick={() => onChange(cat.name)}
-        className={`min-w-0 rounded-lg border px-2 py-2 text-[10px] leading-4 break-words capitalize focus-visible:outline-2 focus-visible:outline-emerald-500 ${value === cat.name ? 'border-emerald-500 bg-emerald-50 text-emerald-800 font-semibold' : 'border-zinc-200 bg-zinc-50 text-zinc-700 hover:border-emerald-400'}`}>
+    <div className="grid grid-cols-3 gap-2" role="group" aria-label="Category">
+      {visible.map(cat => <button key={cat.id} type="button" aria-pressed={value === cat.name} onClick={() => onChange(cat.name)}
+        className={`min-w-0 rounded-lg border px-2 py-1.5 text-[10px] leading-4 break-words capitalize focus-visible:outline-2 focus-visible:outline-emerald-500 ${value === cat.name ? 'border-emerald-500 bg-emerald-50 text-emerald-800 font-semibold' : 'border-zinc-200 bg-zinc-50 text-zinc-700 hover:border-emerald-400'}`}>
         {cat.name.replace(/_/g, ' ')}
       </button>)}
     </div>
+    {!!previewCount && ordered.length > previewCount && (
+      <button type="button" onClick={() => setShowAll(open => !open)} className="mt-1.5 text-xs font-medium text-emerald-700">
+        {showAll ? 'Show less' : `Show more (${ordered.length - previewCount})`}
+      </button>
+    )}
     <button type="button" onClick={() => { setManaging(!managing); setError(''); }} className="mt-2 text-xs text-zinc-600 underline">{managing ? 'Done managing' : 'Manage categories'}</button>
     {managing && <div className="mt-2 space-y-2">
       <p className="text-xs text-zinc-500">Remove unused custom categories. Default categories and categories used in transactions are protected.</p>
