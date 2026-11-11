@@ -1,9 +1,9 @@
-import { dailyPendingRows } from '../utils/dailyPending';
 import { useState, useEffect } from 'react';
 import { CalendarDays, Calendar, ChevronLeft, ChevronRight, Check } from 'lucide-react';
 import { Transaction, Driver, Rickshaw } from '../types';
 import { todayYMD, shiftYMD, formatDate } from '../utils/date';
 import { isLeaveTransaction } from '../utils/leave';
+import { isPendingTransaction } from '../utils/transactionStatus';
 
 interface DiaryRow {
   key: string;
@@ -11,6 +11,7 @@ interface DiaryRow {
   rickshaw: string;
   income: number;
   expense: number;
+  pending: number;
   paid: boolean;
   isDriver: boolean;
   parked: boolean;
@@ -59,23 +60,28 @@ export default function IncomeTab() {
 
   const isToday = date === todayYMD();
 
-  // Sum income and expenses per driver for the selected date
+  // Sum income, pending, and expenses per driver for the selected date
   const incomeById: Record<string, number> = {};
   const expenseById: Record<string, number> = {};
-  let noDriverIncome = 0, noDriverExpense = 0;
+  const pendingById: Record<string, number> = {};
+  let noDriverIncome = 0, noDriverExpense = 0, noDriverPending = 0;
   transactions.forEach(t => {
-    const isPending = t.category === 'rent_pending' || t.type === 'pending';
     const amount = Number(t.amount) || 0;
-    const isIncome = t.type === 'income' && !isPending;
-    const isExpense = t.type === 'expense' && !isPending;
-    if (isPending || (!isIncome && !isExpense)) return;
-    if (t.driver_id == null || !drivers.some(d => String(d.id) === String(t.driver_id))) {
-      if (isIncome) noDriverIncome += amount;
+    const pending = isPendingTransaction(t);
+    const isIncome = t.type === 'income' && !pending;
+    const isExpense = t.type === 'expense' && !pending;
+    if (pending && amount <= 0) return;
+    if (!pending && !isIncome && !isExpense) return;
+    const knownDriver = t.driver_id != null && drivers.some(d => String(d.id) === String(t.driver_id));
+    if (!knownDriver) {
+      if (pending) noDriverPending += amount;
+      else if (isIncome) noDriverIncome += amount;
       else noDriverExpense += amount;
       return;
     }
     const id = String(t.driver_id);
-    if (isIncome) incomeById[id] = (incomeById[id] || 0) + amount;
+    if (pending) pendingById[id] = (pendingById[id] || 0) + amount;
+    else if (isIncome) incomeById[id] = (incomeById[id] || 0) + amount;
     else expenseById[id] = (expenseById[id] || 0) + amount;
   });
 
@@ -89,30 +95,30 @@ export default function IncomeTab() {
     const id = String(d.id);
     const income = incomeById[id] || 0;
     const expense = expenseById[id] || 0;
+    const pending = pendingById[id] || 0;
     const rickshaw = rickshaws.find(r => r.number === d.assigned_rickshaw);
     const parked = (rickshaw?.status || d.rickshaw_status) === 'parked';
-    return { key: id, name: d.name, rickshaw: d.assigned_rickshaw || '', income, expense, paid: income > 0, isDriver: true, parked, leave: leaveIds.has(id) };
+    return { key: id, name: d.name, rickshaw: d.assigned_rickshaw || '', income, expense, pending, paid: income > 0, isDriver: true, parked, leave: leaveIds.has(id) };
   });
 
   const sortRows = (rows: DiaryRow[]) =>
-    [...rows].sort((a, b) => (b.paid ? 1 : 0) - (a.paid ? 1 : 0) || b.income - a.income);
+    [...rows].sort((a, b) => (b.paid ? 1 : 0) - (a.paid ? 1 : 0) || (b.pending > 0 ? 1 : 0) - (a.pending > 0 ? 1 : 0) || b.income - a.income || b.pending - a.pending);
 
   // Keep every driver in one of the two status groups.
   const activeRows = sortRows(allRows.filter(r => !r.parked));
   const parkedRows = sortRows(allRows.filter(r => r.parked));
-  if (noDriverIncome > 0 || noDriverExpense > 0) {
-    activeRows.push({ key: 'none', name: '— (no driver)', rickshaw: '', income: noDriverIncome, expense: noDriverExpense, paid: noDriverIncome > 0, isDriver: false, parked: false, leave: false });
+  if (noDriverIncome > 0 || noDriverExpense > 0 || noDriverPending > 0) {
+    activeRows.push({ key: 'none', name: '— (no driver)', rickshaw: '', income: noDriverIncome, expense: noDriverExpense, pending: noDriverPending, paid: noDriverIncome > 0, isDriver: false, parked: false, leave: false });
   }
-
-  const pendingRows = dailyPendingRows(rickshaws, transactions, date);
-  const totalPending = pendingRows.reduce((sum, row) => sum + Math.round(row.amount * 100), 0) / 100;
 
   const grandIncome = allRows.reduce((s, r) => s + r.income, 0) + noDriverIncome;
   const grandExpense = allRows.reduce((s, r) => s + r.expense, 0) + noDriverExpense;
+  const grandPending = allRows.reduce((s, r) => s + r.pending, 0) + noDriverPending;
 
   const DiaryTable = ({ title, rows }: { title: string; rows: DiaryRow[] }) => {
     const totalIncome = rows.reduce((s, r) => s + r.income, 0);
     const totalExpense = rows.reduce((s, r) => s + r.expense, 0);
+    const totalPending = rows.reduce((s, r) => s + r.pending, 0);
     const driverRows = rows.filter(r => r.isDriver);
     const paidCount = driverRows.filter(r => r.paid).length;
 
@@ -146,7 +152,7 @@ export default function IncomeTab() {
                     <td className="px-3 md:px-4 py-2.5 md:py-3">
                       <div className="flex items-center gap-2">
                         {r.isDriver && (
-                          <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${r.leave ? 'bg-rose-500' : r.paid ? 'bg-emerald-500' : 'bg-zinc-300'}`} />
+                          <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${r.leave ? 'bg-rose-500' : r.paid ? 'bg-emerald-500' : r.pending > 0 ? 'bg-amber-500' : 'bg-zinc-300'}`} />
                         )}
                         <span className="text-[12px] md:text-sm font-medium text-zinc-900">{r.name}</span>
                         {r.leave && (
@@ -157,8 +163,10 @@ export default function IncomeTab() {
                         )}
                       </div>
                     </td>
-                    <td className={`px-3 md:px-4 py-2.5 md:py-3 text-right text-[12px] md:text-sm font-semibold font-number ${r.income > 0 ? 'text-emerald-600' : 'text-zinc-300'}`}>
-                      {r.income > 0 ? `${currency} ${r.income.toLocaleString()}` : '—'}
+                    <td className="px-3 md:px-4 py-2.5 md:py-3 text-right text-[12px] md:text-sm font-semibold font-number">
+                      {r.income > 0 && <div className="text-emerald-600">{currency} {r.income.toLocaleString()}</div>}
+                      {r.pending > 0 && <div className="text-amber-600">{currency} {r.pending.toLocaleString()}</div>}
+                      {r.income <= 0 && r.pending <= 0 && <span className="text-zinc-300">—</span>}
                     </td>
                     <td className={`px-3 md:px-4 py-2.5 md:py-3 text-right text-[12px] md:text-sm font-semibold font-number ${r.expense > 0 ? 'text-rose-600' : 'text-zinc-300'}`}>
                       {r.expense > 0 ? `${currency} ${r.expense.toLocaleString()}` : '—'}
@@ -171,7 +179,10 @@ export default function IncomeTab() {
               <tfoot className="bg-zinc-50/80 border-t border-zinc-200">
                 <tr>
                   <td className="px-3 md:px-4 py-2.5 md:py-3 text-[12px] md:text-sm font-bold text-zinc-900">Total</td>
-                  <td className="px-3 md:px-4 py-2.5 md:py-3 text-right text-[12px] md:text-sm font-bold text-emerald-700 font-number">{currency} {totalIncome.toLocaleString()}</td>
+                  <td className="px-3 md:px-4 py-2.5 md:py-3 text-right text-[12px] md:text-sm font-bold font-number">
+                    <div className="text-emerald-700">{currency} {totalIncome.toLocaleString()}</div>
+                    {totalPending > 0 && <div className="text-amber-700">{currency} {totalPending.toLocaleString()}</div>}
+                  </td>
                   <td className="px-3 md:px-4 py-2.5 md:py-3 text-right text-[12px] md:text-sm font-bold text-rose-700 font-number">{currency} {totalExpense.toLocaleString()}</td>
                 </tr>
               </tfoot>
@@ -245,29 +256,14 @@ export default function IncomeTab() {
         {!loading && (
           <p className="text-[11px] md:text-xs text-zinc-500">
             Day total: <span className="font-semibold text-emerald-600 font-number">{currency} {grandIncome.toLocaleString()}</span>
+            {grandPending > 0 && <> · <span className="font-semibold text-amber-600 font-number">{currency} {grandPending.toLocaleString()}</span></>}
             {grandExpense > 0 && <> · <span className="font-semibold text-rose-600 font-number">-{currency} {grandExpense.toLocaleString()}</span></>}
           </p>
         )}
       </div>
 
       {error && <p role="alert" className="text-sm text-rose-600">{error}</p>}
-      {/* Income and expenses remain in the driver tables. */}
       <DiaryTable title="Active Rickshaw Drivers" rows={activeRows} />
-      <div className="bg-white rounded-2xl shadow-sm border border-amber-200 overflow-hidden">
-        <div className="px-3 md:px-4 py-3 bg-amber-50 border-b border-amber-100">
-          <h3 className="text-sm md:text-base font-semibold text-amber-900">Rickshaw Pending</h3>
-          <p className="text-xs text-amber-700 mt-1">Only drivers with pending amounts on the selected date.</p>
-        </div>
-        <div className="overflow-x-auto"><table className="w-full text-xs md:text-sm text-left">
-          <thead className="bg-amber-50/50"><tr><th scope="col" className="p-3">Rickshaw</th><th scope="col" className="p-3">Driver on entry</th><th scope="col" className="p-3 text-right">Pending</th></tr></thead>
-          <tbody className="divide-y divide-amber-100">
-            {loading ? <tr><td colSpan={3} className="p-4 text-center text-zinc-500">Loading...</td></tr> : pendingRows.length ? pendingRows.map(row => <tr key={row.key} className={row.amount > 0 ? 'bg-amber-50/50' : ''}>
-              <td className="p-3 font-medium">{row.number}</td><td className="p-3 text-zinc-500">{row.drivers || '—'}</td><td className={`p-3 text-right font-semibold font-number ${row.amount > 0 ? 'text-amber-700' : 'text-zinc-400'}`}>{currency} {row.amount.toLocaleString()}</td>
-            </tr>) : <tr><td colSpan={3} className="p-4 text-center text-zinc-500">No pending amounts for this date.</td></tr>}
-          </tbody>
-          {!loading && pendingRows.length > 0 && <tfoot className="bg-amber-50 border-t border-amber-200"><tr><th scope="row" colSpan={2} className="p-3">Total pending</th><td className="p-3 text-right font-bold text-amber-800 font-number">{currency} {totalPending.toLocaleString()}</td></tr></tfoot>}
-        </table></div>
-      </div>
       <DiaryTable title="Parked Rickshaw Drivers" rows={parkedRows} />
     </div>
   );
