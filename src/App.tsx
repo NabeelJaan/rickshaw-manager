@@ -1,6 +1,6 @@
 import PendingLedger from './components/PendingLedger';
 import { useState, useEffect } from 'react';
-import { LayoutDashboard, Users, Car, Settings, Menu, X, LogOut, FileText, Calculator, History, TrendingUp, Wallet, Droplets } from 'lucide-react';
+import { LayoutDashboard, Users, Car, Settings, Menu, X, LogOut, FileText, Calculator, History, TrendingUp, Wallet, Droplets, Coins } from 'lucide-react';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import LoginPage from './components/LoginPage';
 import Dashboard from './components/Dashboard';
@@ -12,6 +12,7 @@ import IncomeTab from './components/IncomeTab';
 import ExpenseManager from './components/ExpenseManager';
 import OilTab from './components/OilTab';
 import SettingsPage from './components/Settings';
+import CommitteeTab from './components/CommitteeTab';
 import { Driver } from './types';
 import { todayYMD, currentMonth, shiftYMD } from './utils/date';
 import { isLeaveTransaction } from './utils/leave';
@@ -206,6 +207,7 @@ function AppContent() {
     { id: 'netprofit', label: 'Net Profit', icon: Calculator },
     { id: 'oil', label: 'Oil Changes', icon: Droplets },
     { id: 'expenses', label: 'Expense Manager', icon: Wallet },
+    { id: 'commetti', label: 'Commetti', icon: Coins },
     { id: 'history', label: 'History', icon: History },
     { id: 'settings', label: 'Settings', icon: Settings },
   ];
@@ -220,6 +222,7 @@ function AppContent() {
       case 'pending-register': return <PendingLedger />;
       case 'oil': return <OilTab />;
       case 'expenses': return <ExpenseManager />;
+      case 'commetti': return <CommitteeTab />;
       case 'history': return <HistoryPage />;
       case 'settings': return <SettingsPage />;
       default: return <Dashboard selectedDriverId={selectedDriverId} />;
@@ -319,8 +322,8 @@ function AppContent() {
       <main className="flex-1 min-w-0 p-3 md:p-8 lg:p-10 overflow-y-auto min-h-screen md:min-h-0 md:h-screen">
         <div className="max-w-7xl mx-auto">
 
-          {/* Driver Filter Tabs */}
-          <div className="mb-4 md:mb-6">
+          {/* Driver Filter Tabs — hidden on Commetti, which is not part of the rickshaw accounts */}
+          {activeTab !== 'commetti' && <div className="mb-4 md:mb-6">
             <div className="flex items-center gap-1.5 md:gap-2 mb-2 md:mb-3">
               <Users className="w-3.5 h-3.5 md:w-4 md:h-4 text-zinc-500" />
               <span className="text-xs md:text-sm font-medium text-zinc-600">Select Driver:</span>
@@ -384,7 +387,7 @@ function AppContent() {
                 <Users className="w-3 h-3 md:w-3.5 md:h-3.5" /> Add Driver
               </button>
             </div>
-          </div>
+          </div>}
 
           {renderContent()}
         </div>

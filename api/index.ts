@@ -1,5 +1,6 @@
 import { categoryName, categoryType } from '../src/utils/category.js';
 import { validatePendingRecord } from '../src/utils/pendingRecord.js';
+import { validateCommitteeEntry } from '../src/utils/committee.js';
 import { transactionAmount } from '../src/utils/transactionAmount.js';
 import express from 'express';
 import { sql } from '@vercel/postgres';
@@ -73,6 +74,12 @@ async function ensureDb() {
     rickshaw_id INTEGER REFERENCES rickshaws(id),
     driver_id INTEGER REFERENCES drivers(id),
     notes TEXT
+  )`;
+  await sql`CREATE TABLE IF NOT EXISTS committee_entries (
+    id SERIAL PRIMARY KEY,
+    date TEXT NOT NULL,
+    amount NUMERIC(14,2) NOT NULL CHECK (amount > 0),
+    notes TEXT NOT NULL DEFAULT ''
   )`;
   await sql`CREATE TABLE IF NOT EXISTS pending_register (
     id SERIAL PRIMARY KEY, date TEXT NOT NULL, month TEXT NOT NULL,
@@ -563,6 +570,31 @@ app.delete('/api/pending-register/:id', authenticate, async (req, res) => {
   try {
     await ensureDb();
     const r = await sql`DELETE FROM pending_register WHERE id=${req.params.id} RETURNING id`;
+    if (!r.rowCount) return res.status(404).json({ error: 'Record not found' });
+    res.json({ success: true });
+  } catch (e: any) { res.status(400).json({ error: e.message }); }
+});
+
+// Daily committee. Separate from rickshaw transactions, balances, and stats.
+app.get('/api/committee', authenticate, async (_req, res) => {
+  try {
+    await ensureDb();
+    const r = await sql`SELECT * FROM committee_entries ORDER BY date DESC, id DESC`;
+    res.json(r.rows.map(row => ({ ...row, amount: Number(row.amount), notes: row.notes || '' })));
+  } catch (e: any) { res.status(500).json({ error: e.message }); }
+});
+app.post('/api/committee', authenticate, async (req, res) => {
+  try {
+    await ensureDb();
+    const entry = validateCommitteeEntry(req.body);
+    const r = await sql`INSERT INTO committee_entries (date, amount, notes) VALUES (${entry.date}, ${entry.amount}, ${entry.notes}) RETURNING *`;
+    res.json({ ...r.rows[0], amount: Number(r.rows[0].amount) });
+  } catch (e: any) { res.status(400).json({ error: e.message }); }
+});
+app.delete('/api/committee/:id', authenticate, async (req, res) => {
+  try {
+    await ensureDb();
+    const r = await sql`DELETE FROM committee_entries WHERE id=${req.params.id} RETURNING id`;
     if (!r.rowCount) return res.status(404).json({ error: 'Record not found' });
     res.json({ success: true });
   } catch (e: any) { res.status(400).json({ error: e.message }); }

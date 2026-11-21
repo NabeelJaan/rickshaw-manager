@@ -1,10 +1,17 @@
 import { categoryName, categoryType } from './src/utils/category';
 import { validatePendingRecord } from './src/utils/pendingRecord';
+import { validateCommitteeEntry } from './src/utils/committee';
 import { transactionAmount } from './src/utils/transactionAmount';
 import express from "express";
 import { createServer as createViteServer } from "vite";
 import db from "./server/database";
 
+db.prepare(`CREATE TABLE IF NOT EXISTS committee_entries (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  date TEXT NOT NULL,
+  amount REAL NOT NULL CHECK (amount > 0),
+  notes TEXT NOT NULL DEFAULT ''
+)`).run();
 db.prepare(`CREATE TABLE IF NOT EXISTS pending_register (
   id INTEGER PRIMARY KEY AUTOINCREMENT, date TEXT NOT NULL, month TEXT NOT NULL,
   category TEXT NOT NULL CHECK (category IN ('pending', 'payment')), amount REAL NOT NULL CHECK (amount > 0),
@@ -252,6 +259,25 @@ function txParties(rickshawId: any, driverId: any): string {
   app.delete('/api/pending-register/:id', (req, res) => {
     try {
       const r = db.prepare('DELETE FROM pending_register WHERE id=?').run(req.params.id);
+      if (!r.changes) return res.status(404).json({ error: 'Record not found' });
+      res.json({ success: true });
+    } catch (e: any) { res.status(400).json({ error: e.message }); }
+  });
+
+  app.get('/api/committee', (_req, res) => {
+    try { res.json(db.prepare('SELECT * FROM committee_entries ORDER BY date DESC, id DESC').all()); }
+    catch (e: any) { res.status(500).json({ error: e.message }); }
+  });
+  app.post('/api/committee', (req, res) => {
+    try {
+      const entry = validateCommitteeEntry(req.body);
+      const r = db.prepare('INSERT INTO committee_entries (date, amount, notes) VALUES (?, ?, ?)').run(entry.date, entry.amount, entry.notes);
+      res.json({ id: r.lastInsertRowid, ...entry });
+    } catch (e: any) { res.status(400).json({ error: e.message }); }
+  });
+  app.delete('/api/committee/:id', (req, res) => {
+    try {
+      const r = db.prepare('DELETE FROM committee_entries WHERE id=?').run(req.params.id);
       if (!r.changes) return res.status(404).json({ error: 'Record not found' });
       res.json({ success: true });
     } catch (e: any) { res.status(400).json({ error: e.message }); }
